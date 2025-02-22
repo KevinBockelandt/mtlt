@@ -247,17 +247,25 @@ pub fn deleteTag(args: ArgumentParser) !void {
 /// Delete a thing from the data file
 pub fn deleteThing(args: ArgumentParser) !void {
     const w = std.io.getStdOut().writer();
+    var id_thing_to_delete: u19 = 0;
 
+    // if there is no argument with the command
     if (args.payload == null) {
-        _ = try w.write("Need to specify the id of the thing to remove\n");
-        return;
-    }
+        const cur_timer = try globals.dfr.getCurrentTimer();
 
-    const arg_id: u19 = try base62_helper.b62ToB10(args.payload.?);
+        // and there is a previous thing to delete
+        if (cur_timer.id_thing != 0) {
+            id_thing_to_delete = cur_timer.id_thing;
+        } else {
+            _ = try w.write("Need to specify the id of the thing to remove\n");
+        }
+    } else {
+        id_thing_to_delete = try base62_helper.b62ToB10(args.payload.?);
+    }
 
     // check if there is a running timer for this thing. If yes stop it
     const cur_timer = try globals.dfr.getCurrentTimer();
-    if (cur_timer.id_thing == arg_id) {
+    if (cur_timer.id_thing == id_thing_to_delete) {
         try globals.data_file.seekFromEnd(-dt.lgt_fixed_current_timer);
         const to_write = dt.getIntFromCurrentTimer(.{
             .id_thing = 0,
@@ -268,14 +276,15 @@ pub fn deleteThing(args: ArgumentParser) !void {
     }
 
     // get the name of the thing to delete
-    if (globals.dfr.getFixedPartThing(arg_id)) |fpt| {
+    if (globals.dfr.getFixedPartThing(id_thing_to_delete)) |fpt| {
         const thing_name = try globals.allocator.alloc(u8, fpt.lgt_name);
         defer globals.allocator.free(thing_name);
         _ = try globals.data_file.reader().read(thing_name);
 
         // try to delete the thing
-        try globals.dfw.deleteThingFromFile(arg_id);
-        try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ colid, args.payload.?, colres, colemp, thing_name, colres });
+        try globals.dfw.deleteThingFromFile(id_thing_to_delete);
+        const str_id_thing = base62_helper.b10ToB62(&buf_str_id, id_thing_to_delete);
+        try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ colid, str_id_thing, colres, colemp, thing_name, colres });
     } else |err| {
         switch (err) {
             DataParsingError.ThingNotFound => try displayThingNotFound(args.payload.?),
