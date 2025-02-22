@@ -1,0 +1,94 @@
+mtlt add-tag tag_name                                            | add new tag
+mtlt add "Name thing" -a tag_name tag_name -t 4:30 -e 1:30       | add a new thing
+mtlt add "Name thing" -a tag_name -s                             | add a new thing and start a timer on it right away
+mtlt delete-tag tag_name                                         | remove tag
+mtlt delete id_thing                                             | remove a thing
+mtlt infos                                                       | infos on the last thing started
+mtlt infos id_thing                                              | infos on the specified thing
+mtlt ongoing                                                     | display the ongoing report
+mtlt tags                                                        | list ongoing tags
+mtlt start id_thing                                              | start the specified thing
+mtlt start                                                       | start the last thing started
+mtlt stop                                                        | stop the thing currently running
+mtlt toggle-tag tag_name                                         | archive / unarchive a tag
+mtlt toggle id_thing                                             | change status of a thing (ongoing / close)
+mtlt update-tag old_name new_name                                | udpate a tag name
+// If the tag is already in the thing, it is removed
+// If the tag is not already in the thing, it is added
+mtlt update id_thing -n "New name" -a tag_name -t 3: -e 2:       | update a thing
+mtlt udpate-timer id_thing-id_timer -dl 1:20                     | remove from the duration of a timer
+
+---
+
+Name         | Potential flags
+------------ | ----------------
+add          | -a, -e, -s, -t, -n
+add-tag      |
+add-timer    | -sl, -sm, -d
+delete       |
+delete-tag   |
+delete-timer |
+update       | -a, -e, -s, -t, -n
+update-tag   |
+update-timer | -sl, -sm, -dl, -dm
+toggle       | -dl, -dm, -s
+toggle-tag   |
+start        |
+stop         | -dl, -dm
+tags         | -n, -l
+timers       | -a, --exclude-tags, -sl, -sm, -l, --no-tags
+infos        |
+closed       | -a, --exclude-tags, -n, -l, --no-tags
+ongoing      | -a, --exclude-tags, -n, -em, -el, tm, tl, -l, --no-tags
+stats        | -a, --exclude-tags, -sl, --end-less, --divisions, --no-tags
+
+---
+
+Short | Long               | Description                                 | Used in
+----- | ------------------ | ------------------------------------------- | -------------
+      | --divisions        | number of divisions to use in report        | stats
+      | --end-less         | offset between now and end time for report  | stats
+      | --exclude-tags     | list of tags to exclude                     | timers, closed, ongoing, stats
+      | --no-tags          | filter out things that have associated tags | timers, closed, ongoing, stats
+-a    | --tags             | list of tags to include                     | add, update, timers, closed, ongoing, stats
+-d    | --duration         | duration for a timer                        | add-timer
+-dl   | --duration-less    | remove from duration                        | toggle, update-timer, stop
+-dm   | --duration-more    | add to duration                             | toggle, update-timer, stop
+-e    | --estimation       | estimated time necessary (format h:m)       | add, update, timers, closed, ongoing, stats
+-em   | --estimation-more  | add to estimation or filter below value     | ongoing
+-el   | --estimation-less  | remove to estimation or filter above value  | ongoing
+-l    | --limit            | limit the number of displayed result        | ongoing, closed, timers, tags
+-n    | --name             | name for a thing                            | add, update, closed, ongoing, tags
+-s    | --start            | start a timer on the thing right away       | add, update, toggle
+-sl   | --start-less       | remove from start time                      | add-timer, update-timer, timers, stats
+-sm   | --start-more       | add to start time                           | add-timer, update-timer, timers
+-t    | --target           | target for a thing (format h:m)             | add, update
+-tm   | --target-more      | add to target or filter below value         | ongoing
+-tl   | --target-less      | remove from target or filter above value    | ongoing
+
+---
+
+                                                                     Average    | Average
+                     |         | Number | Things | Things |        | Accuracy   | Accuracy
+Period               | Time in | Timers | Opened | Closed | Ratio  | Estimation | Target
+-------------------------------------------------------------------------------------------
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
+-------------------------------------------------------------------------------------------
+               TOTAL | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
+
+---
+
+Limits of the application related to the way data are stored:
+
+- There can be a maximum of (2^16 - 1) different tags -> 65,535
+- There can be a maximum of (2^19 - 1) different things -> 524,288
+- There can be a maximum of 2^6 tags associated to a thing -> 64
+- There can be a maximum of 2^11 timers associated to a thing -> 2048
+- The name of a tag can have a maximum length of 2^7 -> 128
+- The name of a thing can have a maximum length of 2^8 -> 256
+- The target of a thing can represent time up to approximately the year 2084
+- The estimation of time necessary for a thing can be up to 2^16 minutes -> ~1,092 h
+- The maximum duration of a timer is 2^12 minutes -> ~68h
+- The minimum precision is the minute. All durations are rounded to the minute
