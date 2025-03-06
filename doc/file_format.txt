@@ -114,6 +114,6 @@ The current timer section is composed of 4 items:
 If the timestamp is equal to 0 it means the timer is not active. If the timestamp contains a value it means that the timer is currently running.
 
 
-* Timestamps are not actually standard UNIX timestamp. Instead we store the number of seconds since the start of January 1st 2020. This way we keep a similar system but push back the year 2038 problem. It makes sense since we don't intend to handle calendar dates but only handle time offsets, and not in a crazy large range.
+* Timestamps are not actually standard UNIX timestamp. Instead we store the number of minutes since the start of January 1st 2020. This way we keep a similar system but push back the year 2038 problem. It makes sense since we don't intend to handle calendar dates but only handle time offsets, and not in a crazy large range.
 
 

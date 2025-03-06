@@ -15,27 +15,42 @@ const little_end = std.builtin.Endian.little;
 
 /// Display informations on the specified thing
 pub fn infosReport(args: ArgumentParser) !void {
+    // get the current timer contained in the data file
+    const cur_timer = try globals.dfr.getCurrentTimer();
+
+    // ID of the thing to display infos about
+    var id_thing: u19 = undefined;
+
     if (args.payload == null) {
-        _ = try std.io.getStdOut().write("Need to specify the id of the thing to get infos about\n");
-        return;
+        // and no previous current timer
+        if (cur_timer.id_thing == 0) {
+            _ = try std.io.getStdOut().write("Need to specify the id of the thing to get infos about\n");
+            return;
+        } else {
+            id_thing = cur_timer.id_thing;
+        }
+    } else {
+        id_thing = try base62_helper.b62ToB10(args.payload.?);
     }
 
-    const arg_id: u19 = try base62_helper.b62ToB10(args.payload.?);
-
-    const thing_to_display = try globals.dfr.getThing(arg_id);
+    const thing_to_display = try globals.dfr.getThing(id_thing);
     defer {
         globals.allocator.free(thing_to_display.name);
         globals.allocator.free(thing_to_display.tags);
         globals.allocator.free(thing_to_display.timers);
     }
 
-    try displayTableReport(thing_to_display, args.payload.?);
+    try displayTableReport(thing_to_display);
 }
 
 /// Setup the table printer to display the data of the thing
-fn displayTableReport(thing: dt.Thing, id: []const u8) !void {
+fn displayTableReport(thing: dt.Thing) !void {
     const w = std.io.getStdOut().writer();
     const cur_time = th.curTimestamp();
+
+    // string for the thing ID
+    var buf_id_thing: [4]u8 = undefined;
+    const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, thing.id);
 
     // target
     var str_target: []const u8 = undefined;
@@ -125,7 +140,7 @@ fn displayTableReport(thing: dt.Thing, id: []const u8) !void {
 
         // ID column
         var buf_id: [128]u8 = undefined;
-        const str_id: []u8 = try std.fmt.bufPrint(&buf_id, "{s}-{d}", .{ id, timer.id });
+        const str_id: []u8 = try std.fmt.bufPrint(&buf_id, "{s}-{d}", .{ str_id_thing, timer.id });
         timers_table[i][0] = .{
             .content = try globals.allocator.dupe(u8, str_id),
             .alignment = .right,
@@ -173,7 +188,7 @@ fn displayTableReport(thing: dt.Thing, id: []const u8) !void {
     var buf_time_offset: [100]u8 = undefined;
     const str_time_offset = try th.formatDurationNoSign(&buf_time_offset, @abs(time_offset));
 
-    try w.print("{s}                ID{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, id, ansi.colres });
+    try w.print("{s}                ID{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id_thing, ansi.colres });
     try w.print("{s}              Name{s} : {s}\n", .{ ansi.colemp, ansi.colres, thing.name });
     try w.print("{s}            Status{s} : {s}\n", .{ ansi.colemp, ansi.colres, @tagName(thing.status) });
     try w.print("{s}   Associated tags{s} : {s}\n", .{ ansi.colemp, ansi.colres, buf_tags[0..idx_buf_tags] });
