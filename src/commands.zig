@@ -458,10 +458,10 @@ pub fn toggleTagStatus(args: ArgumentParser) !void {
     const w = std.io.getStdOut().writer();
 
     if (globals.dfw.toggleTagStatus(args.payload.?)) |new_status| {
-        try w.print("Status set to {s}{s}{s} for the tag {s}{s}{s}", .{ colemp, @tagName(new_status), colres, colemp, args.payload.?, colres });
+        try w.print("Status set to {s}{s}{s} for the tag {s}{s}{s}\n", .{ colemp, @tagName(new_status), colres, colemp, args.payload.?, colres });
     } else |err| {
         if (err == DataParsingError.TagNotFound) {
-            try w.print("Error: No tag found for the name {s}{s}{s}", .{ colemp, args.payload.?, colres });
+            try w.print("Error: No tag found for the name {s}{s}{s}\n", .{ colemp, args.payload.?, colres });
         } else {
             return err;
         }
