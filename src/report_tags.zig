@@ -104,6 +104,18 @@ pub fn tagsReport(args: ArgumentParser) !void {
 
     try displayTableReport(tags_to_sort_slice[0..idx_end_slice]);
 
+    // display an additional line after the table regarding number of tags
+    var buf_missing_tags: [96]u8 = undefined;
+    const nbr_missing_tags: usize = tags_to_sort_slice.len - idx_end_slice;
+
+    const str_missing_tags = if (nbr_missing_tags == 0)
+        try std.fmt.bufPrint(&buf_missing_tags, "{s}{d}{s} tags shown", .{ ansi.coltit, idx_end_slice, ansi.colres })
+    else
+        try std.fmt.bufPrint(&buf_missing_tags, "{s}{d}{s} tags shown - {s}{d}{s} tags not shown because of the display limit", .{ ansi.coltit, idx_end_slice, ansi.colres, ansi.coltit, nbr_missing_tags, ansi.colres });
+
+    try std.io.getStdOut().writer().print("\n{s}\n", .{str_missing_tags});
+
+    // free memory
     for (tags_to_sort_slice) |tag_to_sort| {
         globals.allocator.free(tag_to_sort.tag.name);
     }

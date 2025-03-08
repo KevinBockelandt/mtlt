@@ -72,6 +72,18 @@ pub fn closedReport(args: ArgumentParser) !void {
 
     try displayTableReport(things_to_display_slice[0..idx_end_slice]);
 
+    // display an additional line after the table regarding number of things
+    var buf_missing_things: [96]u8 = undefined;
+    const nbr_missing_things: usize = things_to_display_slice.len - idx_end_slice;
+
+    const str_missing_things = if (nbr_missing_things == 0)
+        try std.fmt.bufPrint(&buf_missing_things, "{s}{d}{s} things shown", .{ ansi.coltit, idx_end_slice, ansi.colres })
+    else
+        try std.fmt.bufPrint(&buf_missing_things, "{s}{d}{s} things shown - {s}{d}{s} things not shown because of the display limit", .{ ansi.coltit, idx_end_slice, ansi.colres, ansi.coltit, nbr_missing_things, ansi.colres });
+
+    try std.io.getStdOut().writer().print("\n{s}\n", .{str_missing_things});
+
+    // free memory
     for (things_to_display_slice) |thing| {
         globals.allocator.free(thing.name);
         globals.allocator.free(thing.tags);

@@ -276,7 +276,7 @@ pub fn ongoingReport(args: ArgumentParser) !void {
         idx_end_slice = args.limit.?;
     }
 
-    try displayTableReport(things_to_sort_slice[0..idx_end_slice]);
+    try displayTableReport(things_to_sort_slice[0..idx_end_slice], things_to_sort_slice.len);
 
     for (things_to_sort_slice) |thing_to_sort| {
         globals.allocator.free(thing_to_sort.thing.name);
@@ -302,53 +302,8 @@ fn computeTimeLeft(thing: dt.Thing) !i64 {
     return @as(i64, thing.estimation) - @as(i64, time_spent_already);
 }
 
-fn displayCurrentTimerReport() !void {
-    const w = std.io.getStdOut().writer();
-    const cur_time = time_helper.curTimestamp();
-    const cur_timer = try globals.dfr.getCurrentTimer();
-
-    if (cur_timer.id_thing != 0 and cur_timer.start != 0) {
-        // get the name of  the current thing
-        const cur_thing = try globals.dfr.getFixedPartThing(cur_timer.id_thing);
-        const pos_cur_thing = try globals.dfr.getPosThing(cur_timer.id_thing);
-        try globals.data_file.seekTo(pos_cur_thing + dt.lgt_fixed_thing);
-
-        var buf_thing_name = try globals.allocator.alloc(u8, cur_thing.lgt_name);
-        defer globals.allocator.free(buf_thing_name);
-        const idx_buf_thing_name = try globals.data_file.reader().read(buf_thing_name[0..cur_thing.lgt_name]);
-
-        var buf_str_id: [4]u8 = undefined;
-        var buf_dur_id: [10]u8 = undefined;
-
-        var duration: u9 = 0;
-        const temp_dur: u25 = cur_time - cur_timer.start;
-
-        if (temp_dur > std.math.maxInt(u9)) {
-            std.debug.print("Error: the current timer has a duration of {d} minutes\n", .{temp_dur});
-        } else {
-            duration = @intCast(temp_dur);
-        }
-
-        const str_thing_id = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-
-        try w.print("> timer for {s}{s}{s} - \"{s}{s}{s}\" running since {s}{s}{s}\n\n", .{
-            ansi.col_id,
-            str_thing_id,
-            ansi.col_reset,
-            ansi.col_emphasis,
-            buf_thing_name[0..idx_buf_thing_name],
-            ansi.col_reset,
-            ansi.col_emphasis,
-            try time_helper.formatDuration(&buf_dur_id, duration),
-            ansi.col_reset,
-        });
-    } else {
-        try w.print("> no timer currently running\n\n", .{});
-    }
-}
-
 /// Setup the table printer to display the data to the user
-fn displayTableReport(things: []dt.ThingToSort) !void {
+fn displayTableReport(things: []dt.ThingToSort, total_nbr_things: usize) !void {
     const num_cols: u8 = 5;
     const cur_time = time_helper.curTimestamp();
 
@@ -361,8 +316,6 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
     var buf_str_tag_name: [128]u8 = undefined;
     // used to manipulate the id strings
     var buf_str_id: [4]u8 = undefined;
-
-    try displayCurrentTimerReport();
 
     // the array of data we want to display as a table
     var to_display = try globals.allocator.alloc([]table_printer.Cell, things.len + 2);
@@ -492,15 +445,12 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
     to_display[idx_last_line] = try globals.allocator.alloc(table_printer.Cell, num_cols);
     defer globals.allocator.free(to_display[idx_last_line]);
 
-    var buf_total_id: [32]u8 = undefined;
-    const str_total_id = try std.fmt.bufPrint(&buf_total_id, "{s}{d}", .{ ansi.coltit, things.len });
     to_display[idx_last_line][0] = .{
-        .content = str_total_id,
+        .content = "",
         .alignment = .left,
         .front_col = null,
         .back_col = .gray,
     };
-
     to_display[idx_last_line][1] = .{
         .content = "",
         .alignment = .left,
@@ -513,7 +463,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
     to_display[idx_last_line][2] = .{
         .content = str_total_remains_dur,
         .alignment = .left,
-        .front_col = null,
+        .front_col = .title,
         .back_col = .gray,
     };
 
@@ -531,6 +481,17 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
     };
 
     try table_printer.printTable(to_display);
+
+    // display an additional line after the table regarding number of things
+    var buf_missing_things: [96]u8 = undefined;
+    const nbr_missing_things: usize = total_nbr_things - things.len;
+
+    const str_missing_things = if (nbr_missing_things == 0)
+        try std.fmt.bufPrint(&buf_missing_things, "{s}{d}{s} things shown", .{ ansi.coltit, things.len, ansi.colres })
+    else
+        try std.fmt.bufPrint(&buf_missing_things, "{s}{d}{s} things shown - {s}{d}{s} things not shown because of the display limit", .{ ansi.coltit, things.len, ansi.colres, ansi.coltit, nbr_missing_things, ansi.colres });
+
+    try std.io.getStdOut().writer().print("\n{s}\n", .{str_missing_things});
 
     // Free memory for all that we allocated
     for (1..things.len + 1) |i| {
