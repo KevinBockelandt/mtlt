@@ -47,8 +47,9 @@ fn parseArgs() !void {
     const args = try std.process.argsAlloc(globals.allocator);
     defer std.process.argsFree(globals.allocator, args);
 
+    // if no command is provided, trigger the associated behavior
     if (args.len < 2) {
-        _ = try std.io.getStdOut().writer().write("Needs a command. TODO display help\n");
+        try commands.displayCurrent();
         return;
     }
 

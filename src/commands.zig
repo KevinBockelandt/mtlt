@@ -13,9 +13,6 @@ const DataOperationError = @import("data_file_writer.zig").DataOperationError;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
 
 const little_end = std.builtin.Endian.little;
-const colemp = ansi.col_emphasis;
-const colid = ansi.col_id;
-const colres = ansi.col_reset;
 
 var buf_str_id: [4]u8 = undefined;
 
@@ -44,25 +41,25 @@ fn displayDurationError(dur: []const u8, err: anyerror) !void {
 /// Display an info message when the current timer is started
 fn displayCurrentTimerStart(cur_timer_id_thing: u19, thing_name: []const u8) !void {
     const str_id = base62_helper.b10ToB62(&buf_str_id, cur_timer_id_thing);
-    try std.io.getStdOut().writer().print("Started a timer for: {s}{s}{s} - {s}{s}{s}\n", .{ colid, str_id, colres, colemp, thing_name, colres });
+    try std.io.getStdOut().writer().print("Started a timer for: {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
 }
 
 /// Display an info message when the current timer is already running
 fn displayCurrentTimerAlreadyRunning(cur_timer_id_thing: u19, thing_name: []const u8) !void {
     const str_id = base62_helper.b10ToB62(&buf_str_id, cur_timer_id_thing);
-    try std.io.getStdOut().writer().print("Timer already running for: {s}{s}{s} - {s}{s}{s}\n", .{ colid, str_id, colres, colemp, thing_name, colres });
+    try std.io.getStdOut().writer().print("Timer already running for: {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
 }
 
 /// Display an error message when trying to start a timer on a closed thing
 fn displayCurrentTimerOnClosedThing(id_thing: u19) !void {
     const str_id = base62_helper.b10ToB62(&buf_str_id, id_thing);
     try std.io.getStdOut().writer().print("Cannot start a timer on a closed thing\n", .{});
-    try std.io.getStdOut().writer().print("You can reopen the thing by using the following command: {s}mtlt toggle {s}{s}\n", .{ colemp, str_id, colres });
+    try std.io.getStdOut().writer().print("You can reopen the thing by using the following command: {s}mtlt toggle {s}{s}\n", .{ ansi.colemp, str_id, ansi.colres });
 }
 
 /// Display an info message when the specified thing is not found
 fn displayThingNotFound(str_thing_id: []const u8) !void {
-    try std.io.getStdOut().writer().print("Error: thing with id {s}{s}{s} not found", .{ colemp, str_thing_id, colres });
+    try std.io.getStdOut().writer().print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, str_thing_id, ansi.colres });
 }
 ///
 /// Check that parsed arguments do not contain several types of duration flags
@@ -131,12 +128,12 @@ pub fn addTag(args: ArgumentParser) !void {
 
     if (globals.dfw.addTagToFile(args.payload.?)) |new_tag_id| {
         _ = new_tag_id;
-        try w.print("Added tag {s}{s}{s}\n", .{ colemp, args.payload.?, colres });
+        try w.print("Added tag {s}{s}{s}\n", .{ ansi.colemp, args.payload.?, ansi.colres });
     } else |err| {
         if (err == DataOperationError.NameTooLong) {
-            try w.print("The name {s}\"{s}\"{s} is too long\n", .{ colemp, args.payload.?, colres });
+            try w.print("The name {s}\"{s}\"{s} is too long\n", .{ ansi.colemp, args.payload.?, ansi.colres });
         } else if (err == DataOperationError.TagWithThisNameAlreadyExisting) {
-            try w.print("A tag with the name {s}{s}{s} already exists\n", .{ colemp, args.payload.?, colres });
+            try w.print("A tag with the name {s}{s}{s} already exists\n", .{ ansi.colemp, args.payload.?, ansi.colres });
         } else {
             return err;
         }
@@ -165,17 +162,17 @@ pub fn addThing(args: ArgumentParser) !void {
     // display infos about the creation of the thing
     const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
 
-    try w.print("Created {s}\"{s}\"{s} with ID {s}{s}{s}", .{ colemp, args.payload.?, colres, colid, str_id, colres });
+    try w.print("Created {s}\"{s}\"{s} with ID {s}{s}{s}", .{ ansi.colemp, args.payload.?, ansi.colres, ansi.colid, str_id, ansi.colres });
     if (args.target != null) {
         var str_target: [20]u8 = undefined;
         const slice_str_target = try time_helper.formatDuration(&str_target, args.target.?);
-        try w.print(" and a target in {s}{s}{s}\n", .{ colemp, slice_str_target, colres });
+        try w.print(" and a target in {s}{s}{s}\n", .{ ansi.colemp, slice_str_target, ansi.colres });
     } else {
         try w.print("\n", .{});
     }
 
     for (infos_creation.created_tags.items) |tag| {
-        try w.print("Created the tag {s}{s}{s}\n", .{ colemp, tag, colres });
+        try w.print("Created the tag {s}{s}{s}\n", .{ ansi.colemp, tag, ansi.colres });
     }
 
     // if wanted, start the current timer on the created thing right away
@@ -217,10 +214,53 @@ pub fn addTimer(args: ArgumentParser) !void {
     const start_abs = time_helper.curTimestamp() - start_less;
 
     if (globals.dfw.addTimerToThing(id_thing_num, start_abs, duration)) |id_timer| {
-        try w.print("Added timer {s}{s}-{d}{s}\n", .{ colid, id_thing_str, id_timer, colres });
+        try w.print("Added timer {s}{s}-{d}{s}\n", .{ ansi.colid, id_thing_str, id_timer, ansi.colres });
     } else |err| {
         try w.print("Error: during the addition of a timer. TODO: {}\n", .{err});
         return;
+    }
+}
+
+/// Display infos on current thing and timer
+pub fn displayCurrent() !void {
+    const w = std.io.getStdOut().writer();
+    const cur_time = time_helper.curTimestamp();
+    const cur_timer = try globals.dfr.getCurrentTimer();
+
+    if (cur_timer.id_thing != 0) {
+        const cur_thing = try globals.dfr.getThing(cur_timer.id_thing);
+        defer {
+            globals.allocator.free(cur_thing.name);
+            globals.allocator.free(cur_thing.tags);
+            globals.allocator.free(cur_thing.timers);
+        }
+
+        var buf_id_thing: [4]u8 = undefined;
+        const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, cur_thing.id);
+
+        try w.print("Current thing: {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_thing, ansi.colres, ansi.colemp, cur_thing.name, ansi.colres });
+
+        if (cur_timer.start != 0) {
+            var buf_dur_id: [10]u8 = undefined;
+            var duration: u9 = 0;
+            const temp_dur: u25 = cur_time - cur_timer.start;
+
+            if (temp_dur > std.math.maxInt(u9)) {
+                std.debug.print("Error: the current timer has a duration of {d} minutes\n", .{temp_dur});
+            } else {
+                duration = @intCast(temp_dur);
+                try w.print("Timer started {s}{s}{s} ago.\n", .{
+                    ansi.coldurntr,
+                    try time_helper.formatDurationNoSign(&buf_dur_id, duration),
+                    ansi.colres,
+                });
+            }
+        } else {
+            try w.print("No current timer.\n", .{});
+        }
+    } else {
+        try w.print("There is no current thing.\n", .{});
+        try w.print("See \"mtlt help\" for help.\n", .{});
     }
 }
 
@@ -234,10 +274,10 @@ pub fn deleteTag(args: ArgumentParser) !void {
     }
 
     if (globals.dfw.deleteTagFromFile(args.payload.?)) |_| {
-        try w.print("The tag {s}{s}{s} was deleted\n", .{ colemp, args.payload.?, colres });
+        try w.print("The tag {s}{s}{s} was deleted\n", .{ ansi.colemp, args.payload.?, ansi.colres });
     } else |err| {
         if (err == DataParsingError.TagNotFound) {
-            try w.print("Error: No tag found with the name {s}{s}{s}\n", .{ colemp, args.payload.?, colres });
+            try w.print("Error: No tag found with the name {s}{s}{s}\n", .{ ansi.colemp, args.payload.?, ansi.colres });
         } else {
             return err;
         }
@@ -284,7 +324,7 @@ pub fn deleteThing(args: ArgumentParser) !void {
         // try to delete the thing
         try globals.dfw.deleteThingFromFile(id_thing_to_delete);
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, id_thing_to_delete);
-        try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ colid, str_id_thing, colres, colemp, thing_name, colres });
+        try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres });
     } else |err| {
         switch (err) {
             DataParsingError.ThingNotFound => try displayThingNotFound(args.payload.?),
@@ -307,7 +347,7 @@ pub fn deleteTimer(args: ArgumentParser) !void {
                 var buf_id_timer: [4]u8 = undefined;
                 const str_id_timer = try std.fmt.bufPrint(&buf_id_timer, "{d}", .{cur_timer.id_last_timer});
                 const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try w.print("Deleted timer {s}{s}-{s}{s}\n", .{ colid, str_id_thing, str_id_timer, colres });
+                try w.print("Deleted timer {s}{s}-{s}{s}\n", .{ ansi.colid, str_id_thing, str_id_timer, ansi.colres });
                 try globals.dfw.resetIdLastCurrentTimer(cur_timer.id_thing, cur_timer.start);
                 return;
             } else |err| {
@@ -340,7 +380,7 @@ pub fn deleteTimer(args: ArgumentParser) !void {
 
     // Actually delete and write feedback message
     if (globals.dfw.deleteTimerFromFile(id_thing, id_timer)) |_| {
-        try w.print("Deleted timer {s}{s}-{s}{s}\n", .{ colid, str_id_thing, str_id_timer, colres });
+        try w.print("Deleted timer {s}{s}-{s}{s}\n", .{ ansi.colid, str_id_thing, str_id_timer, ansi.colres });
     } else |err| {
         try w.print("Error: when trying to delete a timer - {}\n", .{err});
         return err;
@@ -447,7 +487,7 @@ pub fn stop(args: ArgumentParser) !void {
         defer globals.allocator.free(thing_name);
         _ = try globals.data_file.reader().read(thing_name);
 
-        try w.print("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{s}{s}\n", .{ colid, t.id, colres, colid, str_id, colres, colemp, thing_name, colres, colemp, str_dur, colres });
+        try w.print("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{s}{s}\n", .{ ansi.colid, t.id, ansi.colres, ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, str_dur, ansi.colres });
     } else {
         try w.print("No timer currently running\n", .{});
     }
@@ -458,10 +498,10 @@ pub fn toggleTagStatus(args: ArgumentParser) !void {
     const w = std.io.getStdOut().writer();
 
     if (globals.dfw.toggleTagStatus(args.payload.?)) |new_status| {
-        try w.print("Status set to {s}{s}{s} for the tag {s}{s}{s}\n", .{ colemp, @tagName(new_status), colres, colemp, args.payload.?, colres });
+        try w.print("Status set to {s}{s}{s} for the tag {s}{s}{s}\n", .{ ansi.colemp, @tagName(new_status), ansi.colres, ansi.colemp, args.payload.?, ansi.colres });
     } else |err| {
         if (err == DataParsingError.TagNotFound) {
-            try w.print("Error: No tag found for the name {s}{s}{s}\n", .{ colemp, args.payload.?, colres });
+            try w.print("Error: No tag found for the name {s}{s}{s}\n", .{ ansi.colemp, args.payload.?, ansi.colres });
         } else {
             return err;
         }
@@ -505,7 +545,7 @@ pub fn toggleThingStatus(args: ArgumentParser) !void {
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {
         const str_new_status: []const u8 = @tagName(new_status);
-        try w.print("{s}{s}{s} - {s}{s}{s} is now {s}{s}{s}\n", .{ colid, args.payload.?, colres, colemp, thing_data.name, colres, colemp, str_new_status, colres });
+        try w.print("{s}{s}{s} - {s}{s}{s} is now {s}{s}{s}\n", .{ ansi.colid, args.payload.?, ansi.colres, ansi.colemp, thing_data.name, ansi.colres, ansi.colemp, str_new_status, ansi.colres });
 
         // Display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
@@ -522,9 +562,9 @@ pub fn toggleThingStatus(args: ArgumentParser) !void {
 
             if (thing_data.estimation > 0) {
                 if (remaining_time > 0) {
-                    try w.print("{s}{s} less{s} than estimation\n", .{ col_remaining_time, str_remaining_time, colres });
+                    try w.print("{s}{s} less{s} than estimation\n", .{ col_remaining_time, str_remaining_time, ansi.colres });
                 } else {
-                    try w.print("{s}{s} more{s} than estimation\n", .{ col_remaining_time, str_remaining_time, colres });
+                    try w.print("{s}{s} more{s} than estimation\n", .{ col_remaining_time, str_remaining_time, ansi.colres });
                 }
             }
         }
@@ -537,9 +577,9 @@ pub fn toggleThingStatus(args: ArgumentParser) !void {
             const col_target = ansi.getDurCol(offset_target);
 
             if (offset_target > 0) {
-                try w.print("{s}{s} less{s} than target\n", .{ col_target, str_target, colres });
+                try w.print("{s}{s} less{s} than target\n", .{ col_target, str_target, ansi.colres });
             } else {
-                try w.print("{s}{s} more{s} than target\n", .{ col_target, str_target, colres });
+                try w.print("{s}{s} more{s} than target\n", .{ col_target, str_target, ansi.colres });
             }
         }
     } else |err| {
@@ -570,12 +610,12 @@ pub fn updateTagName(args: ArgumentParser) !void {
 
     // finally perform the operation
     if (globals.dfw.updateTagName(args.payload.?, args.name.?)) |_| {
-        try w.print("Tag {s}{s}{s} is now nammed {s}{s}{s}\n", .{ colemp, args.payload.?, colres, colemp, args.name.?, colres });
+        try w.print("Tag {s}{s}{s} is now nammed {s}{s}{s}\n", .{ ansi.colemp, args.payload.?, ansi.colres, ansi.colemp, args.name.?, ansi.colres });
     } else |err| {
         switch (err) {
-            DataParsingError.TagNotFound => try w.print("Error: no tag with name {s}{s}{s} found\n", .{ colemp, args.payload.?, colres }),
-            DataOperationError.NameTooLong => try w.print("Error: the new name is too long {s}{s}{s}\n", .{ colemp, args.name.?, colres }),
-            DataOperationError.TagWithThisNameAlreadyExisting => try w.print("Error: a tag with the name {s}{s}{s} already exists\n", .{ colemp, args.name.?, colres }),
+            DataParsingError.TagNotFound => try w.print("Error: no tag with name {s}{s}{s} found\n", .{ ansi.colemp, args.payload.?, ansi.colres }),
+            DataOperationError.NameTooLong => try w.print("Error: the new name is too long {s}{s}{s}\n", .{ ansi.colemp, args.name.?, ansi.colres }),
+            DataOperationError.TagWithThisNameAlreadyExisting => try w.print("Error: a tag with the name {s}{s}{s} already exists\n", .{ ansi.colemp, args.name.?, ansi.colres }),
             else => return err,
         }
     }
@@ -620,10 +660,10 @@ pub fn updateThing(args: ArgumentParser) !void {
     defer globals.allocator.free(thing_name);
     _ = try globals.data_file.reader().read(thing_name);
 
-    try w.print("Updated thing {s}{s}{s} - {s}{s}{s}\n", .{ colid, id_str, colres, colemp, thing_name, colres });
+    try w.print("Updated thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, id_str, ansi.colres, ansi.colemp, thing_name, ansi.colres });
 
     for (created_tags.items) |ct| {
-        try w.print("Added tag {s}{s}{s}\n", .{ colemp, ct.name, colres });
+        try w.print("Added tag {s}{s}{s}\n", .{ ansi.colemp, ct.name, ansi.colres });
     }
 
     // if wanted and possible, start the current timer on the updated thing right away
@@ -661,7 +701,7 @@ pub fn updateTimer(args: ArgumentParser) !void {
                 var buf_id_timer: [4]u8 = undefined;
                 const str_id_timer = try std.fmt.bufPrint(&buf_id_timer, "{d}", .{cur_timer.id_last_timer});
                 const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try w.print("Updated timer {s}{s}-{s}{s}. TODO new start and duration\n", .{ colid, str_id_thing, str_id_timer, colres });
+                try w.print("Updated timer {s}{s}-{s}{s}. TODO new start and duration\n", .{ ansi.colid, str_id_thing, str_id_timer, ansi.colres });
                 return;
             } else |err| {
                 try w.print("Error: when trying to update a timer - {}\n", .{err});
@@ -737,5 +777,5 @@ pub fn updateTimer(args: ArgumentParser) !void {
     defer globals.allocator.free(name_thing);
     _ = try globals.data_file.readAll(name_thing);
 
-    try w.print("Updated timer {s}{s}{s} of {s}{s}{s} - {s}{s}{s}\n", .{ colid, str_id_timer, colres, colid, str_id_thing, colres, colemp, name_thing, colres });
+    try w.print("Updated timer {s}{s}{s} of {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_timer, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, name_thing, ansi.colres });
 }
