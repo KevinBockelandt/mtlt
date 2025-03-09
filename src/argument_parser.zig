@@ -40,6 +40,10 @@ pub const ArgumentParsingError = error{
     TargetAlreadyParsed,
     TargetMoreAlreadyParsed,
     TargetLessAlreadyParsed,
+    // related to the parsed data
+    NoDuration,
+    SeveralDurationArgs,
+    StartLessAndMore,
 };
 
 /// Potential types of command line arguments currently parsed
@@ -791,6 +795,47 @@ pub const ArgumentParser = struct {
 
         std.debug.print(" - Should start: {}\n", .{self.should_start});
         std.debug.print(" - No tags: {}\n", .{self.no_tags});
+    }
+
+    /// Check that parsed arguments do not contain several types of duration flags
+    pub fn checkOnlyOneTypeDurationArg(self: *ArgumentParser) !void {
+        if ((self.duration != null and self.duration_less != null) or
+            (self.duration != null and self.duration_more != null))
+        {
+            _ = try std.io.getStdOut().write("Error: you cannot give a specific duration and a duration offset at the same time\n");
+            return ArgumentParsingError.SeveralDurationArgs;
+        }
+
+        if (self.duration_less != null and self.duration_more != null) {
+            _ = try std.io.getStdOut().write("Error: you cannot add and remove duration at the same time\n");
+            return ArgumentParsingError.SeveralDurationArgs;
+        }
+    }
+
+    /// Check that parsed arguments do not contain simultaneously duration less and more
+    pub fn checkNoDurationLessAndMore(self: *ArgumentParser) !void {
+        if (self.duration_less != null and self.duration_more != null) {
+            _ = try std.io.getStdOut().write("Error: you cannot add and remove duration at the same time\n");
+            return ArgumentParsingError.DurationLessAndMore;
+        }
+    }
+
+    /// Check that parsed arguments do not contain simultaneously start offset less and more
+    pub fn checkNoStartLessAndMore(self: *ArgumentParser) !void {
+        if (self.start_less != null and self.start_more != null) {
+            _ = try std.io.getStdOut().write("Error: you cannot push the start time backward and forward at the same time\n");
+            return ArgumentParsingError.StartLessAndMore;
+        }
+    }
+
+    /// Check there is a duration argument parsed in the command
+    pub fn checkDurationPresence(self: *ArgumentParser) !u12 {
+        if (self.duration) |dur| {
+            return dur;
+        } else {
+            _ = try std.io.getStdOut().write("Error: you need to specify a duration (with the -d flag)\n");
+            return ArgumentParsingError.NoDuration;
+        }
     }
 };
 

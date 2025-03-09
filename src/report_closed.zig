@@ -46,7 +46,7 @@ fn addThingToList(data: []const u8) void {
 }
 
 /// Display a report of the ongoing things
-pub fn closedReport(args: ArgumentParser) !void {
+pub fn closedReport(args: *ArgumentParser) !void {
     // TODO add necessary filters
 
     // create a list of all the things to display
@@ -64,10 +64,10 @@ pub fn closedReport(args: ArgumentParser) !void {
 
     // compute the number of items to display
     var idx_end_slice = things_to_display_slice.len;
-    if (args.limit == null and idx_end_slice > globals.default_report_limit) {
+    if (args.*.limit == null and idx_end_slice > globals.default_report_limit) {
         idx_end_slice = globals.default_report_limit;
-    } else if (args.limit != null and idx_end_slice > args.limit.? and args.limit.? != 0) {
-        idx_end_slice = args.limit.?;
+    } else if (args.*.limit != null and idx_end_slice > args.*.limit.? and args.*.limit.? != 0) {
+        idx_end_slice = args.*.limit.?;
     }
 
     try displayTableReport(things_to_display_slice[0..idx_end_slice]);
@@ -303,4 +303,11 @@ fn displayTableReport(things: []dt.Thing) !void {
         globals.allocator.free(to_display[i][7].content);
         globals.allocator.free(to_display[i]);
     }
+}
+
+/// Print out help for the closed command
+pub fn help() !void {
+    try std.io.getStdOut().writer().print(
+        \\TODO help for closed command
+    , .{});
 }

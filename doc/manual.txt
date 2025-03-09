@@ -28,6 +28,7 @@ add-timer    | -sl, -sm, -d
 delete       |
 delete-tag   |
 delete-timer |
+help         |
 update       | -a, -e, -s, -t, -n
 update-tag   |
 update-timer | -sl, -sm, -dl, -dm
@@ -46,6 +47,7 @@ stats        | -a, --exclude-tags, -sl, --end-less, --divisions, --no-tags
 
 Short | Long               | Description                                 | Used in
 ----- | ------------------ | ------------------------------------------- | -------------
+      | --no-color         | no colors on the output text                | everywhere
       | --divisions        | number of divisions to use in report        | stats
       | --end-less         | offset between now and end time for report  | stats
       | --exclude-tags     | list of tags to exclude                     | timers, closed, ongoing, stats

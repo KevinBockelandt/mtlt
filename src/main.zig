@@ -1,7 +1,21 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const commands = @import("commands.zig");
+const command_add = @import("command_add.zig");
+const command_add_tag = @import("command_add_tag.zig");
+const command_add_timer = @import("command_add_timer.zig");
+const command_delete = @import("command_delete.zig");
+const command_delete_tag = @import("command_delete_tag.zig");
+const command_delete_timer = @import("command_delete_timer.zig");
+const command_help = @import("command_help.zig");
+const command_mtlt = @import("command_mtlt.zig");
+const command_start = @import("command_start.zig");
+const command_stop = @import("command_stop.zig");
+const command_toggle = @import("command_toggle.zig");
+const command_toggle_tag = @import("command_toggle_tag.zig");
+const command_update = @import("command_update.zig");
+const command_update_tag = @import("command_update_tag.zig");
+const command_update_timer = @import("command_update_timer.zig");
 const data_types = @import("data_types.zig");
 const globals = @import("globals.zig");
 const report_closed = @import("report_closed.zig");
@@ -22,6 +36,7 @@ const Commands = enum {
     add,
     closed,
     delete,
+    help,
     infos,
     ongoing,
     start,
@@ -49,7 +64,7 @@ fn parseArgs() !void {
 
     // if no command is provided, trigger the associated behavior
     if (args.len < 2) {
-        try commands.displayCurrent();
+        try command_mtlt.cmd();
         return;
     }
 
@@ -67,23 +82,24 @@ fn parseArgs() !void {
 
     // handle the command appropriately
     switch (cmd) {
-        .@"add-tag" => try commands.addTag(arg_parser),
-        .@"add-timer" => try commands.addTimer(arg_parser),
-        .@"delete-tag" => try commands.deleteTag(arg_parser),
-        .@"delete-timer" => try commands.deleteTimer(arg_parser),
-        .@"toggle-tag" => try commands.toggleTagStatus(arg_parser),
-        .@"update-tag" => try commands.updateTagName(arg_parser),
-        .@"update-timer" => try commands.updateTimer(arg_parser),
-        .add => try commands.addThing(arg_parser),
-        .closed => try report_closed.closedReport(arg_parser),
-        .delete => try commands.deleteThing(arg_parser),
-        .infos => try report_infos.infosReport(arg_parser),
-        .ongoing => try report_ongoing.ongoingReport(arg_parser),
-        .start => try commands.start(arg_parser),
-        .stop => try commands.stop(arg_parser),
-        .tags => try report_tags.tagsReport(arg_parser),
-        .toggle => try commands.toggleThingStatus(arg_parser),
-        .update => try commands.updateThing(arg_parser),
+        .@"add-tag" => try command_add_tag.cmd(&arg_parser),
+        .@"add-timer" => try command_add_timer.cmd(&arg_parser),
+        .@"delete-tag" => try command_delete_tag.cmd(&arg_parser),
+        .@"delete-timer" => try command_delete_timer.cmd(&arg_parser),
+        .@"toggle-tag" => try command_toggle_tag.cmd(&arg_parser),
+        .@"update-tag" => try command_update_tag.cmd(&arg_parser),
+        .@"update-timer" => try command_update_timer.cmd(&arg_parser),
+        .add => try command_add.cmd(&arg_parser),
+        .closed => try report_closed.closedReport(&arg_parser),
+        .delete => try command_delete.cmd(&arg_parser),
+        .help => try command_help.cmd(&arg_parser),
+        .infos => try report_infos.infosReport(&arg_parser),
+        .ongoing => try report_ongoing.ongoingReport(&arg_parser),
+        .start => try command_start.cmd(&arg_parser),
+        .stop => try command_stop.cmd(&arg_parser),
+        .tags => try report_tags.tagsReport(&arg_parser),
+        .toggle => try command_toggle.cmd(&arg_parser),
+        .update => try command_update.cmd(&arg_parser),
         else => try std.io.getStdOut().writer().print("Unknown command: {s}\n", .{args[1]}),
     }
 }

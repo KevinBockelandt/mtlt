@@ -14,14 +14,14 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const little_end = std.builtin.Endian.little;
 
 /// Display informations on the specified thing
-pub fn infosReport(args: ArgumentParser) !void {
+pub fn infosReport(args: *ArgumentParser) !void {
     // get the current timer contained in the data file
     const cur_timer = try globals.dfr.getCurrentTimer();
 
     // ID of the thing to display infos about
     var id_thing: u19 = undefined;
 
-    if (args.payload == null) {
+    if (args.*.payload == null) {
         // and no previous current timer
         if (cur_timer.id_thing == 0) {
             _ = try std.io.getStdOut().write("Need to specify the id of the thing to get infos about\n");
@@ -30,7 +30,7 @@ pub fn infosReport(args: ArgumentParser) !void {
             id_thing = cur_timer.id_thing;
         }
     } else {
-        id_thing = try base62_helper.b62ToB10(args.payload.?);
+        id_thing = try base62_helper.b62ToB10(args.*.payload.?);
     }
 
     const thing_to_display = try globals.dfr.getThing(id_thing);
@@ -242,4 +242,11 @@ fn displayTableReport(thing: dt.Thing) !void {
         globals.allocator.free(timers_table[i][2].content);
         globals.allocator.free(timers_table[i]);
     }
+}
+
+/// Print out help for the infos command
+pub fn help() !void {
+    try std.io.getStdOut().writer().print(
+        \\TODO help for infos command
+    , .{});
 }

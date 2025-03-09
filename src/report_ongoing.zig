@@ -221,12 +221,12 @@ fn compareThings(_: void, a: dt.ThingToSort, b: dt.ThingToSort) bool {
 }
 
 /// Display a report of the ongoing things
-pub fn ongoingReport(args: ArgumentParser) !void {
+pub fn ongoingReport(args: *ArgumentParser) !void {
     // create the list of tags used as filter
     filter_tag_id_in = std.ArrayList(u16).init(globals.allocator);
     defer filter_tag_id_in.deinit();
 
-    for (args.tags.items) |tag_name| {
+    for (args.*.tags.items) |tag_name| {
         const fpt = try globals.dfr.getFixedPartTag(tag_name);
         try filter_tag_id_in.append(fpt.id);
     }
@@ -234,22 +234,22 @@ pub fn ongoingReport(args: ArgumentParser) !void {
     filter_tag_id_out = std.ArrayList(u16).init(globals.allocator);
     defer filter_tag_id_out.deinit();
 
-    for (args.excluded_tags.items) |tag_name| {
+    for (args.*.excluded_tags.items) |tag_name| {
         const fpt = try globals.dfr.getFixedPartTag(tag_name);
         try filter_tag_id_out.append(fpt.id);
     }
 
     // store the potential filters
-    filter_name = args.name;
-    filter_no_tags = args.no_tags;
-    filter_target_above = args.target_more;
-    filter_target_below = args.target_less;
-    if (args.target) |target| {
+    filter_name = args.*.name;
+    filter_no_tags = args.*.no_tags;
+    filter_target_above = args.*.target_more;
+    filter_target_below = args.*.target_less;
+    if (args.*.target) |target| {
         filter_include_no_target = if (target == 0) true else false;
     }
-    filter_remain_above = args.remain_more;
-    filter_remain_below = args.remain_less;
-    if (args.estimation) |estim| {
+    filter_remain_above = args.*.remain_more;
+    filter_remain_below = args.*.remain_less;
+    if (args.*.estimation) |estim| {
         filter_include_no_estimation = if (estim == 0) true else false;
     }
 
@@ -270,10 +270,10 @@ pub fn ongoingReport(args: ArgumentParser) !void {
 
     // compute the number of items to display
     var idx_end_slice = things_to_sort_slice.len;
-    if (args.limit == null and idx_end_slice > globals.default_report_limit) {
+    if (args.*.limit == null and idx_end_slice > globals.default_report_limit) {
         idx_end_slice = globals.default_report_limit;
-    } else if (args.limit != null and idx_end_slice > args.limit.? and args.limit.? != 0) {
-        idx_end_slice = args.limit.?;
+    } else if (args.*.limit != null and idx_end_slice > args.*.limit.? and args.*.limit.? != 0) {
+        idx_end_slice = args.*.limit.?;
     }
 
     try displayTableReport(things_to_sort_slice[0..idx_end_slice], things_to_sort_slice.len);
@@ -484,4 +484,12 @@ fn displayTableReport(things: []dt.ThingToSort, total_nbr_things: usize) !void {
         globals.allocator.free(to_display[i][4].content);
         globals.allocator.free(to_display[i]);
     }
+}
+
+/// Print out help for the ongoing command
+pub fn help() !void {
+    try std.io.getStdOut().writer().print(
+        \\TODO help for ongoing command
+        \\
+    , .{});
 }

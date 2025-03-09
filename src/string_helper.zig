@@ -27,6 +27,12 @@ pub fn fillStr(str: []u8, char: u8) void {
     }
 }
 
+/// Very basic check to know if a character is a letter or number
+/// TODO should be able to handle more than ascii chara
+pub fn isValidTagNameChar(c: u8) bool {
+    return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or (c == '_') or (c == '-');
+}
+
 /// Cut a string according to a given length so that it's split into
 /// lines no longer than the maximum length
 /// The length refers to a number of cells of the terminal
@@ -121,18 +127,6 @@ pub fn computeDisplayLength(str: []const u8) StringError!usize {
     }
 
     return disp_lgt;
-}
-
-/// Return true if the specified byte is the first of a UTF-8 encoded character
-pub fn isFirstByteOfUTF8(byte: u8) bool {
-    if ((byte & 0b10000000 == 0b00000000) or
-        (byte & 0b11100000 == 0b11000000) or
-        (byte & 0b11110000 == 0b11100000) or
-        (byte & 0b11111000 == 0b11110000))
-    {
-        return true;
-    }
-    return false;
 }
 
 /// Return the number of bytes of the UTF-8 encoded character from

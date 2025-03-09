@@ -65,7 +65,7 @@ pub fn addTagToList(data: []const u8) void {
 }
 
 /// Display a report of the tags in the data file
-pub fn tagsReport(args: ArgumentParser) !void {
+pub fn tagsReport(args: *ArgumentParser) !void {
     // TODO add filters for tags with flag -a and --exclude-tags
 
     // create a list of all the tags to display
@@ -96,10 +96,10 @@ pub fn tagsReport(args: ArgumentParser) !void {
 
     // compute the number of items to display
     var idx_end_slice = tags_to_sort_slice.len;
-    if (args.limit == null and idx_end_slice > globals.default_report_limit) {
+    if (args.*.limit == null and idx_end_slice > globals.default_report_limit) {
         idx_end_slice = globals.default_report_limit;
-    } else if (args.limit != null and idx_end_slice > args.limit.? and args.limit.? != 0) {
-        idx_end_slice = args.limit.?;
+    } else if (args.*.limit != null and idx_end_slice > args.*.limit.? and args.*.limit.? != 0) {
+        idx_end_slice = args.*.limit.?;
     }
 
     try displayTableReport(tags_to_sort_slice[0..idx_end_slice]);
@@ -180,4 +180,11 @@ fn displayTableReport(tags: []dt.TagToSort) !void {
         globals.allocator.free(to_display[i][2].content);
         globals.allocator.free(to_display[i]);
     }
+}
+
+/// Print out help for the tags command
+pub fn help() !void {
+    try std.io.getStdOut().writer().print(
+        \\TODO help for tags command
+    , .{});
 }
