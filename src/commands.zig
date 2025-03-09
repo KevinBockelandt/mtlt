@@ -512,22 +512,34 @@ pub fn toggleTagStatus(args: ArgumentParser) !void {
 pub fn toggleThingStatus(args: ArgumentParser) !void {
     const w = std.io.getStdOut().writer();
 
+    // get the current timer contained in the data file
+    const cur_timer = try globals.dfr.getCurrentTimer();
+
+    var id_thing: u19 = undefined;
+
+    // determine the id of the thing to toggle
     if (args.payload == null) {
-        _ = try w.write("Need to specify the id of the thing to toggle\n");
-        return;
+        // no argument and no previous current timer
+        if (cur_timer.id_thing == 0) {
+            _ = try w.write("Need to specify the id of the thing to toggle\n");
+            return;
+        } else {
+            id_thing = cur_timer.id_thing;
+        }
+    } else {
+        id_thing = try base62_helper.b62ToB10(args.payload.?);
     }
 
-    const id_thing = try base62_helper.b62ToB10(args.payload.?);
+    const str_id = base62_helper.b10ToB62(&buf_str_id, id_thing);
 
+    //  stop a potential current timer running associated to the thing to toggle
     if (globals.dfr.getFixedPartThing(id_thing)) |fpt| {
-        // if there is a current timer running associated to this thing, we stop it
-        const cur_timer = try globals.dfr.getCurrentTimer();
         if (fpt.status == @intFromEnum(dt.Status.ongoing) and cur_timer.id_thing == id_thing and cur_timer.start != 0) {
             try stop(args);
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
-            try displayThingNotFound(args.payload.?);
+            try displayThingNotFound(str_id);
             return err;
         } else {
             return err;
@@ -545,7 +557,7 @@ pub fn toggleThingStatus(args: ArgumentParser) !void {
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {
         const str_new_status: []const u8 = @tagName(new_status);
-        try w.print("{s}{s}{s} - {s}{s}{s} is now {s}{s}{s}\n", .{ ansi.colid, args.payload.?, ansi.colres, ansi.colemp, thing_data.name, ansi.colres, ansi.colemp, str_new_status, ansi.colres });
+        try w.print("{s}{s}{s} - {s}{s}{s} is now {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_data.name, ansi.colres, ansi.colemp, str_new_status, ansi.colres });
 
         // Display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
@@ -584,7 +596,7 @@ pub fn toggleThingStatus(args: ArgumentParser) !void {
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
-            try displayThingNotFound(args.payload.?);
+            try displayThingNotFound(str_id);
             return err;
         } else {
             return err;
