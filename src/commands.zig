@@ -235,28 +235,49 @@ pub fn displayCurrent() !void {
             globals.allocator.free(cur_thing.timers);
         }
 
-        var buf_id_thing: [4]u8 = undefined;
-        const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, cur_thing.id);
+        const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_thing.id);
 
-        try w.print("Current thing: {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_thing, ansi.colres, ansi.colemp, cur_thing.name, ansi.colres });
+        try w.print(" {s}thing{s} : {s}{s}{s} - {s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id_thing, ansi.colres, cur_thing.name });
+        try w.print("{s}status{s} : {s}\n", .{ ansi.colemp, ansi.colres, @tagName(cur_thing.status) });
 
-        if (cur_timer.start != 0) {
-            var buf_dur_id: [10]u8 = undefined;
-            var duration: u9 = 0;
-            const temp_dur: u25 = cur_time - cur_timer.start;
+        if (cur_thing.status == .ongoing) {
+            var buf_str: [128]u8 = undefined;
 
-            if (temp_dur > std.math.maxInt(u9)) {
-                std.debug.print("Error: the current timer has a duration of {d} minutes\n", .{temp_dur});
-            } else {
-                duration = @intCast(temp_dur);
-                try w.print("Timer started {s}{s}{s} ago.\n", .{
-                    ansi.coldurntr,
-                    try time_helper.formatDurationNoSign(&buf_dur_id, duration),
-                    ansi.colres,
-                });
+            // display infos on the target if there is one
+            if (cur_thing.target != 0) {
+                const target_offset = @as(i64, cur_thing.target) - @as(i64, cur_time);
+                const str_target_offset = try time_helper.formatDuration(&buf_str, target_offset);
+                try w.print("{s}target{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.getDurCol(target_offset), str_target_offset, ansi.colres });
             }
-        } else {
-            try w.print("No current timer.\n", .{});
+
+            // display infos on the time left if there is an estimation
+            if (cur_thing.estimation != 0) {
+                const time_left = try time_helper.computeTimeLeft(cur_thing);
+                const str_time_left = try time_helper.formatDuration(&buf_str, time_left);
+                try w.print("  {s}left{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.getDurCol(time_left), str_time_left, ansi.colres });
+            }
+
+            // display infos on the current timer if there is one
+            if (cur_timer.start != 0) {
+                var buf_dur_id: [10]u8 = undefined;
+                var duration: u9 = 0;
+                const temp_dur: u25 = cur_time - cur_timer.start;
+
+                if (temp_dur > std.math.maxInt(u9)) {
+                    std.debug.print("Error: the current timer has a duration of {d} minutes\n", .{temp_dur});
+                } else {
+                    duration = @intCast(temp_dur);
+                    try w.print(" {s}timer{s} : started {s}{s}{s} ago\n", .{
+                        ansi.colemp,
+                        ansi.colres,
+                        ansi.coldurntr,
+                        try time_helper.formatDurationNoSign(&buf_dur_id, duration),
+                        ansi.colres,
+                    });
+                }
+            } else {
+                try w.print(" {s}timer{s} : no current timer\n", .{ ansi.colemp, ansi.colres });
+            }
         }
     } else {
         try w.print("There is no current thing.\n", .{});

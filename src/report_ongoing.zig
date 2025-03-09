@@ -203,7 +203,7 @@ fn computeSortingCoef(fpt: dt.FixedPartThing, thing: dt.Thing) u64 {
     const max16 = std.math.maxInt(u16);
 
     if (fpt.estimation != 0) {
-        if (computeTimeLeft(thing)) |tl| {
+        if (time_helper.computeTimeLeft(thing)) |tl| {
             if (tl > 0 and tl < max16) {
                 total_score += max16 - @as(u16, @intCast(tl));
             } else if (tl < 0) {
@@ -285,23 +285,6 @@ pub fn ongoingReport(args: ArgumentParser) !void {
     }
 }
 
-/// Compute the remaining time for a particular thing
-fn computeTimeLeft(thing: dt.Thing) !i64 {
-    var time_spent_already: u32 = 0;
-    for (thing.timers) |timer| {
-        time_spent_already += timer.duration;
-    }
-
-    // check there is not a current timer for this thing
-    const cur_timer = try globals.dfr.getCurrentTimer();
-    if (cur_timer.id_thing == thing.id and cur_timer.start != 0) {
-        const dur_cur_timer = time_helper.curTimestamp() - cur_timer.start;
-        time_spent_already += dur_cur_timer;
-    }
-
-    return @as(i64, thing.estimation) - @as(i64, time_spent_already);
-}
-
 /// Setup the table printer to display the data to the user
 fn displayTableReport(things: []dt.ThingToSort, total_nbr_things: usize) !void {
     const num_cols: u8 = 5;
@@ -372,7 +355,7 @@ fn displayTableReport(things: []dt.ThingToSort, total_nbr_things: usize) !void {
 
         // create string for the time left
         if (thing.estimation > 0) {
-            const time_left = try computeTimeLeft(thing);
+            const time_left = try time_helper.computeTimeLeft(thing);
             total_time_left += time_left;
             const str_estimation_offset = try time_helper.formatDuration(&buf_str, time_left);
 

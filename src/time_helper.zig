@@ -1,5 +1,6 @@
 const std = @import("std");
 const globals = @import("globals.zig");
+const dt = @import("data_types.zig");
 
 // ALL timestamps that are used in the application are starting on January first 2020.
 // This is used to push back the issue with year 2038 when you store timestamps on 32 bits
@@ -85,6 +86,23 @@ pub fn parseDuration(dur: []const u8, max: type) !u32 {
     }
 
     return total_min;
+}
+
+/// Compute the remaining time for a particular thing
+pub fn computeTimeLeft(thing: dt.Thing) !i64 {
+    var time_spent_already: u32 = 0;
+    for (thing.timers) |timer| {
+        time_spent_already += timer.duration;
+    }
+
+    // check there is not a current timer for this thing
+    const cur_timer = try globals.dfr.getCurrentTimer();
+    if (cur_timer.id_thing == thing.id and cur_timer.start != 0) {
+        const dur_cur_timer = curTimestamp() - cur_timer.start;
+        time_spent_already += dur_cur_timer;
+    }
+
+    return @as(i64, thing.estimation) - @as(i64, time_spent_already);
 }
 
 test "formatDuration - 0h0m" {
