@@ -125,6 +125,8 @@ pub fn cmd(args: *ArgumentParser) !void {
         try help_delete_tag();
     } else if (std.mem.eql(u8, args.*.payload.?, "delete-timer")) {
         try help_delete_timer();
+    } else if (std.mem.eql(u8, args.*.payload.?, "help")) {
+        try main_help();
     } else if (std.mem.eql(u8, args.*.payload.?, "infos")) {
         try help_infos();
     } else if (std.mem.eql(u8, args.*.payload.?, "intro")) {
@@ -148,6 +150,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     } else if (std.mem.eql(u8, args.*.payload.?, "update-timer")) {
         try help_update_timer();
     } else {
-        _ = try w.write("TODO Unknown help topic\n");
+        _ = try w.write("Error: unknown help topic\n\n");
+        try main_help();
     }
 }

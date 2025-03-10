@@ -62,5 +62,22 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the delete timer command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help delete timer\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt delete-timer <timer_id>{s}
+        \\
+        \\Deletes a timer permanently from the data file.
+        \\
+        \\You can see the list of timers related to a thing with the {s}infos{s}
+        \\command.
+        \\
+        \\Examples:
+        \\  {s}mtlt delete-timer{s}
+        \\  {s}mtlt delete-timer 3d-2{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }

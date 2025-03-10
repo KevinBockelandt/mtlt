@@ -32,7 +32,7 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt delete-tag <tag_name>{s}
         \\
-        \\Deletes a tag permanently from the date file.
+        \\Deletes a tag permanently from the data file.
         \\
         \\Examples:
         \\  {s}mtlt delete-tag theTag{s}
