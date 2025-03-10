@@ -6,6 +6,7 @@ const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -39,7 +40,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         .tags = args.*.tags,
     }, &created_tags)) |_| {} else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try w.print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, args.*.payload.?, ansi.colres }),
+            DataParsingError.ThingNotFound => try user_feedback.errorThingNotFound(args.*.payload.?),
             else => std.debug.print("ERROR: {}\n", .{err}),
         }
     }
@@ -53,7 +54,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     try w.print("Updated thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, id_str, ansi.colres, ansi.colemp, thing_name, ansi.colres });
 
     for (created_tags.items) |ct| {
-        try w.print("Added tag {s}{s}{s}\n", .{ ansi.colemp, ct.name, ansi.colres });
+        try user_feedback.createdTag(ct.name);
     }
 
     // if wanted and possible, start the current timer on the updated thing right away

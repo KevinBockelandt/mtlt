@@ -2,6 +2,7 @@ const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
 const globals = @import("globals.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataOperationError = @import("data_file_writer.zig").DataOperationError;
@@ -28,7 +29,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         try w.print("Tag {s}{s}{s} is now nammed {s}{s}{s}\n", .{ ansi.colemp, args.*.payload.?, ansi.colres, ansi.colemp, args.*.name.?, ansi.colres });
     } else |err| {
         switch (err) {
-            DataParsingError.TagNotFound => try w.print("Error: no tag with name {s}{s}{s} found\n", .{ ansi.colemp, args.*.payload.?, ansi.colres }),
+            DataParsingError.TagNotFound => try user_feedback.errorTagNotFound(args.*.payload.?),
             DataOperationError.NameTooLong => try w.print("Error: the new name is too long {s}{s}{s}\n", .{ ansi.colemp, args.*.name.?, ansi.colres }),
             DataOperationError.TagWithThisNameAlreadyExisting => try w.print("Error: a tag with the name {s}{s}{s} already exists\n", .{ ansi.colemp, args.*.name.?, ansi.colres }),
             else => return err,

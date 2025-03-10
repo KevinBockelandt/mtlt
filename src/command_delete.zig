@@ -3,6 +3,7 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -53,7 +54,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres });
     } else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try std.io.getStdOut().writer().print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, args.*.payload.?, ansi.colres }),
+            DataParsingError.ThingNotFound => try user_feedback.errorThingNotFound(args.*.payload.?),
             else => return err,
         }
     }

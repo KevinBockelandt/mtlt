@@ -6,6 +6,7 @@ const command_stop = @import("command_stop.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -44,7 +45,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
-            try w.print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, str_id, ansi.colres });
+            try user_feedback.errorThingNotFoundNum(id_thing);
             return err;
         } else {
             return err;

@@ -5,6 +5,7 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const string_helper = @import("string_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataOperationError = @import("data_file_writer.zig").DataOperationError;
@@ -34,7 +35,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     if (globals.dfw.addTagToFile(args.*.payload.?)) |new_tag_id| {
         _ = new_tag_id;
-        try w.print("The tag {s}{s}{s} was created\n", .{ ansi.colemp, args.*.payload.?, ansi.colres });
+        try user_feedback.createdTag(args.*.payload.?);
     } else |err| {
         if (err == DataOperationError.NameTooLong) {
             try w.print("The name {s}\"{s}\"{s} is too long\n", .{ ansi.colemp, args.*.payload.?, ansi.colres });

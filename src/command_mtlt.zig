@@ -7,6 +7,7 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -41,7 +42,7 @@ fn displayCurTimerInfos(start: u25) !void {
         const temp_dur: u25 = time_helper.curTimestamp() - start;
 
         if (temp_dur > std.math.maxInt(u9)) {
-            std.debug.print("Error: the current timer has a duration of {d} minutes\n", .{temp_dur});
+            user_feedback.errorTimerDurationTooGreat(temp_dur);
         } else {
             const str_duration = try time_helper.formatDurationNoSign(&buf_dur_id, @as(u9, @intCast(temp_dur)));
 

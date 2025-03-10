@@ -6,6 +6,7 @@ const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -42,7 +43,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     for (infos_creation.created_tags.items) |tag| {
-        try w.print("Created the tag {s}{s}{s}\n", .{ ansi.colemp, tag, ansi.colres });
+        try user_feedback.createdTag(tag);
     }
 
     // if wanted, start the current timer on the created thing right away
