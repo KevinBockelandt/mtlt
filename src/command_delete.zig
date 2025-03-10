@@ -61,5 +61,22 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the delete command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help delete\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt delete [thing_id]{s}
+        \\
+        \\Deletes a thing permanently from the data file.
+        \\
+        \\If no ID is provided, it deletes the current thing. You can see what
+        \\the current thing is by using {s}mtlt{s} without any sub-command.
+        \\
+        \\Examples:
+        \\  {s}mtlt delete{s}
+        \\  {s}mtlt delete 8I{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
