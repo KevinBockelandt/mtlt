@@ -247,6 +247,19 @@ fn displayTableReport(thing: dt.Thing) !void {
 /// Print out help for the infos command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\TODO help for infos command
-    , .{});
+        \\Usage: {s}mtlt infos [thing_id]{s}
+        \\
+        \\Displays all informations related to the specified thing.
+        \\
+        \\If no ID is provided, this command will act on the current thing.
+        \\
+        \\Examples:
+        \\  {s}mtlt infos{s}
+        \\  {s}mtlt infos b5{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
