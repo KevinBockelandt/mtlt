@@ -22,5 +22,16 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the toggle-tag command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help toggle-tag\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt toggle-tag <tag_name>{s}
+        \\
+        \\Toggle the status of a tag between open and closed.
+        \\
+        \\Examples:
+        \\  {s}mtlt toggle-tag theTag{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }

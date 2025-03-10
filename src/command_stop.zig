@@ -50,7 +50,7 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt stop{s}
         \\
-        \\Stops the current timer
+        \\Stop the current timer.
         \\
     , .{
         ansi.colemp, ansi.colres,

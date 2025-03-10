@@ -51,10 +51,10 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt add-tag <tag_name>{s}
         \\
-        \\Creates a new tag
+        \\Create a new tag.
         \\
         \\The tag name can only contain ASCII letters, numbers and the '_' or '-'
-        \\characters
+        \\characters.
         \\
         \\Examples:
         \\  {s}mtlt add-tag "myCoolTag"{s}
