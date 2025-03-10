@@ -47,5 +47,12 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the stop command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help stop\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt stop{s}
+        \\
+        \\Stops the current timer
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+    });
 }
