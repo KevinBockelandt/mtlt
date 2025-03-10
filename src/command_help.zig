@@ -115,15 +115,15 @@ pub fn cmd(args: *ArgumentParser) !void {
         try help_add_tag();
     } else if (std.mem.eql(u8, args.*.payload.?, "add-timer")) {
         try help_add_timer();
-    } else if (std.mem.eql(u8, args.*.payload.?, "add_timer")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "add-timer")) {
         try help_add_timer();
     } else if (std.mem.eql(u8, args.*.payload.?, "closed")) {
         try help_closed();
     } else if (std.mem.eql(u8, args.*.payload.?, "delete")) {
         try help_delete();
-    } else if (std.mem.eql(u8, args.*.payload.?, "delete_tag")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "delete-tag")) {
         try help_delete_tag();
-    } else if (std.mem.eql(u8, args.*.payload.?, "delete_timer")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "delete-timer")) {
         try help_delete_timer();
     } else if (std.mem.eql(u8, args.*.payload.?, "infos")) {
         try help_infos();
@@ -139,13 +139,13 @@ pub fn cmd(args: *ArgumentParser) !void {
         try help_tags();
     } else if (std.mem.eql(u8, args.*.payload.?, "toggle")) {
         try help_toggle();
-    } else if (std.mem.eql(u8, args.*.payload.?, "toggle_tag")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "toggle-tag")) {
         try help_toggle_tag();
     } else if (std.mem.eql(u8, args.*.payload.?, "update")) {
         try help_update();
-    } else if (std.mem.eql(u8, args.*.payload.?, "update_tag")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "update-tag")) {
         try help_update_tag();
-    } else if (std.mem.eql(u8, args.*.payload.?, "update_timer")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "update-timer")) {
         try help_update_timer();
     } else {
         _ = try w.write("TODO Unknown help topic\n");

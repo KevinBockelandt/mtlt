@@ -48,9 +48,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Display help text for this command
 pub fn help() !void {
-    const w = std.io.getStdOut().writer();
-
-    try w.print(
+    try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt add-tag <tag_name>{s}
         \\
         \\Creates a new tag

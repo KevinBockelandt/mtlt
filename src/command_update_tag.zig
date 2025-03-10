@@ -38,5 +38,26 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the update-tag command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help update-tag\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt update-tag <old_name> -n <new_name>{s}
+        \\
+        \\Updates the name of a tag
+        \\
+        \\The tag names can only contain ASCII letters, numbers and the '_' or '-'
+        \\characters
+        \\
+        \\Options:
+        \\  {s}-n{s}, {s}--name{s}            New name of the tag
+        \\
+        \\Examples:
+        \\  {s}mtlt update-tag old_name -n new_name{s}
+        \\  {s}mtlt update-tag withTypo -n withoutTypo{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
