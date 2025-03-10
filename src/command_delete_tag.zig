@@ -29,5 +29,16 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the delete tag command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help delete tag\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt delete-tag <tag_name>{s}
+        \\
+        \\Deletes a tag permanently from the date file.
+        \\
+        \\Examples:
+        \\  {s}mtlt delete-tag theTag{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }

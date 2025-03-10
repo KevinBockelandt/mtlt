@@ -25,7 +25,7 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt toggle-tag <tag_name>{s}
         \\
-        \\Toggle the status of a tag between open and closed.
+        \\Toggles the status of a tag between open and closed.
         \\
         \\Examples:
         \\  {s}mtlt toggle-tag theTag{s}
