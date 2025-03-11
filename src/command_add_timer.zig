@@ -49,5 +49,43 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the add-timer command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help add-timer\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt add-timer [thing_id]{s}
+        \\
+        \\Adds a new timer for the given thing.
+        \\
+        \\If no ID is provided, it adds a timer to the current thing. You can see what
+        \\the current thing is by using {s}mtlt{s} without any sub-command.
+        \\
+        \\Options:
+        \\  {s}-sl{s}, {s}--start-less{s}     Amount of time to remove from now to get start time
+        \\  {s}-sm{s}, {s}--start-more{s}     Amount of time to add to now to get start time
+        \\  {s}-d{s},  {s}--duration{s}       Duration of the timer to add
+        \\
+        \\Examples:
+        \\  {s}mtlt add-timer -sl 10 -d 10{s}
+        \\      Add a timer to the current thing which started 10 minutes ago and
+        \\      lasted 10 minutes.
+        \\
+        \\  {s}mtlt add-timer 3b -d 1:10{s}
+        \\      Add a timer to the thing with ID 3b which started just now and lasts
+        \\      1 hour 10 minutes.
+        \\
+        \\  {s}mtlt add-timer F4 -sm 5 -d 15{s}
+        \\      Add a timer to the thing with id F4 which will start in 5 minutes and
+        \\      last 15 minutes.
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
