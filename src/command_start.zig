@@ -97,5 +97,24 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
 
 /// Print out help for the start command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help start\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt start [thing_id]{s}
+        \\
+        \\Starts a timer on the specified thing.
+        \\
+        \\If no ID is provided, it starts a timer on the current thing. You can see
+        \\what the current thing is by using {s}mtlt{s} without any sub-command.
+        \\
+        \\If a timer is already running, it will be stopped before the new one starts.
+        \\
+        \\Examples:
+        \\  {s}mtlt start{s}
+        \\  {s}mtlt start 8I{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
