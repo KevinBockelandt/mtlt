@@ -185,6 +185,28 @@ fn displayTableReport(tags: []dt.TagToSort) !void {
 /// Print out help for the tags command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\TODO help for tags command
-    , .{});
+        \\Usage: {s}mtlt tags{s}
+        \\
+        \\Displays a list of all tags present in the data file. By default,
+        \\closed tags are not included.
+        \\
+        \\Options:
+        \\  {s}-l{s}, {s}--limit{s}           How many tags to display at most
+        \\                        (0 means no limit)
+        \\      {s}--include-closed{s}  Should include closed tags
+        \\
+        \\Examples:
+        \\  {s}mtlt tags{s}
+        \\  {s}mtlt tags -l 0 --include-closed{s}
+        \\  {s}mtlt tags -l 20{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }

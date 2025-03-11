@@ -36,7 +36,7 @@ toggle       | -dl, -dm, -s
 toggle-tag   |
 start        |
 stop         | -dl, -dm
-tags         | -n, -l
+tags         | -l, --include-closed
 timers       | -a, --exclude-tags, -sl, -sm, -l, --no-tags
 infos        |
 closed       | -a, --exclude-tags, -n, -l, --no-tags
@@ -51,6 +51,7 @@ Short | Long               | Description                                 | Used 
       | --divisions        | number of divisions to use in report        | stats
       | --end-less         | offset between now and end time for report  | stats
       | --exclude-tags     | list of tags to exclude                     | timers, closed, ongoing, stats
+      | --include-closed   | include closed elements in result           | tags
       | --no-tags          | filter out things that have associated tags | timers, closed, ongoing, stats
 -a    | --tags             | list of tags to include                     | add, update, timers, closed, ongoing, stats
 -d    | --duration         | duration for a timer                        | add-timer
