@@ -113,5 +113,36 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Print out help for the update-timer command
 pub fn help() !void {
-    try std.io.getStdOut().writer().print("TODO help update-timer\n", .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt update-timer [timer_id]{s}
+        \\
+        \\Updates the given timer.
+        \\
+        \\If no ID is provided, it updates the last previous timer. You can see what
+        \\the last previous timer is by using {s}mtlt{s} without any sub-command.
+        \\
+        \\Options:
+        \\  {s}-sl{s}, {s}--start-less{s}            Amount of time to retrieve from start time
+        \\  {s}-sm{s}, {s}--start-more{s}            Amount of time to add to start time
+        \\  {s}-dl{s}, {s}--duration-less{s}         Amount of time to retrieve from duration
+        \\  {s}-dm{s}, {s}--duration-more{s}         Amount of time to add to duration
+        \\
+        \\Examples:
+        \\  {s}mtlt update-timer -sl 10 -dm 10{s}
+        \\  {s}mtlt update-timer 3b-4 -dl 1:05{s}
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }

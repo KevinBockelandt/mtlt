@@ -100,7 +100,7 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt start [thing_id]{s}
         \\
-        \\Starts a timer on the specified thing.
+        \\Starts a timer on the given thing.
         \\
         \\If no ID is provided, it starts a timer on the current thing. You can see
         \\what the current thing is by using {s}mtlt{s} without any sub-command.
