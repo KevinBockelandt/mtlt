@@ -251,13 +251,18 @@ pub fn help() !void {
         \\
         \\Displays all informations related to the specified thing.
         \\
-        \\If no ID is provided, this command will act on the current thing.
+        \\If no ID is provided, this command will act on the current thing. You can
+        \\see what the current thing is by using {s}mtlt{s} without any sub-command.
         \\
         \\Examples:
         \\  {s}mtlt infos{s}
+        \\      Display infos about the current thing.
+        \\
         \\  {s}mtlt infos b5{s}
+        \\      Display infos about the thing with id 'b5'.
         \\
     , .{
+        ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,

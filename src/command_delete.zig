@@ -71,7 +71,10 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt delete{s}
+        \\      Delete the current thing.
+        \\
         \\  {s}mtlt delete 8I{s}
+        \\      Delete the thing with id '8I'.
         \\
     , .{
         ansi.colemp, ansi.colres,

@@ -36,6 +36,7 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt delete-tag theTag{s}
+        \\      Delete the tag called 'theTag'.
         \\
     , .{
         ansi.colemp, ansi.colres,

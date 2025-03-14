@@ -29,6 +29,7 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt toggle-tag theTag{s}
+        \\      Toggle status of the tag called 'theTag'.
         \\
     , .{
         ansi.colemp, ansi.colres,

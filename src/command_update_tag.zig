@@ -51,7 +51,10 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt update-tag old_name -n new_name{s}
+        \\      Update the tag called 'old_name' to change it to 'new_name'.
+        \\
         \\  {s}mtlt update-tag withTypo -n withoutTypo{s}
+        \\      Update the tag called 'withTypo' to change it to 'withoutTypo'.
         \\
     , .{
         ansi.colemp, ansi.colres,

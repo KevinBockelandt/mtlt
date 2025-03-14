@@ -58,8 +58,13 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt add-tag "myCoolTag"{s}
+        \\      Create a new tag called 'myCoolTag'.
+        \\
         \\  {s}mtlt add-tag "1-also-good"{s}
+        \\      Create a new tag called '1-also-good'.
+        \\
         \\  {s}mtlt add-tag "_it_works"{s}
+        \\      Create a new tag called '_it_works'.
         \\
     , .{
         ansi.colemp, ansi.colres,

@@ -67,14 +67,21 @@ pub fn help() !void {
         \\
         \\Deletes a timer permanently from the data file.
         \\
+        \\If no ID is provided, it updates the last previous timer. You can see what
+        \\the last previous timer is by using {s}mtlt{s} without any sub-command.
+        \\
         \\You can see the list of timers related to a thing with the {s}infos{s}
         \\command.
         \\
         \\Examples:
         \\  {s}mtlt delete-timer{s}
+        \\      Delete the last previous timer.
+        \\
         \\  {s}mtlt delete-timer 3d-2{s}
+        \\      Delete the timer with id '3d-2'.
         \\
     , .{
+        ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,

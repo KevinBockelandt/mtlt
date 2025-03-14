@@ -197,8 +197,13 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt tags{s}
+        \\      Display the list of open tags with the default limit.
+        \\
         \\  {s}mtlt tags -l 0 --include-closed{s}
+        \\      Display open and closed tags without any number limit.
+        \\
         \\  {s}mtlt tags -l 20{s}
+        \\      Display the 20 first open tags.
         \\
     , .{
         ansi.colemp, ansi.colres,

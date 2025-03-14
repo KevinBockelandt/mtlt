@@ -109,7 +109,10 @@ pub fn help() !void {
         \\
         \\Examples:
         \\  {s}mtlt start{s}
+        \\      Starts a timer on the current thing.
+        \\
         \\  {s}mtlt start 8I{s}
+        \\      Starts a timer on the thing with id '8I'.
         \\
     , .{
         ansi.colemp, ansi.colres,
