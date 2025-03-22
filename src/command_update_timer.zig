@@ -4,12 +4,12 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 /// Update a timer
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
     var buf_str_id: [4]u8 = undefined;
 
     try args.*.checkOnlyOneTypeDurationArg();
@@ -29,21 +29,21 @@ pub fn cmd(args: *ArgumentParser) !void {
                 .start_off = if (args.*.start_less == null) args.*.start_more else args.*.start_less,
                 .add_start_off = args.*.start_less == null,
             }, cur_timer.id_thing)) |_| {
-                var buf_id_timer: [4]u8 = undefined;
-                const str_id_timer = try std.fmt.bufPrint(&buf_id_timer, "{d}", .{cur_timer.id_last_timer});
                 const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try w.print("Updated timer {s}{s}-{s}{s}. TODO new start and duration\n", .{ ansi.colid, str_id_thing, str_id_timer, ansi.colres });
+                try user_feedback.updatedTimer(str_id_thing, cur_timer.id_last_timer);
+
+                // TODO pass the new start offset
+                try user_feedback.reportStarted(0);
+                // TODO pass the new duration
+                try user_feedback.reportDuration(0);
                 return;
             } else |err| {
-                try w.print("Error: when trying to update a timer - {}\n", .{err});
+                try user_feedback.errUnexpectedUpdateTimer(err);
                 return err;
             }
         }
 
-        // if we reach this point, there was no argument with the command but
-        // there is no operation that we can perform
-        _ = try w.write("There is no immediate last timer to update and we could not parse a specific timer id\n");
-        try w.print("Those should have the format {s}<id thing>-<id timer>{s}. For example: {s}b-2{s}\n", .{ ansi.colid, ansi.colres, ansi.colid, ansi.colres });
+        try user_feedback.noLastTimerToWorkOn();
         return;
     }
 
@@ -53,11 +53,11 @@ pub fn cmd(args: *ArgumentParser) !void {
     const str_id_timer = arg_it.rest();
 
     const id_thing = base62_helper.b62ToB10(str_id_thing) catch |err| {
-        std.debug.print("Error: impossible to parse the ID of the thing: {}\n", .{err});
+        try user_feedback.errUnexpectedTimerIdParsing(err);
         return;
     };
     const id_timer = std.fmt.parseInt(u11, str_id_timer, 10) catch |err| {
-        std.debug.print("Error: impossible to parse the ID of the timer: {}\n", .{err});
+        try user_feedback.errUnexpectedTimerIdParsing(err);
         return;
     };
 
@@ -86,9 +86,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     if (args.*.duration == null and duration_off == null and start_off == null) {
-        _ = try w.write("Nothing to update on the timer");
-        _ = try w.write("You can specify a duration (with -d), a duration offset (with -dm or -dl) or start time offset (with -sm or -sl)");
-        _ = try w.write("Ex: '-dm :20' to add 20 minutes to the duration. Or '-sl 1:34' to subtract 1 hour 34 minutes from current start time");
+        try user_feedback.nothingToUpdateTimer();
     }
 
     const update_data = dt.TimerToUpdate{
@@ -108,7 +106,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     defer globals.allocator.free(name_thing);
     _ = try globals.data_file.readAll(name_thing);
 
-    try w.print("Updated timer {s}{s}{s} of {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_timer, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, name_thing, ansi.colres });
+    try user_feedback.updatedTimer(str_id_thing, id_timer);
 }
 
 /// Print out help for the update-timer command

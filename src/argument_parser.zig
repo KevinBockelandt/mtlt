@@ -7,6 +7,7 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const little_end = std.builtin.Endian.little;
 const colemp = ansi.col_emphasis;
@@ -99,14 +100,11 @@ fn displayDurationError(dur: []const u8, err: anyerror) !void {
     const w = std.io.getStdOut().writer();
 
     switch (err) {
-        time_helper.TimeError.EmptyDuration => _ = try w.write("Error: the duration is empty\n"),
-        time_helper.TimeError.InvalidDurationString => try w.print("Error: the duration string \"{s}\" is invalid\n", .{dur}),
-        time_helper.TimeError.DurationTooGreat => try w.print("Error: the duration \"{s}\" is too big\n", .{dur}),
-        std.fmt.ParseIntError.Overflow => try w.print("Error: the duration string \"{s}\" contains a number that is too big\n", .{dur}),
-        else => {
-            try w.print("Unexpected error while parsing the duration {s}\n", .{dur});
-            try w.print("{}", .{err});
-        },
+        time_helper.TimeError.EmptyDuration => try user_feedback.errDurationMissing(),
+        time_helper.TimeError.InvalidDurationString => try user_feedback.errInvalidDurationString(dur),
+        time_helper.TimeError.DurationTooGreat => try user_feedback.errDurationTooGreat(dur),
+        std.fmt.ParseIntError.Overflow => try w.print("Error: the duration string \"{s}\" contains a number that is too big. TODO see that\n", .{dur}),
+        else => try user_feedback.errUnexpectedParsingDuration(dur, err),
     }
 
     return ArgumentParsingError.CannotParseDuration;
@@ -245,7 +243,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_tags;
             self.tags_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-a\" or \"--tags\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-a", "--tags");
             return ArgumentParsingError.TagsAlreadyParsed;
         }
     }
@@ -256,7 +254,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_exclude_tags;
             self.excluded_tags_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"--exclude-tags\" flag\n");
+            try user_feedback.errMultipleFlagsLong("--exclude-tags");
             return ArgumentParsingError.ExcludeTagsAlreadyParsed;
         }
     }
@@ -267,7 +265,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_divisions;
             self.divisions_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"--divisions\" flag\n");
+            try user_feedback.errMultipleFlagsLong("--divisions");
             return ArgumentParsingError.DivisionsAlreadyParsed;
         }
     }
@@ -278,7 +276,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_estimation;
             self.estimation_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-e\" or \"--estimation\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-e", "--estimation");
             return ArgumentParsingError.EstimationAlreadyParsed;
         }
     }
@@ -289,7 +287,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_remain_less;
             self.remain_less_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-ea\" or \"--remain-less\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-rl", "--remain-less");
             return ArgumentParsingError.RemainLessAlreadyParsed;
         }
     }
@@ -300,7 +298,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_remain_more;
             self.remain_more_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-ea\" or \"--remain-more\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-rm", "--remain-more");
             return ArgumentParsingError.RemainMoreAlreadyParsed;
         }
     }
@@ -311,7 +309,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_target;
             self.target_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-t\" or \"--target\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-t", "--target");
             return ArgumentParsingError.TargetAlreadyParsed;
         }
     }
@@ -322,7 +320,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_target_more;
             self.target_more_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-ta\" or \"--target-more\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-tm", "--target-more");
             return ArgumentParsingError.TargetMoreAlreadyParsed;
         }
     }
@@ -333,7 +331,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_target_less;
             self.target_less_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-ta\" or \"--target-less\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-tl", "--target-less");
             return ArgumentParsingError.TargetLessAlreadyParsed;
         }
     }
@@ -344,7 +342,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_start_more;
             self.start_more_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-sm\" or \"--start-more\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-sm", "--start-more");
             return ArgumentParsingError.StartMoreAlreadyParsed;
         }
     }
@@ -355,7 +353,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_start_less;
             self.start_less_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-sl\" or \"--start-less\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-sl", "--start-less");
             return ArgumentParsingError.StartLessAlreadyParsed;
         }
     }
@@ -366,7 +364,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_duration;
             self.duration_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-d\" or \"--duration\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-d", "--duration");
             return ArgumentParsingError.DurationAlreadyParsed;
         }
     }
@@ -377,7 +375,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_duration_more;
             self.duration_more_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-dm\" or \"--duration-more\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-dm", "--duration-more");
             return ArgumentParsingError.DurationMoreAlreadyParsed;
         }
     }
@@ -388,7 +386,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_duration_less;
             self.duration_less_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-dl\" or \"--duration-less\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-dl", "--duration-less");
             return ArgumentParsingError.DurationLessAlreadyParsed;
         }
     }
@@ -399,7 +397,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_end_less;
             self.end_less_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"--end-less\" flag\n");
+            try user_feedback.errMultipleFlagsLong("--end-less");
             return ArgumentParsingError.EndLessAlreadyParsed;
         }
     }
@@ -410,7 +408,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_limit;
             self.limit_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-l\" or \"--limit\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-l", "--limit");
             return ArgumentParsingError.LimitAlreadyParsed;
         }
     }
@@ -421,7 +419,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_name;
             self.name_flag_already_parsed = true;
         } else {
-            _ = try std.io.getStdOut().writer().write("Error: there can be only one \"-n\" or \"--name\" flag\n");
+            try user_feedback.errMultipleFlagsShortLong("-n", "--name");
             return ArgumentParsingError.NameAlreadyParsed;
         }
     }
@@ -429,7 +427,7 @@ pub const ArgumentParser = struct {
     /// Called when encountering an unexpected argument
     fn unexpectedArgument(self: *ArgumentParser, arg: []const u8) !void {
         _ = self;
-        try std.io.getStdOut().writer().print("Error: unexpected argument: {s}\n", .{arg});
+        try user_feedback.errUnexpectedArgument(arg);
         return ArgumentParsingError.UnexpectedArgument;
     }
 
@@ -471,15 +469,13 @@ pub const ArgumentParser = struct {
 
     /// Parse the list of arguments to check validity and extract relevant infos
     pub fn parse(self: *ArgumentParser, args: [][:0]u8) !void {
-        const w = std.io.getStdOut().writer();
-
         for (args[0..]) |arg| {
             const cur_arg_type = getArgType(arg);
 
             // those argument types are handled independently of the current state of the parser
             switch (cur_arg_type) {
                 ArgType.unknown_flag => {
-                    try w.print("Error: unknown flag: {s}\n", .{arg});
+                    try user_feedback.errUnexpectedFlag(arg);
                     return ArgumentParsingError.UnknownFlag;
                 },
                 ArgType.start => {
@@ -502,7 +498,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_divisions => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.divisions_already_parsed) {
-                            try w.print("Error: division number already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errDivisionInvalidCharacter();
                             return ArgumentParsingError.DivisionsAlreadyParsed;
                         } else if (std.fmt.parseInt(u8, arg, 10)) |parsed_divisions| {
                             self.divisions = @intCast(parsed_divisions);
@@ -510,8 +506,8 @@ pub const ArgumentParser = struct {
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             switch (err) {
-                                std.fmt.ParseIntError.InvalidCharacter => try w.print("Error: division number contains invalid characters\n", .{}),
-                                std.fmt.ParseIntError.Overflow => try w.print("Error: division number too big. Maximum is: {d}\n", .{std.math.maxInt(u8)}),
+                                std.fmt.ParseIntError.InvalidCharacter => try user_feedback.errDivisionInvalidCharacter(),
+                                std.fmt.ParseIntError.Overflow => try user_feedback.errDivisionNumberTooBig(),
                             }
                             return err;
                         }
@@ -520,7 +516,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_duration => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.duration_already_parsed) {
-                            _ = try w.print("Error: duration already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Duration", arg);
                             return ArgumentParsingError.DurationAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
                             self.duration = @intCast(parsed_duration);
@@ -534,7 +530,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_duration_more => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.duration_more_already_parsed) {
-                            _ = try w.print("Error: duration more already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Duration more", arg);
                             return ArgumentParsingError.DurationMoreAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
                             self.duration_more = @intCast(parsed_duration);
@@ -548,7 +544,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_duration_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.duration_less_already_parsed) {
-                            _ = try w.print("Error: duration less already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Duration less", arg);
                             return ArgumentParsingError.DurationLessAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
                             self.duration_less = @intCast(parsed_duration);
@@ -562,7 +558,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_end_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.end_less_already_parsed) {
-                            _ = try w.print("Error: end less already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("End less", arg);
                             return ArgumentParsingError.EndLessAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_end| {
                             self.end_less = @intCast(parsed_end);
@@ -576,7 +572,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_estimation => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.estimation_already_parsed) {
-                            _ = try w.print("Error: estimation already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Estimation", arg);
                             return ArgumentParsingError.EstimationAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u16)) |parsed_estimation| {
                             self.estimation = @intCast(parsed_estimation);
@@ -590,7 +586,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_remain_more => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.remain_more_already_parsed) {
-                            _ = try w.print("Error: remain more already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Remain more", arg);
                             return ArgumentParsingError.RemainMoreAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u16)) |parsed_remain| {
                             self.remain_more = @intCast(parsed_remain);
@@ -604,7 +600,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_remain_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.remain_less_already_parsed) {
-                            _ = try w.print("Error: remain less already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Remain less", arg);
                             return ArgumentParsingError.RemainLessAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u16)) |parsed_remain| {
                             self.remain_less = @intCast(parsed_remain);
@@ -623,7 +619,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_limit => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.limit_already_parsed) {
-                            _ = try w.print("Error: limit already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Limit", arg);
                             return ArgumentParsingError.LimitAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u32)) |parsed_limit| {
                             self.limit = @intCast(parsed_limit);
@@ -647,7 +643,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_start_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.start_less_already_parsed) {
-                            _ = try w.print("Error: start less already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Start less", arg);
                             return ArgumentParsingError.StartLessAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_start| {
                             self.start_less = @intCast(parsed_start);
@@ -661,7 +657,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_start_more => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.start_more_already_parsed) {
-                            _ = try w.print("Error: start more already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Start more", arg);
                             return ArgumentParsingError.StartMoreAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_start| {
                             self.start_more = @intCast(parsed_start);
@@ -680,7 +676,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_target => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.target_already_parsed) {
-                            _ = try w.print("Error: target already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Target", arg);
                             return ArgumentParsingError.TargetAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
                             self.target = @intCast(parsed_target);
@@ -694,7 +690,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_target_more => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.target_more_already_parsed) {
-                            _ = try w.print("Error: target more already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Target more", arg);
                             return ArgumentParsingError.TargetMoreAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
                             self.target_more = @intCast(parsed_target);
@@ -708,7 +704,7 @@ pub const ArgumentParser = struct {
                 ArgParserState.expecting_target_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.target_less_already_parsed) {
-                            _ = try w.print("Error: target less already parsed. Please remove: \"{s}\"\n", .{arg});
+                            try user_feedback.errOptionAlreadyParsed("Target less", arg);
                             return ArgumentParsingError.TargetLessAlreadyParsed;
                         } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
                             self.target_less = @intCast(parsed_target);
@@ -734,17 +730,14 @@ pub const ArgumentParser = struct {
 
         // perform some checks on the parsed data
         if (self.no_tags and self.tags.items.len != 0 and self.excluded_tags.items.len != 0) {
-            _ = try w.write("Warning: you specified the --no-tags flag along the --tags and --excluded-tags flags.\n");
-            _ = try w.write("Since these are contradictory only the --no-tags flag will be taken into account\n");
+            try user_feedback.errContradictionAllTagsFlags();
             self.tags.clearRetainingCapacity();
             self.excluded_tags.clearRetainingCapacity();
         } else if (self.no_tags and self.tags.items.len != 0) {
-            _ = try w.write("Warning: you specified the --no-tags flag along the --tags flag.\n");
-            _ = try w.write("Since these are contradictory only the --no-tags flag will be taken into account\n");
+            try user_feedback.errContradictionNoTagsTags();
             self.tags.clearRetainingCapacity();
         } else if (self.no_tags and (self.tags.items.len != 0 or self.excluded_tags.items.len != 0)) {
-            _ = try w.write("Warning: you specified the --no-tags flag along the --excluded-tags flag.\n");
-            _ = try w.write("Since these are contradictory only the --no-tags flag will be taken into account\n");
+            try user_feedback.errContradictionNoTagsExcludedTags();
             self.excluded_tags.clearRetainingCapacity();
         }
     }
@@ -802,12 +795,12 @@ pub const ArgumentParser = struct {
         if ((self.duration != null and self.duration_less != null) or
             (self.duration != null and self.duration_more != null))
         {
-            _ = try std.io.getStdOut().write("Error: you cannot give a specific duration and a duration offset at the same time\n");
+            try user_feedback.errContradictionDurationDurationOffset();
             return ArgumentParsingError.SeveralDurationArgs;
         }
 
         if (self.duration_less != null and self.duration_more != null) {
-            _ = try std.io.getStdOut().write("Error: you cannot add and remove duration at the same time\n");
+            try user_feedback.errContradictionAddRemoveDuration();
             return ArgumentParsingError.SeveralDurationArgs;
         }
     }
@@ -815,7 +808,7 @@ pub const ArgumentParser = struct {
     /// Check that parsed arguments do not contain simultaneously duration less and more
     pub fn checkNoDurationLessAndMore(self: *ArgumentParser) !void {
         if (self.duration_less != null and self.duration_more != null) {
-            _ = try std.io.getStdOut().write("Error: you cannot add and remove duration at the same time\n");
+            try user_feedback.errContradictionAddRemoveDuration();
             return ArgumentParsingError.DurationLessAndMore;
         }
     }
@@ -823,7 +816,7 @@ pub const ArgumentParser = struct {
     /// Check that parsed arguments do not contain simultaneously start offset less and more
     pub fn checkNoStartLessAndMore(self: *ArgumentParser) !void {
         if (self.start_less != null and self.start_more != null) {
-            _ = try std.io.getStdOut().write("Error: you cannot push the start time backward and forward at the same time\n");
+            try user_feedback.errContradictionAddRemoveStartTime();
             return ArgumentParsingError.StartLessAndMore;
         }
     }
@@ -833,7 +826,7 @@ pub const ArgumentParser = struct {
         if (self.duration) |dur| {
             return dur;
         } else {
-            _ = try std.io.getStdOut().write("Error: you need to specify a duration (with the -d flag)\n");
+            try user_feedback.errDurationMissing();
             return ArgumentParsingError.NoDuration;
         }
     }

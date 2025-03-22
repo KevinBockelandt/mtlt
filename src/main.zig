@@ -22,6 +22,7 @@ const report_closed = @import("report_closed.zig");
 const report_infos = @import("report_infos.zig");
 const report_ongoing = @import("report_ongoing.zig");
 const report_tags = @import("report_tags.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -100,6 +101,6 @@ fn parseArgs() !void {
         .tags => try report_tags.tagsReport(&arg_parser),
         .toggle => try command_toggle.cmd(&arg_parser),
         .update => try command_update.cmd(&arg_parser),
-        else => try std.io.getStdOut().writer().print("Unknown command: {s}\n", .{args[1]}),
+        else => try user_feedback.errUnknownCommand(args[1]),
     }
 }

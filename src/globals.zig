@@ -1,6 +1,8 @@
 const builtin = @import("builtin");
-const data_file_writer = @import("data_file_writer.zig");
 const std = @import("std");
+
+const data_file_writer = @import("data_file_writer.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const DataFileReader = @import("data_file_reader.zig").DataFileReader;
 const DataFileWriter = @import("data_file_writer.zig").DataFileWriter;
@@ -33,11 +35,10 @@ pub fn initDataFileNames(arg_dfp: ?[]const u8) !void {
             data_file_path = try allocator.dupe(u8, dfp);
             allocator.free(dfp);
         } else |err| {
-            const w = std.io.getStdOut().writer();
             switch (err) {
-                error.EnvironmentVariableNotFound => try w.print("Please setup the {s} environment variable.", .{df_env_var}),
-                error.InvalidWtf8 => try w.print("Error: the {s} environment variable is not valid WTF-8.", .{df_env_var}),
-                else => try w.print("Error while trying to get the {} environment variable: ", .{err}),
+                error.EnvironmentVariableNotFound => try user_feedback.missingEnvVar(df_env_var),
+                error.InvalidWtf8 => try user_feedback.errInvalidEnvVar(df_env_var),
+                else => try user_feedback.errUnexpectedGetEnvVar(df_env_var, err),
             }
 
             return err;

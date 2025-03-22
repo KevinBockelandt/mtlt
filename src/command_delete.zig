@@ -3,6 +3,7 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -11,7 +12,6 @@ const little_end = std.builtin.Endian.little;
 
 /// Delete a thing from the data file
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
     var id_thing_to_delete: u19 = 0;
     var buf_str_id: [4]u8 = undefined;
 
@@ -23,7 +23,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         if (cur_timer.id_thing != 0) {
             id_thing_to_delete = cur_timer.id_thing;
         } else {
-            _ = try w.write("Need to specify the id of the thing to remove\n");
+            try user_feedback.errIdThingMissing();
         }
     } else {
         id_thing_to_delete = try base62_helper.b62ToB10(args.*.payload.?);
@@ -50,10 +50,10 @@ pub fn cmd(args: *ArgumentParser) !void {
         // try to delete the thing
         try globals.dfw.deleteThingFromFile(id_thing_to_delete);
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, id_thing_to_delete);
-        try w.print("Deleted thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres });
+        try user_feedback.deletedThing(str_id_thing, thing_name);
     } else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try std.io.getStdOut().writer().print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, args.*.payload.?, ansi.colres }),
+            DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(args.*.payload.?),
             else => return err,
         }
     }

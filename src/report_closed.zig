@@ -7,6 +7,7 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const th = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const CellAlignment = @import("table_printer.zig").CellAlignment;
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -271,9 +272,9 @@ fn displayTableReport(things: []dt.Thing) !void {
                     }
                 } else |err| {
                     if (err == dfr.DataParsingError.TagNotFound) {
-                        std.debug.print("Error: the tag with ID: {d} was not found\n", .{tag_id});
+                        try user_feedback.errTagNotFoundId(tag_id);
                     } else {
-                        std.debug.print("Error: while getting name for tag {d} - {}\n", .{ tag_id, err });
+                        try user_feedback.errUnexpectedGetTagName(tag_id, err);
                     }
                 }
             }
