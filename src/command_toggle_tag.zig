@@ -8,16 +8,12 @@ const DataParsingError = @import("data_file_reader.zig").DataParsingError;
 
 /// Toggle the status of a tag
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
-
     if (globals.dfw.toggleTagStatus(args.*.payload.?)) |new_status| {
-        try w.print("Status set to {s}{s}{s} for the tag {s}{s}{s}\n", .{ ansi.colemp, @tagName(new_status), ansi.colres, ansi.colemp, args.*.payload.?, ansi.colres });
+        try user_feedback.toggledTag(@tagName(new_status), args.*.payload.?);
     } else |err| {
-        // TODO use a switch here
-        if (err == DataParsingError.TagNotFound) {
-            try w.print("The tag {s}{s}{s} was deleted\n", .{ ansi.colemp, args.*.payload.?, ansi.colres });
-        } else {
-            return err;
+        switch (err) {
+            DataParsingError.TagNotFound => try user_feedback.errTagNotFoundName(args.*.payload.?),
+            else => try user_feedback.errUnexpectedToggleTag(err),
         }
     }
 }

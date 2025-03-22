@@ -20,7 +20,7 @@ fn displayTargetInfos(target: u25) !void {
 
         const target_offset = @as(i64, target) - @as(i64, time_helper.curTimestamp());
         const str_target_offset = try time_helper.formatDuration(&buf_str, target_offset);
-        try std.io.getStdOut().writer().print("{s}target{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.getDurCol(target_offset), str_target_offset, ansi.colres });
+        try user_feedback.reportTarget(str_target_offset, ansi.getDurCol(target_offset));
     }
 }
 
@@ -31,7 +31,7 @@ fn displayTimeLeftInfos(cur_thing: dt.Thing) !void {
 
         const time_left = try time_helper.computeTimeLeft(cur_thing);
         const str_time_left = try time_helper.formatDuration(&buf_str, time_left);
-        try std.io.getStdOut().writer().print("  {s}left{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.getDurCol(time_left), str_time_left, ansi.colres });
+        try user_feedback.reportTimeLeftInfos(str_time_left, ansi.getDurCol(time_left));
     }
 }
 
@@ -42,28 +42,19 @@ fn displayCurTimerInfos(start: u25) !void {
         const temp_dur: u25 = time_helper.curTimestamp() - start;
 
         if (temp_dur > std.math.maxInt(u9)) {
-            user_feedback.errorTimerDurationTooGreat(temp_dur);
+            try user_feedback.errTimerDurationTooGreat(temp_dur);
         } else {
             const str_duration = try time_helper.formatDurationNoSign(&buf_dur_id, @as(u9, @intCast(temp_dur)));
-
-            try std.io.getStdOut().writer().print(" {s}timer{s} : started {s}{s}{s} ago\n", .{
-                ansi.colemp,
-                ansi.colres,
-                ansi.coldurntr,
-                str_duration,
-                ansi.colres,
-            });
+            try user_feedback.reportTimerStarted(str_duration);
         }
     } else {
-        try std.io.getStdOut().writer().print(" {s}timer{s} : no current timer\n", .{ ansi.colemp, ansi.colres });
+        try user_feedback.reportNoTimer();
     }
 }
 
 /// Display infos on current thing and timer
 pub fn cmd() !void {
     var buf_str_id: [4]u8 = undefined;
-
-    const w = std.io.getStdOut().writer();
     const cur_timer = try globals.dfr.getCurrentTimer();
 
     if (cur_timer.id_thing != 0) {
@@ -76,8 +67,8 @@ pub fn cmd() !void {
 
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_thing.id);
 
-        try w.print(" {s}thing{s} : {s}{s}{s} - {s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id_thing, ansi.colres, cur_thing.name });
-        try w.print("{s}status{s} : {s}\n", .{ ansi.colemp, ansi.colres, @tagName(cur_thing.status) });
+        try user_feedback.reportThingIdName(str_id_thing, cur_thing.name);
+        try user_feedback.reportStatus(@tagName(cur_thing.status));
 
         if (cur_thing.status == .ongoing) {
             try displayTargetInfos(cur_thing.target);
@@ -85,7 +76,6 @@ pub fn cmd() !void {
             try displayCurTimerInfos(cur_timer.start);
         }
     } else {
-        try w.print("There is no current thing.\n", .{});
-        try w.print("See \"mtlt help\" for help.\n", .{});
+        try user_feedback.reportNoCurrentThing();
     }
 }

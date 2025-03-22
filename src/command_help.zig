@@ -5,6 +5,9 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const string_helper = @import("string_helper.zig");
+const user_feedback = @import("user_feedback.zig");
+
+const help_add = @import("command_add.zig").help;
 const help_add_tag = @import("command_add_tag.zig").help;
 const help_add_timer = @import("command_add_timer.zig").help;
 const help_closed = @import("report_closed.zig").help;
@@ -104,13 +107,11 @@ fn help_intro() !void {
 
 /// Display help for the application
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
-
     // if there is no argument with the command display entry level help
     if (args.*.payload == null) {
         try main_help();
     } else if (std.mem.eql(u8, args.*.payload.?, "add")) {
-        _ = try w.write("TODO add\n");
+        try help_add();
     } else if (std.mem.eql(u8, args.*.payload.?, "add-tag")) {
         try help_add_tag();
     } else if (std.mem.eql(u8, args.*.payload.?, "add_timer")) {
@@ -146,6 +147,6 @@ pub fn cmd(args: *ArgumentParser) !void {
     } else if (std.mem.eql(u8, args.*.payload.?, "update_timer")) {
         try help_update_timer();
     } else {
-        _ = try w.write("TODO Unknown help topic\n");
+        try user_feedback.errUnknownHelpTopic();
     }
 }

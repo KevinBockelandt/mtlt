@@ -44,16 +44,15 @@ pub fn b62ToB10(input: []const u8) !u19 {
     var result: u19 = 0;
 
     if (input.len > 4) {
-        std.debug.print("Error cannot parse this b62 ID: {s}\n", .{input});
         return Base62Error.InputStringTooBig;
     }
 
     // a u19 cannot get over 2COF
     if (input.len == 4 and
         ((input[0] > '2') or
-        (input[0] == '2' and input[1] > 'C') or
-        (input[0] == '2' and input[1] == 'C' and input[2] > 'O') or
-        (input[0] == '2' and input[1] == 'C' and input[2] == 'O' and input[3] > 'F')))
+            (input[0] == '2' and input[1] > 'C') or
+            (input[0] == '2' and input[1] == 'C' and input[2] > 'O') or
+            (input[0] == '2' and input[1] == 'C' and input[2] == 'O' and input[3] > 'F')))
     {
         return Base62Error.InputStringTooBig;
     }

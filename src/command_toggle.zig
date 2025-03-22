@@ -15,7 +15,6 @@ const little_end = std.builtin.Endian.little;
 
 /// Toggle the status of a thing
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
     var buf_str_id: [4]u8 = undefined;
 
     // get the current timer contained in the data file
@@ -27,7 +26,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         // no argument and no previous current timer
         if (cur_timer.id_thing == 0) {
-            _ = try w.write("Need to specify the id of the thing to toggle\n");
+            try user_feedback.errIdThingMissing();
             return;
         } else {
             id_thing = cur_timer.id_thing;
@@ -45,7 +44,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
-            try user_feedback.errorThingNotFoundNum(id_thing);
+            try user_feedback.errThingNotFoundNum(id_thing);
             return err;
         } else {
             return err;
@@ -63,7 +62,8 @@ pub fn cmd(args: *ArgumentParser) !void {
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {
         const str_new_status: []const u8 = @tagName(new_status);
-        try w.print("{s}{s}{s} - {s}{s}{s} is now {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_data.name, ansi.colres, ansi.colemp, str_new_status, ansi.colres });
+        try user_feedback.reportThingIdName(str_id, thing_data.name);
+        try user_feedback.reportStatus(str_new_status);
 
         // Display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
@@ -79,11 +79,7 @@ pub fn cmd(args: *ArgumentParser) !void {
             const col_remaining_time = ansi.getDurCol(remaining_time);
 
             if (thing_data.estimation > 0) {
-                if (remaining_time > 0) {
-                    try w.print("{s}{s} less{s} than estimation\n", .{ col_remaining_time, str_remaining_time, ansi.colres });
-                } else {
-                    try w.print("{s}{s} more{s} than estimation\n", .{ col_remaining_time, str_remaining_time, ansi.colres });
-                }
+                try user_feedback.reportTimeLeftInfos(col_remaining_time, str_remaining_time);
             }
         }
 
@@ -94,18 +90,12 @@ pub fn cmd(args: *ArgumentParser) !void {
             const str_target = try time_helper.formatDurationNoSign(&buf_target, @abs(offset_target));
             const col_target = ansi.getDurCol(offset_target);
 
-            if (offset_target > 0) {
-                try w.print("{s}{s} less{s} than target\n", .{ col_target, str_target, ansi.colres });
-            } else {
-                try w.print("{s}{s} more{s} than target\n", .{ col_target, str_target, ansi.colres });
-            }
+            try user_feedback.reportTarget(str_target, col_target);
         }
     } else |err| {
-        if (err == DataParsingError.ThingNotFound) {
-            try w.print("Error: thing with id {s}{s}{s} not found", .{ ansi.colemp, str_id, ansi.colres });
-            return err;
-        } else {
-            return err;
+        switch (err) {
+            DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(str_id),
+            else => try user_feedback.errUnexpectedToggleThing(err),
         }
     }
 }

@@ -5,6 +5,7 @@ const dfr = @import("data_file_reader.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const CellAlignment = @import("table_printer.zig").CellAlignment;
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -60,7 +61,7 @@ pub fn addTagToList(data: []const u8) void {
             std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
         };
     } else |err| {
-        std.debug.print("ERROR: while trying to allocate memory for a tag name: {}\n", .{err});
+        std.debug.print("ERROR: while trying to allocate memory for a tag: {}\n", .{err});
     }
 }
 
@@ -73,7 +74,7 @@ pub fn tagsReport(args: *ArgumentParser) !void {
     try globals.dfr.parseTags(addTagToList);
 
     if (tags_to_sort.items.len < 1) {
-        _ = try std.io.getStdOut().writer().write("There are no tags to list\n");
+        try user_feedback.noTagsToList();
         return;
     }
 

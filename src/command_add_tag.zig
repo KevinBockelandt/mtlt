@@ -18,17 +18,15 @@ pub const CommandError = error{
 
 /// Add a new tag to the data file
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
-
     if (args.*.payload == null) {
-        _ = try w.write("A name is needed for the tag to add.\n");
+        try user_feedback.errMissingTagNameToAdd();
         return;
     }
 
     // check for invalid characters in the tag name
     for (args.*.payload.?) |c| {
         if (!string_helper.isValidTagNameChar(c)) {
-            _ = try w.write("The tag name can only contain ascii letters, numbers or the '-' or '_' character\n");
+            try user_feedback.errNameTagInvalidChara();
             return;
         }
     }
@@ -38,9 +36,9 @@ pub fn cmd(args: *ArgumentParser) !void {
         try user_feedback.createdTag(args.*.payload.?);
     } else |err| {
         if (err == DataOperationError.NameTooLong) {
-            try w.print("The name {s}\"{s}\"{s} is too long\n", .{ ansi.colemp, args.*.payload.?, ansi.colres });
+            try user_feedback.errNameTagTooLong(args.*.payload.?);
         } else if (err == DataOperationError.TagWithThisNameAlreadyExisting) {
-            try w.print("A tag with the name {s}{s}{s} already exists\n", .{ ansi.colemp, args.*.payload.?, ansi.colres });
+            try user_feedback.errNameTagAlreadyExisting(args.*.payload.?);
         } else {
             return err;
         }

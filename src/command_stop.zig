@@ -7,12 +7,12 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const time_helper = @import("time_helper.zig");
+const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 /// Stop the current timer
 pub fn cmd(args: *ArgumentParser) !void {
-    const w = std.io.getStdOut().writer();
     const cur_timer = try globals.dfr.getCurrentTimer();
     var buf_str_id: [4]u8 = undefined;
 
@@ -39,9 +39,9 @@ pub fn cmd(args: *ArgumentParser) !void {
         defer globals.allocator.free(thing_name);
         _ = try globals.data_file.reader().read(thing_name);
 
-        try w.print("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{s}{s}\n", .{ ansi.colid, t.id, ansi.colres, ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, str_dur, ansi.colres });
+        try user_feedback.stoppedTimer(t.id, str_id, thing_name, str_dur);
     } else {
-        try w.print("No timer currently running\n", .{});
+        try user_feedback.noTimerRunning();
     }
 }
 
