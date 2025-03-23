@@ -6,63 +6,153 @@ const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
 
 const little_end = std.builtin.Endian.little;
+var w: std.fs.File.Writer = undefined;
 
-/// Print a tag of the data file on the standard output
-fn printTagFromStr(data: []const u8) void {
-    const int_fpt = std.mem.readInt(u24, data[0..dt.lgt_fixed_tag], little_end);
-    const fpt = dt.getTagFixedPartFromInt(int_fpt);
-
-    const s_idx_name = dt.lgt_fixed_tag;
-    const e_idx_name = dt.lgt_fixed_tag + fpt.lgt_name;
-
-    printNoFail("{d:_>5} {s:_<8} {s}\n", .{
-        fpt.id,
-        @tagName(@as(dt.Status, @enumFromInt(fpt.status))),
-        data[s_idx_name..e_idx_name],
-    });
+fn printHtmlStart() !void {
+    _ = try w.write(
+        \\<!DOCTYPE html>
+        \\<html>
+        \\    <head>
+        \\        <style>
+        \\        body {
+        \\        font-family: sans-serif;
+        \\        }
+        \\        table {
+        \\        border-collapse: collapse;
+        \\        }
+        \\        h1 {text-align: center;}
+        \\        h2 {
+        \\        margin-top: 3rem;
+        \\        text-align: center;
+        \\        }
+        \\        table tr:nth-child(even){
+        \\        background-color: #f2f2f2;
+        \\        }
+        \\        td, th {
+        \\        padding: 0.5rem 1rem
+        \\        }
+        \\        .detail-row { display: none; }
+        \\        .detail-row.show { display: table-row; }
+        \\        .main-row { border-bottom: 1px dashed black; }
+        \\        </style>
+        \\    </head>
+        \\    <body>
+        \\        <h1>MTLT Data File Content</h1>
+    );
 }
 
-/// Print a thing of the data file on the standard output
-fn printThingFromStr(data: []const u8) void {
+fn printHtmlEnd() !void {
+    _ = try w.write(
+        \\    </body>
+        \\    <script>
+        \\    document.querySelectorAll('.main-row').forEach((mainRow) => {
+        \\    console.log("found a row");
+        \\    mainRow.addEventListener('click', () => {
+        \\    console.log("clicked on row");
+        \\    const detailRow = mainRow.nextElementSibling;
+        \\    if (detailRow && detailRow.classList.contains('detail-row')) {
+        \\    detailRow.classList.toggle('show');
+        \\    }
+        \\    });
+        \\    });
+        \\    </script>
+        \\</html>
+    );
+}
+
+fn printCurrentTimerSection(cur_timer: dt.CurrentTimer) !void {
+    try w.print(
+        \\    <h2>CURRENT TIMER</h2>
+        \\    <ul>
+        \\        <li>Id thing: {d}</li>
+        \\        <li>Id last timer: {d}</li>
+        \\        <li>Start: {d}</li>
+        \\    </ul>
+    , .{ cur_timer.id_thing, cur_timer.id_last_timer, cur_timer.start });
+}
+
+fn processTag(data: []const u8) void {
+    const raw_fpt = std.mem.readInt(u24, data[0..dt.lgt_fixed_tag], little_end);
+    const fpt = dt.getTagFixedPartFromInt(raw_fpt);
+    const name = data[dt.lgt_fixed_tag .. dt.lgt_fixed_tag + fpt.lgt_name];
+
+    w.print(
+        \\        <tr>
+        \\            <td>{d}</td>
+        \\            <td>{s}</td>
+        \\            <td>{s}</td>
+        \\        </tr>
+    , .{ fpt.id, @tagName(@as(dt.Status, @enumFromInt(fpt.status))), name }) catch unreachable;
+}
+
+fn printTagsSection(parser: *dfr.DataFileReader) !void {
+    try w.print(
+        \\    <h2>TAGS</h2>
+        \\    <table>
+        \\        <tr>
+        \\            <th>Id</th>
+        \\            <th>Status</th>
+        \\            <th>Name</th>
+        \\        </tr>
+    , .{});
+
+    try parser.*.parseTags(processTag);
+
+    try w.print(
+        \\    </table>
+    , .{});
+}
+
+fn processThing(data: []const u8) void {
     const int_fpt = std.mem.readInt(u136, data[0..dt.lgt_fixed_thing], little_end);
     const fpt = dt.getThingFixedPartFromInt(int_fpt);
 
     const s_idx_name = dt.lgt_fixed_thing;
     const e_idx_name = dt.lgt_fixed_thing + fpt.lgt_name;
 
-    var str_closure: [20]u8 = undefined;
+    var tag_id_list = std.ArrayList(u8).init(globals.allocator);
+    defer tag_id_list.deinit();
 
-    if (time_helper.formatDuration(&str_closure, fpt.closure)) |slice_str_closure| {
-        // print fixed content of thing + name
-        printNoFail("{d:_>6} {s} {d:_>6} {d:_>8} {d:_>8} {s:_>7} {d:_>3} {d:_>5} {s}\n", .{
-            fpt.id,
-            slice_str_closure,
-            fpt.creation,
-            fpt.target,
-            fpt.estimation,
-            @tagName(@as(dt.Status, @enumFromInt(fpt.status))),
-            fpt.num_tags,
-            fpt.num_timers,
-            data[s_idx_name..e_idx_name],
-        });
-    } else |err| {
-        std.debug.print("Error when formating duration: {}", .{err});
-    }
-
-    // print list of associated tag IDs
     if (fpt.num_tags > 0) {
         var s_idx_tags: usize = e_idx_name;
-        printNoFail("  ", .{});
 
         for (0..fpt.num_tags) |_| {
-            printNoFail("{d:_>5} ", .{std.mem.readInt(u16, data[s_idx_tags .. s_idx_tags + 2][0..2], little_end)});
+            const tag_id = std.mem.readInt(u16, data[s_idx_tags .. s_idx_tags + 2][0..2], little_end);
+            std.fmt.format(tag_id_list.writer(), "{d}, ", .{tag_id}) catch unreachable;
             s_idx_tags += 2;
         }
-
-        printNoFail("\n", .{});
     }
 
-    // print list of associated timers
+    const args = .{
+        fpt.id,
+        @tagName(@as(dt.Status, @enumFromInt(fpt.status))),
+        fpt.creation,
+        fpt.closure,
+        fpt.target,
+        fpt.estimation,
+        data[s_idx_name..e_idx_name],
+        tag_id_list.items,
+    };
+
+    w.print(
+        \\        <tr class="main-row">
+        \\            <td>{d}</td>
+        \\            <td>{s}</td>
+        \\            <td>{d}</td>
+        \\            <td>{d}</td>
+        \\            <td>{d}</td>
+        \\            <td>{d}</td>
+        \\            <td>{s}</td>
+        \\            <td>{s}</td>
+        \\        </tr>
+    , args) catch unreachable;
+
+    w.print(
+        \\        <tr class="detail-row">
+        \\            <td colspan="8">
+        \\                <table>
+    , .{}) catch unreachable;
+
     var s_idx_timers: usize = e_idx_name + fpt.num_tags * 2;
 
     if (fpt.num_timers > 0) {
@@ -70,72 +160,70 @@ fn printThingFromStr(data: []const u8) void {
             const int_data_timer = std.mem.readInt(u48, data[s_idx_timers .. s_idx_timers + 48][0..6], little_end);
             const data_timer = dt.getTimerFromInt(int_data_timer);
 
-            printNoFail("  {d:_>5} {d:_>6} {d:_>8}\n", .{
-                data_timer.id,
-                data_timer.duration,
-                data_timer.start,
-            });
+            w.print(
+                \\                    <tr>
+                \\                        <td>{d}</td>
+                \\                        <td>{d}</td>
+                \\                        <td>{d}</td>
+                \\                    </tr>
+            , .{ data_timer.id, data_timer.duration, data_timer.start }) catch unreachable;
+
             s_idx_timers += 6;
         }
     }
 
-    printNoFail("\n", .{});
+    w.print(
+        \\                </table>
+        \\            </td>
+        \\        </tr>
+    , .{}) catch unreachable;
 }
 
-/// Print the current timer on the standard output
-fn printCurrentTimerFromStr(data: []const u8) void {
-    const int_fpt = std.mem.readInt(u56, data[0..dt.lgt_fixed_current_timer], little_end);
-    const fpt = dt.getCurrentTimerFromInt(int_fpt);
+fn printThingsSection(parser: *dfr.DataFileReader) !void {
+    try w.print(
+        \\    <h2>THINGS</h2>
+        \\    <table>
+        \\        <tr>
+        \\            <th>Id</th>
+        \\            <th>Status</th>
+        \\            <th>Creation</th>
+        \\            <th>Closure</th>
+        \\            <th>Target</th>
+        \\            <th>Estimation</th>
+        \\            <th>Name</th>
+        \\            <th>Tags</th>
+        \\        </tr>
+    , .{});
 
-    printNoFail("\nCurrent Timer:\n", .{});
-    printNoFail("ID thing: {d} ID timer: {d} Start: {d}\n", .{ fpt.id_thing, fpt.id_last_timer, fpt.start });
-}
+    try parser.*.parseThings(processThing);
 
-/// Print the given string into the standard output ignoring potential errors
-fn printNoFail(comptime fmt: []const u8, args: anytype) void {
-    std.io.getStdOut().writer().print(fmt, args) catch |err| {
-        std.debug.print("ERROR while printing on the standard output\n", .{});
-        std.debug.print("{}\n", .{err});
-    };
+    try w.print(
+        \\    </table>
+    , .{});
 }
 
 pub fn main() !void {
-    const args = try std.process.argsAlloc(globals.allocator);
-    defer std.process.argsFree(globals.allocator, args);
-
-    // you can pass an argument to the command to specify a file to print other than the default one
-    if (args.len < 2) {
-        try globals.initDataFileNames(null);
-    } else {
-        try globals.initDataFileNames(args[1]);
-    }
+    try globals.initDataFileNames(null);
     try globals.openDataFiles();
-    defer globals.closeDataFiles();
-    defer globals.deinitDataFileNames();
 
-    const r = globals.data_file.reader();
+    // create the file that will contain the printout
+    const f = try std.fs.cwd().createFile("printout_date_file.html", .{});
+    defer f.close();
+    w = f.writer();
+
+    try printHtmlStart();
+
     var parser = dfr.DataFileReader{};
 
-    // print length tag section
-    const bytes_tag_section = try r.readInt(u64, little_end);
-    std.debug.print("Total bytes tag section: {d} - {x}\n", .{ bytes_tag_section, bytes_tag_section });
+    try printTagsSection(&parser);
+    try printThingsSection(&parser);
 
-    // print total number of tags
-    const num_tags = try r.readInt(u16, little_end);
-    std.debug.print("Num tags in file: {d}\n\n", .{num_tags});
+    const currentTimer = try parser.getCurrentTimer();
+    try printCurrentTimerSection(currentTimer);
 
-    // print all the tags
-    try parser.parseTags(printTagFromStr);
-    std.debug.print("\n", .{});
+    try printHtmlEnd();
 
-    // print total number of things
-    try globals.data_file.seekTo(bytes_tag_section);
-    const num_things = try r.readInt(u24, little_end);
-    std.debug.print("Num things in file: {d}\n\n", .{num_things});
-
-    // print all the things
-    try parser.parseThings(printThingFromStr);
-
-    // print the current timer
-    try parser.parseCurrentTimer(printCurrentTimerFromStr);
+    globals.closeDataFiles();
+    globals.deinitDataFileNames();
+    globals.deinitMemAllocator();
 }

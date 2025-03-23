@@ -180,9 +180,7 @@ fn addThingToList(data: []const u8) void {
         }
 
         if (!ok_filter_remain) {
-            globals.allocator.free(to_add.tags);
-            globals.allocator.free(to_add.name);
-            globals.allocator.free(to_add.timers);
+            to_add.deinit(globals.allocator);
             return;
         }
 
@@ -280,9 +278,7 @@ pub fn ongoingReport(args: *ArgumentParser) !void {
     try displayTableReport(things_to_sort_slice[0..idx_end_slice], things_to_sort_slice.len);
 
     for (things_to_sort_slice) |thing_to_sort| {
-        globals.allocator.free(thing_to_sort.thing.name);
-        globals.allocator.free(thing_to_sort.thing.tags);
-        globals.allocator.free(thing_to_sort.thing.timers);
+        thing_to_sort.deinit(globals.allocator);
     }
 }
 

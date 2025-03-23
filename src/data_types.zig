@@ -1,4 +1,5 @@
 const std = @import("std");
+const globals = @import("globals.zig");
 
 const little_end = std.builtin.Endian.little;
 
@@ -35,6 +36,10 @@ pub const Tag = struct {
     id: u16,
     status: Status = Status.ongoing,
     name: []const u8,
+
+    pub fn deinit(self: *const Tag, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+    }
 };
 
 /// The fixed part of a tag
@@ -75,6 +80,33 @@ pub const Thing = struct {
     name: []const u8 = undefined,
     tags: []u16 = undefined,
     timers: []Timer = undefined,
+
+    pub fn deinit(self: *const Thing, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+        allocator.free(self.tags);
+        allocator.free(self.timers);
+    }
+};
+
+/// The complete content of a data file
+pub const FullData = struct {
+    tags: std.ArrayList(Tag) = undefined,
+    things: std.ArrayList(Thing) = undefined,
+    cur_timer: CurrentTimer = .{
+        .id_thing = 0,
+        .id_last_timer = 0,
+        .start = 0,
+    },
+
+    pub fn init(self: *FullData) void {
+        self.tags = std.ArrayList(Tag).init(globals.allocator);
+        self.things = std.ArrayList(Thing).init(globals.allocator);
+    }
+
+    pub fn deinit(self: *FullData) void {
+        globals.allocator.free(self.tags);
+        globals.allocator.free(self.things);
+    }
 };
 
 /// Association of a tag and a sorting coefficient
@@ -83,12 +115,20 @@ pub const TagToSort = struct {
     num_ongoing_things_associated: u24 = 0,
     num_closed_things_associated: u24 = 0,
     coef: u64 = 0,
+
+    pub fn deinit(self: *const TagToSort, allocator: std.mem.Allocator) void {
+        self.tag.deinit(allocator);
+    }
 };
 
 /// Association of a thing and a sorting coefficient
 pub const ThingToSort = struct {
     thing: Thing = undefined,
     coef: u64 = 0,
+
+    pub fn deinit(self: *const ThingToSort, allocator: std.mem.Allocator) void {
+        self.thing.deinit(allocator);
+    }
 };
 
 /// What needs to be displayed to the user regarding a thing creation operation

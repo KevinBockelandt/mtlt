@@ -59,11 +59,7 @@ pub fn cmd() !void {
 
     if (cur_timer.id_thing != 0) {
         const cur_thing = try globals.dfr.getThing(cur_timer.id_thing);
-        defer {
-            globals.allocator.free(cur_thing.name);
-            globals.allocator.free(cur_thing.tags);
-            globals.allocator.free(cur_thing.timers);
-        }
+        defer cur_thing.deinit(globals.allocator);
 
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_thing.id);
 

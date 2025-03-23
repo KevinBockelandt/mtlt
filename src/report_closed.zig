@@ -86,9 +86,7 @@ pub fn closedReport(args: *ArgumentParser) !void {
 
     // free memory
     for (things_to_display_slice) |thing| {
-        globals.allocator.free(thing.name);
-        globals.allocator.free(thing.tags);
-        globals.allocator.free(thing.timers);
+        thing.deinit(globals.allocator);
     }
 }
 

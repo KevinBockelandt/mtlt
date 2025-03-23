@@ -735,11 +735,7 @@ pub const DataFileWriter = struct {
         _ = self;
 
         const thing = try globals.dfr.getThing(id_thing);
-        defer {
-            globals.allocator.free(thing.name);
-            globals.allocator.free(thing.tags);
-            globals.allocator.free(thing.timers);
-        }
+        defer thing.deinit(globals.allocator);
         const pos_thing = try globals.dfr.getPosThing(id_thing);
 
         const start_pos_timers = pos_thing + dt.lgt_fixed_thing + thing.name.len + thing.tags.len * 2;

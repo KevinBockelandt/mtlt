@@ -71,6 +71,7 @@ pub fn tagsReport(args: *ArgumentParser) !void {
 
     // create a list of all the tags to display
     tags_to_sort = std.ArrayList(dt.TagToSort).init(globals.allocator);
+    defer tags_to_sort.deinit();
     try globals.dfr.parseTags(addTagToList);
 
     if (tags_to_sort.items.len < 1) {
@@ -118,9 +119,8 @@ pub fn tagsReport(args: *ArgumentParser) !void {
 
     // free memory
     for (tags_to_sort_slice) |tag_to_sort| {
-        globals.allocator.free(tag_to_sort.tag.name);
+        tag_to_sort.deinit(globals.allocator);
     }
-    tags_to_sort.deinit();
 }
 
 /// Setup the table printer to display the data to the user
