@@ -71,17 +71,7 @@ fn printCurrentTimerSection(w: std.fs.File.Writer, cur_timer: dt.CurrentTimer) !
     , .{ cur_timer.id_thing, cur_timer.id_last_timer, cur_timer.start });
 }
 
-fn writeTagHtml(tag: dt.Tag, w: *const std.fs.File.Writer) void {
-    w.*.print(
-        \\        <tr>
-        \\            <td>{d}</td>
-        \\            <td>{s}</td>
-        \\            <td>{s}</td>
-        \\        </tr>
-    , .{ tag.id, @tagName(tag.status), tag.name }) catch unreachable;
-}
-
-fn printTagsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void {
+fn printTagsSection(w: std.fs.File.Writer, tags: std.ArrayList(dt.Tag)) !void {
     try w.print(
         \\    <h2>TAGS</h2>
         \\    <table>
@@ -92,72 +82,22 @@ fn printTagsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void {
         \\        </tr>
     , .{});
 
-    try parser.*.parseTags(.{ .WriteTagHtml = .{
-        .func = writeTagHtml,
-        .file = &w,
-    } });
+    for (tags.items) |tag| {
+        try w.print(
+            \\        <tr>
+            \\            <td>{d}</td>
+            \\            <td>{s}</td>
+            \\            <td>{s}</td>
+            \\        </tr>
+        , .{ tag.id, @tagName(tag.status), tag.name });
+    }
 
     try w.print(
         \\    </table>
     , .{});
 }
 
-fn writeThingHtml(thing: dt.Thing, w: *const std.fs.File.Writer) void {
-    var tag_id_list = std.ArrayList(u8).init(globals.allocator);
-    defer tag_id_list.deinit();
-
-    for (thing.tags) |tag_id| {
-        std.fmt.format(tag_id_list.writer(), "{d}, ", .{tag_id}) catch unreachable;
-    }
-
-    const args = .{
-        thing.id,
-        @tagName(thing.status),
-        thing.creation,
-        thing.closure,
-        thing.target,
-        thing.estimation,
-        thing.name,
-        tag_id_list.items,
-    };
-
-    w.print(
-        \\        <tr class="main-row">
-        \\            <td>{d}</td>
-        \\            <td>{s}</td>
-        \\            <td>{d}</td>
-        \\            <td>{d}</td>
-        \\            <td>{d}</td>
-        \\            <td>{d}</td>
-        \\            <td>{s}</td>
-        \\            <td>{s}</td>
-        \\        </tr>
-    , args) catch unreachable;
-
-    w.print(
-        \\        <tr class="detail-row">
-        \\            <td colspan="8">
-        \\                <table>
-    , .{}) catch unreachable;
-
-    for (thing.timers) |timer| {
-        w.print(
-            \\                    <tr>
-            \\                        <td>{d}</td>
-            \\                        <td>{d}</td>
-            \\                        <td>{d}</td>
-            \\                    </tr>
-        , .{ timer.id, timer.duration, timer.start }) catch unreachable;
-    }
-
-    w.print(
-        \\                </table>
-        \\            </td>
-        \\        </tr>
-    , .{}) catch unreachable;
-}
-
-fn printThingsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void {
+fn printThingsSection(w: std.fs.File.Writer, things: std.ArrayList(dt.Thing)) !void {
     try w.print(
         \\    <h2>THINGS</h2>
         \\    <table>
@@ -173,37 +113,89 @@ fn printThingsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void 
         \\        </tr>
     , .{});
 
-    try parser.*.parseThings(.{ .WriteThingHtml = .{
-        .func = writeThingHtml,
-        .file = &w,
-    } });
+    for (things.items) |thing| {
+        var tag_id_list = std.ArrayList(u8).init(globals.allocator);
+        defer tag_id_list.deinit();
+
+        for (thing.tags) |tag_id| {
+            std.fmt.format(tag_id_list.writer(), "{d}, ", .{tag_id}) catch unreachable;
+        }
+
+        const args = .{
+            thing.id,
+            @tagName(thing.status),
+            thing.creation,
+            thing.closure,
+            thing.target,
+            thing.estimation,
+            thing.name,
+            tag_id_list.items,
+        };
+
+        try w.print(
+            \\        <tr class="main-row">
+            \\            <td>{d}</td>
+            \\            <td>{s}</td>
+            \\            <td>{d}</td>
+            \\            <td>{d}</td>
+            \\            <td>{d}</td>
+            \\            <td>{d}</td>
+            \\            <td>{s}</td>
+            \\            <td>{s}</td>
+            \\        </tr>
+        , args);
+
+        try w.print(
+            \\        <tr class="detail-row">
+            \\            <td colspan="8">
+            \\                <table>
+        , .{});
+
+        for (thing.timers) |timer| {
+            try w.print(
+                \\                    <tr>
+                \\                        <td>{d}</td>
+                \\                        <td>{d}</td>
+                \\                        <td>{d}</td>
+                \\                    </tr>
+            , .{ timer.id, timer.duration, timer.start });
+        }
+
+        try w.print(
+            \\                </table>
+            \\            </td>
+            \\        </tr>
+        , .{});
+    }
 
     try w.print(
         \\    </table>
     , .{});
 }
 
-pub fn main() !void {
-    try globals.initDataFileNames(null);
-    try globals.openDataFiles();
-
+pub fn printFileData(file_data: dt.FullData) !void {
     // create the file that will contain the printout
-    const f = try std.fs.cwd().createFile("printout_date_file.html", .{});
+    const f = try std.fs.cwd().createFile("printout_data_file.html", .{});
     defer f.close();
     const w = f.writer();
 
     try printHtmlStart(w);
+    try printTagsSection(w, file_data.tags);
+    try printThingsSection(w, file_data.things);
+    try printCurrentTimerSection(w, file_data.cur_timer);
+    try printHtmlEnd(w);
+}
+
+pub fn main() !void {
+    try globals.initDataFileNames(null);
+    try globals.openDataFiles();
 
     var parser = dfr.DataFileReader{};
+    var file_data = try parser.getFullData();
 
-    try printTagsSection(w, &parser);
-    try printThingsSection(w, &parser);
+    try printFileData(file_data);
 
-    const currentTimer = try parser.getCurrentTimer();
-    try printCurrentTimerSection(w, currentTimer);
-
-    try printHtmlEnd(w);
-
+    file_data.deinit();
     globals.closeDataFiles();
     globals.deinitDataFileNames();
     globals.deinitMemAllocator();

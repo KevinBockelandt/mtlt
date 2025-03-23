@@ -14,6 +14,22 @@ pub const DataParsingError = error{
 // amount of data we read from the file at once
 pub const lgt_buf_read_from_file = 2024;
 
+fn addTagToList(tag: dt.Tag, arr: *std.ArrayList(dt.Tag)) void {
+    const dup_tag = tag.dupe();
+
+    arr.*.append(dup_tag) catch |err| {
+        std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
+    };
+}
+
+fn addThingToList(thing: dt.Thing, arr: *std.ArrayList(dt.Thing)) void {
+    const dup_thing = thing.dupe();
+
+    arr.*.append(dup_thing) catch |err| {
+        std.debug.print("ERROR: while trying to add a thing to a list during parsing: {}\n", .{err});
+    };
+}
+
 /// Structure used to parse the data file
 pub const DataFileReader = struct {
     /// contains what is read from the file
@@ -386,11 +402,11 @@ pub const DataFileReader = struct {
             };
 
             switch (cb) {
-                .AddTagToSortToArrayList => |cb_handler| {
+                .AddTagToArrayList => |cb_handler| {
                     cb_handler.func(tag, cb_handler.tag_array);
                 },
-                .WriteTagHtml => |cb_handler| {
-                    cb_handler.func(tag, cb_handler.file);
+                .AddTagToSortToArrayList => |cb_handler| {
+                    cb_handler.func(tag, cb_handler.tag_array);
                 },
             }
         }
@@ -447,14 +463,31 @@ pub const DataFileReader = struct {
                 .CheckThingForTagAssociation => |cb_handler| {
                     cb_handler.func(thing, cb_handler.tag_id, cb_handler.num_ongoing, cb_handler.num_closed);
                 },
-                .WriteThingHtml => |cb_handler| {
-                    cb_handler.func(thing, cb_handler.file);
-                },
             }
 
             thing.deinit();
         }
 
         try globals.data_file.seekTo(cur_pos);
+    }
+
+    /// Parse the entire data file
+    pub fn getFullData(self: *DataFileReader) !dt.FullData {
+        var fd: dt.FullData = .{};
+        fd.init();
+
+        try self.parseTags(.{ .AddTagToArrayList = .{
+            .func = addTagToList,
+            .tag_array = &fd.tags,
+        } });
+
+        try self.parseThings(.{ .AddThingToArrayList = .{
+            .func = addThingToList,
+            .thing_array = &fd.things,
+        } });
+
+        fd.cur_timer = try self.getCurrentTimer();
+
+        return fd;
     }
 };

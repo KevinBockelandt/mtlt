@@ -110,8 +110,14 @@ pub const FullData = struct {
     }
 
     pub fn deinit(self: *FullData) void {
-        globals.allocator.free(self.tags);
-        globals.allocator.free(self.things);
+        for (self.tags.items) |tag| {
+            tag.deinit();
+        }
+        for (self.things.items) |thing| {
+            thing.deinit();
+        }
+        self.tags.deinit();
+        self.things.deinit();
     }
 };
 
