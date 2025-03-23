@@ -18,17 +18,17 @@ pub const Status = enum(u1) {
     closed = 1,
 };
 
+/// Durations in the application
+pub const Duration = struct {
+    minutes: u32 = 0,
+    hours: u32 = 0,
+};
+
 /// Describes the structure of the current timer section of the data file
 pub const CurrentTimer = struct {
     id_thing: u19,
     id_last_timer: u11,
     start: u25,
-};
-
-/// Durations in the application
-pub const Duration = struct {
-    minutes: u32 = 0,
-    hours: u32 = 0,
 };
 
 /// The structure of a tag element in the data file
@@ -37,8 +37,81 @@ pub const Tag = struct {
     status: Status = Status.ongoing,
     name: []const u8,
 
-    pub fn deinit(self: *const Tag, allocator: std.mem.Allocator) void {
-        allocator.free(self.name);
+    pub fn deinit(self: *const Tag) void {
+        globals.allocator.free(self.name);
+    }
+
+    pub fn dupe(self: *const Tag) Tag {
+        const dup_name = globals.allocator.dupe(u8, self.name) catch unreachable;
+        return .{
+            .id = self.id,
+            .status = self.status,
+            .name = dup_name,
+        };
+    }
+};
+
+/// Describes the structure of a thing element in the data file
+pub const Thing = struct {
+    id: u19 = 0,
+    creation: u25 = 0,
+    target: u25 = 0,
+    estimation: u16 = 0,
+    closure: u25 = 0,
+    status: Status = Status.ongoing,
+    name: []const u8 = undefined,
+    tags: []u16 = undefined,
+    timers: []Timer = undefined,
+
+    pub fn deinit(self: *const Thing) void {
+        globals.allocator.free(self.name);
+        globals.allocator.free(self.tags);
+        globals.allocator.free(self.timers);
+    }
+
+    pub fn dupe(self: *const Thing) Thing {
+        const dup_name = globals.allocator.dupe(u8, self.name) catch unreachable;
+        const dup_tags = globals.allocator.dupe(u16, self.tags) catch unreachable;
+        const dup_timers = globals.allocator.dupe(Timer, self.timers) catch unreachable;
+        return .{
+            .id = self.id,
+            .creation = self.creation,
+            .target = self.target,
+            .estimation = self.estimation,
+            .closure = self.closure,
+            .status = self.status,
+            .name = dup_name,
+            .tags = dup_tags,
+            .timers = dup_timers,
+        };
+    }
+};
+
+/// The structure of a timer element in the data file
+pub const Timer = struct {
+    id: u11,
+    duration: u12,
+    start: u25,
+};
+
+/// The complete content of a data file
+pub const FullData = struct {
+    tags: std.ArrayList(Tag) = undefined,
+    things: std.ArrayList(Thing) = undefined,
+    cur_timer: CurrentTimer = .{
+        .id_thing = 0,
+        .id_last_timer = 0,
+        .start = 0,
+    },
+
+    pub fn init(self: *FullData) void {
+        self.tags = std.ArrayList(Tag).init(globals.allocator);
+        self.things = std.ArrayList(Thing).init(globals.allocator);
+    }
+
+    pub fn deinit(self: *FullData) void {
+        globals.allocator.free(self.tags);
+        globals.allocator.free(self.things);
     }
 };
 
@@ -69,46 +142,6 @@ pub const VariablePartThing = struct {
     timers: []Timer = undefined,
 };
 
-/// Describes the structure of a thing element in the data file
-pub const Thing = struct {
-    id: u19 = 0,
-    creation: u25 = 0,
-    target: u25 = 0,
-    estimation: u16 = 0,
-    closure: u25 = 0,
-    status: Status = Status.ongoing,
-    name: []const u8 = undefined,
-    tags: []u16 = undefined,
-    timers: []Timer = undefined,
-
-    pub fn deinit(self: *const Thing, allocator: std.mem.Allocator) void {
-        allocator.free(self.name);
-        allocator.free(self.tags);
-        allocator.free(self.timers);
-    }
-};
-
-/// The complete content of a data file
-pub const FullData = struct {
-    tags: std.ArrayList(Tag) = undefined,
-    things: std.ArrayList(Thing) = undefined,
-    cur_timer: CurrentTimer = .{
-        .id_thing = 0,
-        .id_last_timer = 0,
-        .start = 0,
-    },
-
-    pub fn init(self: *FullData) void {
-        self.tags = std.ArrayList(Tag).init(globals.allocator);
-        self.things = std.ArrayList(Thing).init(globals.allocator);
-    }
-
-    pub fn deinit(self: *FullData) void {
-        globals.allocator.free(self.tags);
-        globals.allocator.free(self.things);
-    }
-};
-
 /// Association of a tag and a sorting coefficient
 pub const TagToSort = struct {
     tag: Tag = undefined,
@@ -116,8 +149,8 @@ pub const TagToSort = struct {
     num_closed_things_associated: u24 = 0,
     coef: u64 = 0,
 
-    pub fn deinit(self: *const TagToSort, allocator: std.mem.Allocator) void {
-        self.tag.deinit(allocator);
+    pub fn deinit(self: *const TagToSort) void {
+        self.tag.deinit();
     }
 };
 
@@ -126,8 +159,8 @@ pub const ThingToSort = struct {
     thing: Thing = undefined,
     coef: u64 = 0,
 
-    pub fn deinit(self: *const ThingToSort, allocator: std.mem.Allocator) void {
-        self.thing.deinit(allocator);
+    pub fn deinit(self: *const ThingToSort) void {
+        self.thing.deinit();
     }
 };
 
@@ -146,13 +179,6 @@ pub const ThingToUpdate = struct {
     tags: std.ArrayList([]u8) = undefined,
 };
 
-/// The structure of a timer element in the data file
-pub const Timer = struct {
-    id: u11,
-    duration: u12,
-    start: u25,
-};
-
 /// What needs to be updated in a timer
 pub const TimerToUpdate = struct {
     id: u11,
@@ -163,7 +189,8 @@ pub const TimerToUpdate = struct {
     add_start_off: bool = false,
 };
 
-// masks used to extract data from the fixed part of a thing
+// Masks used to extract data from the fixed part of different types
+// thing
 const mask_fpt_id = 0b0000000011111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
 const mask_fpt_num_timers = 0b0000000000000000000000000001111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
 const mask_fpt_num_tags = 0b0000000000000000000000000000000000000011111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
@@ -172,6 +199,18 @@ const mask_fpt_creation = 0b0000000000000000000000000000000000000000000001111111
 const mask_fpt_target = 0b0000000000000000000000000000000000000000000000000000000000000000000000111111111111111111111111100000000000000000000000000000000000000000;
 const mask_fpt_estimation = 0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111110000000000000000000000000;
 const mask_fpt_closure = 0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111;
+
+// tag
+const mask_tag_status = 0b000000010000000000000000;
+const mask_tag_id = 0b000000001111111111111111;
+
+// timer
+const mask_timer_duration = 0b000000000001111111111110000000000000000000000000;
+const mask_timer_start = 0b000000000000000000000001111111111111111111111111;
+
+// current timer
+const mask_cur_timer_last_timer_id = 0b00000000000000000001111111111100000000000000000000000000;
+const mask_cur_timer_start = 0b00000000000000000000000000000011111111111111111111111110;
 
 /// return the data contained in a u136 corresponding to the fixed part of a thing
 pub fn getThingFixedPartFromInt(data: u136) FixedPartThing {
@@ -188,10 +227,6 @@ pub fn getThingFixedPartFromInt(data: u136) FixedPartThing {
     };
 }
 
-// masks used to extract data from a tag
-const mask_tag_status = 0b000000010000000000000000;
-const mask_tag_id = 0b000000001111111111111111;
-
 /// return the data contained in a u24 corresponding to a tag
 pub fn getTagFixedPartFromInt(data: u24) FixedPartTag {
     return FixedPartTag{
@@ -201,10 +236,6 @@ pub fn getTagFixedPartFromInt(data: u24) FixedPartTag {
     };
 }
 
-// masks used to extract data from a timer
-const mask_timer_duration = 0b000000000001111111111110000000000000000000000000;
-const mask_timer_start = 0b000000000000000000000001111111111111111111111111;
-
 /// return the data contained in a u48 corresponding to a timer
 pub fn getTimerFromInt(data: u48) Timer {
     return Timer{
@@ -213,10 +244,6 @@ pub fn getTimerFromInt(data: u48) Timer {
         .start = @intCast(data & mask_timer_start),
     };
 }
-
-// masks used to extract data from the current timer
-const mask_cur_timer_last_timer_id = 0b00000000000000000001111111111100000000000000000000000000;
-const mask_cur_timer_start = 0b00000000000000000000000000000011111111111111111111111110;
 
 /// return the data contained in a u48 corresponding to a timer
 pub fn getCurrentTimerFromInt(data: u56) CurrentTimer {

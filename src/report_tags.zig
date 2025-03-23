@@ -15,28 +15,17 @@ const little_end = std.builtin.Endian.little;
 // Array list of tags included in the report
 var tags_to_sort: std.ArrayList(dt.TagToSort) = undefined;
 
-/// used to compute how many things are associated to the tag we are currently processing
-var num_ongoing_things_for_current_tag: u24 = 0;
-var num_closed_things_for_current_tag: u24 = 0;
-var id_cur_tag: u16 = 0;
-
 /// Process a thing to check if it is associated to the specified tag
-pub fn checkThingForTagAssociation(data: []const u8) void {
-    const raw_fpt = std.mem.readInt(u136, data[0..dt.lgt_fixed_thing], little_end);
-    const fpt = dt.getThingFixedPartFromInt(raw_fpt);
-
-    var i = dt.lgt_fixed_thing + fpt.lgt_name;
-    for (0..fpt.num_tags) |_| {
-        const id_tag = std.mem.readInt(u16, data[i .. i + 2][0..2], little_end);
-        if (id_tag == id_cur_tag) {
-            if (fpt.status == @intFromEnum(dt.Status.ongoing)) {
-                num_ongoing_things_for_current_tag += 1;
+pub fn checkThingForTagAssociation(thing: dt.Thing, tag_id: u16, num_ongoing: *u24, num_closed: *u24) void {
+    for (thing.tags) |tag| {
+        if (tag == tag_id) {
+            if (thing.status == dt.Status.ongoing) {
+                num_ongoing.* += 1;
             } else {
-                num_closed_things_for_current_tag += 1;
+                num_closed.* += 1;
             }
             return;
         }
-        i += 2;
     }
 }
 
@@ -45,24 +34,12 @@ fn compareTags(_: void, a: dt.TagToSort, b: dt.TagToSort) bool {
     return a.coef > b.coef;
 }
 
-/// Process the raw data of a tag to add it to the list of tags
-pub fn addTagToList(data: []const u8) void {
-    const raw_fpt = std.mem.readInt(u24, data[0..dt.lgt_fixed_tag], little_end);
-    const fpt = dt.getTagFixedPartFromInt(raw_fpt);
+fn addTagToSortToList(tag: dt.Tag, arr: *std.ArrayList(dt.TagToSort)) void {
+    const dup_tag = tag.dupe();
 
-    if (globals.allocator.dupe(u8, data[dt.lgt_fixed_tag .. dt.lgt_fixed_tag + fpt.lgt_name])) |name| {
-        const tag_to_add: dt.Tag = .{
-            .id = fpt.id,
-            .status = @enumFromInt(fpt.status),
-            .name = name,
-        };
-
-        tags_to_sort.append(.{ .tag = tag_to_add, .num_ongoing_things_associated = 0, .num_closed_things_associated = 0, .coef = 0 }) catch |err| {
-            std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
-        };
-    } else |err| {
-        std.debug.print("ERROR: while trying to allocate memory for a tag: {}\n", .{err});
-    }
+    arr.*.append(.{ .tag = dup_tag, .num_ongoing_things_associated = 0, .num_closed_things_associated = 0, .coef = 0 }) catch |err| {
+        std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
+    };
 }
 
 /// Display a report of the tags in the data file
@@ -72,7 +49,11 @@ pub fn tagsReport(args: *ArgumentParser) !void {
     // create a list of all the tags to display
     tags_to_sort = std.ArrayList(dt.TagToSort).init(globals.allocator);
     defer tags_to_sort.deinit();
-    try globals.dfr.parseTags(addTagToList);
+
+    try globals.dfr.parseTags(.{ .AddTagToSortToArrayList = .{
+        .func = addTagToSortToList,
+        .tag_array = &tags_to_sort,
+    } });
 
     if (tags_to_sort.items.len < 1) {
         try user_feedback.noTagsToList();
@@ -81,11 +62,17 @@ pub fn tagsReport(args: *ArgumentParser) !void {
 
     // complete the list by getting the number of associated things for each tag
     for (0..tags_to_sort.items.len) |i| {
-        id_cur_tag = tags_to_sort.items[i].tag.id;
-        num_ongoing_things_for_current_tag = 0;
-        num_closed_things_for_current_tag = 0;
+        const id_cur_tag = tags_to_sort.items[i].tag.id;
+        var num_ongoing_things_for_current_tag: u24 = 0;
+        var num_closed_things_for_current_tag: u24 = 0;
 
-        try globals.dfr.parseThings(checkThingForTagAssociation);
+        try globals.dfr.parseThings(.{ .CheckThingForTagAssociation = .{
+            .func = checkThingForTagAssociation,
+            .tag_id = id_cur_tag,
+            .num_ongoing = &num_ongoing_things_for_current_tag,
+            .num_closed = &num_closed_things_for_current_tag,
+        } });
+
         tags_to_sort.items[i].num_ongoing_things_associated = num_ongoing_things_for_current_tag;
         tags_to_sort.items[i].num_closed_things_associated = num_closed_things_for_current_tag;
         tags_to_sort.items[i].coef = num_ongoing_things_for_current_tag;
@@ -119,7 +106,7 @@ pub fn tagsReport(args: *ArgumentParser) !void {
 
     // free memory
     for (tags_to_sort_slice) |tag_to_sort| {
-        tag_to_sort.deinit(globals.allocator);
+        tag_to_sort.deinit();
     }
 }
 

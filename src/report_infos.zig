@@ -35,7 +35,7 @@ pub fn infosReport(args: *ArgumentParser) !void {
     }
 
     const thing_to_display = try globals.dfr.getThing(id_thing);
-    defer thing_to_display.deinit(globals.allocator);
+    defer thing_to_display.deinit();
 
     try displayTableReport(thing_to_display);
 }

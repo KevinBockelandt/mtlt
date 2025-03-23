@@ -53,7 +53,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // now that the current timer is closed (if needed), we get the full infos on the thing
     const thing_data = try globals.dfr.getThing(id_thing);
-    defer thing_data.deinit(globals.allocator);
+    defer thing_data.deinit();
 
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {

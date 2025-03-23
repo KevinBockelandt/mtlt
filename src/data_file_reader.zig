@@ -2,6 +2,7 @@ const std = @import("std");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const ft = @import("function_types.zig");
 
 const little_end = std.builtin.Endian.little;
 
@@ -316,6 +317,7 @@ pub const DataFileReader = struct {
     }
 
     /// Get the variable thing infos from the specified data
+    /// Caller owns memory for the returned data
     pub fn getThingVariablePartFromData(self: *DataFileReader, lgt_name: u8, num_timers: u11, num_tags: u6, data: []const u8) !dt.VariablePartThing {
         _ = self;
 
@@ -356,7 +358,7 @@ pub const DataFileReader = struct {
 
     /// Parse the tags section of the data file and callback a function with the content of each tag
     /// Put the cursor position back where it was after
-    pub fn parseTags(self: *DataFileReader, callback: *const fn ([]const u8) void) !void {
+    pub fn parseTags(self: *DataFileReader, cb: ft.TagParsingCallbacks) !void {
         const cur_pos = try globals.data_file.getPos();
 
         try globals.data_file.seekTo(0);
@@ -370,26 +372,27 @@ pub const DataFileReader = struct {
         // get the number of tags present in the data file
         const num_tags_in_file: u16 = try r.readInt(u16, little_end);
 
-        const max_lgt_name = std.math.maxInt(u7);
-        const lgt_full_tag: u16 = dt.lgt_fixed_tag + max_lgt_name;
-        var full_tag_buf: [lgt_full_tag]u8 = undefined;
-
         for (0..num_tags_in_file) |_| {
             // get the fixed part of the tag
             self.getCurItem(dt.lgt_fixed_tag);
-            std.mem.copyForwards(u8, &full_tag_buf, self.buf_cur_item[0..self.idx_buf_cur_item]);
-
-            // extract data from the fixed part
-            const int_fpt = std.mem.readInt(u24, full_tag_buf[0..dt.lgt_fixed_tag], little_end);
+            const int_fpt = std.mem.readInt(u24, self.buf_cur_item[0..dt.lgt_fixed_tag], little_end);
             const fpt = dt.getTagFixedPartFromInt(int_fpt);
-
-            // read the name of the tag and copy it to the buffer containing the whole tag
             self.getCurItem(fpt.lgt_name);
-            const s_idx = dt.lgt_fixed_tag;
-            const e_idx = dt.lgt_fixed_tag + fpt.lgt_name;
-            std.mem.copyForwards(u8, full_tag_buf[s_idx..e_idx], self.buf_cur_item[0..fpt.lgt_name]);
 
-            callback(&full_tag_buf);
+            const tag: dt.Tag = .{
+                .id = fpt.id,
+                .status = @enumFromInt(fpt.status),
+                .name = self.buf_cur_item[0..fpt.lgt_name],
+            };
+
+            switch (cb) {
+                .AddTagToSortToArrayList => |cb_handler| {
+                    cb_handler.func(tag, cb_handler.tag_array);
+                },
+                .WriteTagHtml => |cb_handler| {
+                    cb_handler.func(tag, cb_handler.file);
+                },
+            }
         }
 
         try globals.data_file.seekTo(cur_pos);
@@ -397,7 +400,7 @@ pub const DataFileReader = struct {
 
     /// Parse the things section of the data file and callback a function with the content of each thing
     /// Put the cursor position back where it was after
-    pub fn parseThings(self: *DataFileReader, callback: *const fn ([]const u8) void) !void {
+    pub fn parseThings(self: *DataFileReader, cb: ft.ThingParsingCallbacks) !void {
         const cur_pos = try globals.data_file.getPos();
 
         try globals.data_file.seekTo(0);
@@ -410,49 +413,48 @@ pub const DataFileReader = struct {
         try globals.data_file.seekTo(lgt_tag_section);
         const num_things_in_file: u24 = try r.readInt(u24, little_end);
 
-        const max_lgt_name = std.math.maxInt(u8);
-        const max_lgt_tags = std.math.maxInt(u6) * 2;
-        const max_lgt_timers = std.math.maxInt(u11) * 6;
-        const lgt_full_thing: u16 = max_lgt_name + dt.lgt_fixed_thing + max_lgt_tags + max_lgt_timers;
-        var full_thing_buf: [lgt_full_thing]u8 = undefined;
-
         for (0..num_things_in_file) |_| {
             // get the fixed part of the thing
             self.getCurItem(dt.lgt_fixed_thing);
-            std.mem.copyForwards(u8, &full_thing_buf, self.buf_cur_item[0..self.idx_buf_cur_item]);
-
-            // extract data from the fixed part
-            const int_fpt = std.mem.readInt(u136, full_thing_buf[0..dt.lgt_fixed_thing], little_end);
+            const int_fpt = std.mem.readInt(u136, self.buf_cur_item[0..dt.lgt_fixed_thing], little_end);
             const fpt = dt.getThingFixedPartFromInt(int_fpt);
 
-            // read everything related to this thing past the fixed part
+            // get the variable part of the thing
             const lgt_variable_thing: u16 = fpt.lgt_name + fpt.num_tags * 2 + fpt.num_timers * 6;
-
             self.getCurItem(lgt_variable_thing);
 
-            // and copy it to the right place the buffer containing the whole thing
-            const s_idx = dt.lgt_fixed_thing;
-            const e_idx = dt.lgt_fixed_thing + lgt_variable_thing;
-            std.mem.copyForwards(u8, full_thing_buf[s_idx..e_idx], self.buf_cur_item[0..lgt_variable_thing]);
+            const vpt = try getThingVariablePartFromData(self, fpt.lgt_name, fpt.num_timers, fpt.num_tags, self.buf_cur_item[0..lgt_variable_thing]);
 
-            callback(&full_thing_buf);
+            const thing: dt.Thing = .{
+                .id = fpt.id,
+                .creation = fpt.creation,
+                .target = fpt.target,
+                .estimation = fpt.estimation,
+                .closure = fpt.closure,
+                .status = @enumFromInt(fpt.status),
+                .name = vpt.name,
+                .tags = vpt.tags,
+                .timers = vpt.timers,
+            };
+
+            switch (cb) {
+                .AddThingToSortToArrayList => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.thing_array);
+                },
+                .AddThingToArrayList => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.thing_array);
+                },
+                .CheckThingForTagAssociation => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.tag_id, cb_handler.num_ongoing, cb_handler.num_closed);
+                },
+                .WriteThingHtml => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.file);
+                },
+            }
+
+            thing.deinit();
         }
 
-        try globals.data_file.seekTo(cur_pos);
-    }
-
-    /// Parse the current timer section of the data file and callback a function with it's content
-    /// Put the cursor position back where it was after
-    pub fn parseCurrentTimer(self: *DataFileReader, callback: *const fn ([]const u8) void) !void {
-        const cur_pos = try globals.data_file.getPos();
-
-        try globals.data_file.seekFromEnd(-dt.lgt_fixed_current_timer);
-        self.getCurItem(dt.lgt_fixed_current_timer);
-
-        var cur_timer_buf: [56]u8 = undefined;
-        std.mem.copyForwards(u8, &cur_timer_buf, self.buf_cur_item[0..dt.lgt_fixed_current_timer]);
-
-        callback(&cur_timer_buf);
         try globals.data_file.seekTo(cur_pos);
     }
 };

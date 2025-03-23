@@ -22,28 +22,11 @@ const little_end = std.builtin.Endian.little;
 var things_to_display: std.ArrayList(dt.Thing) = undefined;
 
 /// Process the raw data of a thing to add it to the list of things
-fn addThingToList(data: []const u8) void {
-    const raw_fpt = std.mem.readInt(u136, data[0..dt.lgt_fixed_thing], little_end);
-    const fpt = dt.getThingFixedPartFromInt(raw_fpt);
-
-    if (fpt.status == @intFromEnum(dt.Status.closed)) {
-        var to_add = dt.Thing{
-            .id = fpt.id,
-            .target = fpt.target,
-            .creation = fpt.creation,
-            .estimation = fpt.estimation,
-            .closure = fpt.closure,
-            .status = @enumFromInt(fpt.status),
-        };
-
-        const vpt = globals.dfr.getThingVariablePartFromData(fpt.lgt_name, fpt.num_timers, fpt.num_tags, data[dt.lgt_fixed_thing..]) catch unreachable;
-
-        to_add.name = vpt.name;
-        to_add.tags = vpt.tags;
-        to_add.timers = vpt.timers;
-
-        things_to_display.append(to_add) catch unreachable;
-    }
+fn addThingToList(thing: dt.Thing, arr: *std.ArrayList(dt.Thing)) void {
+    const dup_thing = thing.dupe();
+    arr.*.append(dup_thing) catch |err| {
+        std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
+    };
 }
 
 /// Display a report of the ongoing things
@@ -53,7 +36,11 @@ pub fn closedReport(args: *ArgumentParser) !void {
     // create a list of all the things to display
     things_to_display = std.ArrayList(dt.Thing).init(globals.allocator);
     defer things_to_display.deinit();
-    try globals.dfr.parseThings(addThingToList);
+
+    try globals.dfr.parseThings(.{ .AddThingToArrayList = .{
+        .func = addThingToList,
+        .thing_array = &things_to_display,
+    } });
 
     if (things_to_display.items.len < 1) {
         _ = try std.io.getStdOut().writer().write("There are no things to list\n");
@@ -74,7 +61,7 @@ pub fn closedReport(args: *ArgumentParser) !void {
     try displayTableReport(things_to_display_slice[0..idx_end_slice]);
 
     // display an additional line after the table regarding number of things
-    var buf_missing_things: [96]u8 = undefined;
+    var buf_missing_things: [256]u8 = undefined;
     const nbr_missing_things: usize = things_to_display_slice.len - idx_end_slice;
 
     const str_missing_things = if (nbr_missing_things == 0)
@@ -86,7 +73,7 @@ pub fn closedReport(args: *ArgumentParser) !void {
 
     // free memory
     for (things_to_display_slice) |thing| {
-        thing.deinit(globals.allocator);
+        thing.deinit();
     }
 }
 

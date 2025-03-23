@@ -38,23 +38,12 @@ var filter_remain_below: ?u16 = undefined;
 var filter_include_no_estimation: bool = false;
 
 /// Process the raw data of a thing to add it to the list of things
-fn addThingToList(data: []const u8) void {
-    const raw_fpt = std.mem.readInt(u136, data[0..dt.lgt_fixed_thing], little_end);
-    const fpt = dt.getThingFixedPartFromInt(raw_fpt);
-
-    if (fpt.status == @intFromEnum(dt.Status.ongoing)) {
+fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) void {
+    if (thing.status == dt.Status.ongoing) {
         // potentially apply the no tags filter
-        if (filter_no_tags and fpt.num_tags > 0) {
+        if (filter_no_tags and thing.tags.len > 0) {
             return;
         }
-
-        var to_add = dt.Thing{
-            .id = fpt.id,
-            .target = fpt.target,
-            .estimation = fpt.estimation,
-            .closure = fpt.closure,
-            .status = @enumFromInt(fpt.status),
-        };
 
         // filter on the target
         var ok_filter_target = false;
@@ -65,16 +54,16 @@ fn addThingToList(data: []const u8) void {
         }
 
         if (filter_target_above) |target_limit| {
-            if (to_add.target > target_limit + time_helper.curTimestamp()) {
+            if (thing.target > target_limit + time_helper.curTimestamp()) {
                 ok_filter_target = true;
             }
         }
         if (filter_target_below) |target_limit| {
-            if (to_add.target != 0 and to_add.target < target_limit + time_helper.curTimestamp()) {
+            if (thing.target != 0 and thing.target < target_limit + time_helper.curTimestamp()) {
                 ok_filter_target = true;
             }
         }
-        if (filter_include_no_target and to_add.target == 0) {
+        if (filter_include_no_target and thing.target == 0) {
             ok_filter_target = true;
         }
 
@@ -83,17 +72,13 @@ fn addThingToList(data: []const u8) void {
         }
 
         // get the array of tag ids associated to the thing
-        to_add.tags = globals.allocator.alloc(u16, fpt.num_tags) catch unreachable;
-        var cur_idx_tag = dt.lgt_fixed_thing + fpt.lgt_name;
         var filter_tag_found: bool = false;
 
-        for (0..fpt.num_tags) |i| {
-            const tag_to_add_id = std.mem.readInt(u16, data[cur_idx_tag..][0..2], little_end);
-
+        for (thing.tags) |tag| {
             // if we are looking for specific tags, check that this thing contains one
             if (filter_tag_id_in.items.len > 0 and filter_tag_found == false) {
                 for (filter_tag_id_in.items) |filter_tag| {
-                    if (filter_tag == tag_to_add_id) {
+                    if (filter_tag == tag) {
                         filter_tag_found = true;
                     }
                 }
@@ -102,53 +87,28 @@ fn addThingToList(data: []const u8) void {
             // if we are excluding tags, check this thing does not contain one
             if (filter_tag_id_out.items.len > 0) {
                 for (filter_tag_id_out.items) |filter_tag| {
-                    if (filter_tag == tag_to_add_id) {
-                        globals.allocator.free(to_add.tags);
+                    if (filter_tag == tag) {
                         return;
                     }
                 }
             }
-
-            to_add.tags[i] = tag_to_add_id;
-            cur_idx_tag += 2;
         }
 
         if (filter_tag_id_in.items.len > 0 and filter_tag_found == false) {
-            globals.allocator.free(to_add.tags);
             return;
         }
 
-        // get the name of the thing
-        const s_idx_name = dt.lgt_fixed_thing;
-        const e_idx_name = dt.lgt_fixed_thing + fpt.lgt_name;
-        to_add.name = globals.allocator.dupe(u8, data[s_idx_name..e_idx_name]) catch unreachable;
-
         // apply filter on the name if there is one
         if (filter_name) |to_find| {
-            if (!std.mem.containsAtLeast(u8, to_add.name, 1, to_find)) {
-                globals.allocator.free(to_add.tags);
-                globals.allocator.free(to_add.name);
+            if (!std.mem.containsAtLeast(u8, thing.name, 1, to_find)) {
                 return;
             }
         }
 
-        // get the array of timers associated to the thing
-        to_add.timers = globals.allocator.alloc(dt.Timer, fpt.num_timers) catch unreachable;
-        var cur_idx_timer = cur_idx_tag;
+        // compute total time spent on the thing
         var total_time_spent: u64 = 0;
-
-        for (0..fpt.num_timers) |i| {
-            const raw_timer_int = std.mem.readInt(u48, data[cur_idx_timer..][0..6], little_end);
-            const timer = dt.getTimerFromInt(raw_timer_int);
-
-            to_add.timers[i] = .{
-                .id = timer.id,
-                .duration = timer.duration,
-                .start = timer.start,
-            };
-
+        for (thing.timers) |timer| {
             total_time_spent += timer.duration;
-            cur_idx_timer += 6;
         }
 
         // filter on the estimation / remaining time
@@ -160,48 +120,48 @@ fn addThingToList(data: []const u8) void {
         }
 
         if (filter_remain_above) |remain_limit| {
-            if (to_add.estimation != 0 and
-                to_add.estimation > total_time_spent and
-                (to_add.estimation - total_time_spent) >= remain_limit)
+            if (thing.estimation != 0 and
+                thing.estimation > total_time_spent and
+                (thing.estimation - total_time_spent) >= remain_limit)
             {
                 ok_filter_remain = true;
             }
         }
         if (filter_remain_below) |remain_limit| {
-            if (to_add.estimation != 0 and
-                to_add.estimation > total_time_spent and
-                (to_add.estimation - total_time_spent) <= remain_limit)
+            if (thing.estimation != 0 and
+                thing.estimation > total_time_spent and
+                (thing.estimation - total_time_spent) <= remain_limit)
             {
                 ok_filter_remain = true;
             }
         }
-        if (filter_include_no_estimation and to_add.estimation == 0) {
+        if (filter_include_no_estimation and thing.estimation == 0) {
             ok_filter_remain = true;
         }
 
         if (!ok_filter_remain) {
-            to_add.deinit(globals.allocator);
             return;
         }
 
-        things_to_sort.append(.{
-            .thing = to_add,
-            .coef = computeSortingCoef(fpt, to_add),
+        const dup_thing = thing.dupe();
+        arr.append(.{
+            .thing = dup_thing,
+            .coef = computeSortingCoef(dup_thing),
         }) catch unreachable;
     }
 }
 
 /// compute the sorting coef for a given thing
-fn computeSortingCoef(fpt: dt.FixedPartThing, thing: dt.Thing) u64 {
+fn computeSortingCoef(thing: dt.Thing) u64 {
     var total_score: u64 = 0;
 
-    if (fpt.target != 0) {
-        total_score += @as(u64, (std.math.maxInt(u25) - fpt.target)) * 100;
+    if (thing.target != 0) {
+        total_score += @as(u64, (std.math.maxInt(u25) - thing.target)) * 100;
     }
 
     const max16 = std.math.maxInt(u16);
 
-    if (fpt.estimation != 0) {
+    if (thing.estimation != 0) {
         if (time_helper.computeTimeLeft(thing)) |tl| {
             if (tl > 0 and tl < max16) {
                 total_score += max16 - @as(u16, @intCast(tl));
@@ -255,7 +215,11 @@ pub fn ongoingReport(args: *ArgumentParser) !void {
     // create a list of all the things to display
     things_to_sort = std.ArrayList(dt.ThingToSort).init(globals.allocator);
     defer things_to_sort.deinit();
-    try globals.dfr.parseThings(addThingToList);
+
+    try globals.dfr.parseThings(.{ .AddThingToSortToArrayList = .{
+        .func = addThingToSortToList,
+        .thing_array = &things_to_sort,
+    } });
 
     if (things_to_sort.items.len < 1) {
         _ = try std.io.getStdOut().writer().write("There are no things to list\n");
@@ -278,7 +242,7 @@ pub fn ongoingReport(args: *ArgumentParser) !void {
     try displayTableReport(things_to_sort_slice[0..idx_end_slice], things_to_sort_slice.len);
 
     for (things_to_sort_slice) |thing_to_sort| {
-        thing_to_sort.deinit(globals.allocator);
+        thing_to_sort.deinit();
     }
 }
 

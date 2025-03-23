@@ -4,11 +4,11 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const ft = @import("function_types.zig");
 
 const little_end = std.builtin.Endian.little;
-var w: std.fs.File.Writer = undefined;
 
-fn printHtmlStart() !void {
+fn printHtmlStart(w: std.fs.File.Writer) !void {
     _ = try w.write(
         \\<!DOCTYPE html>
         \\<html>
@@ -41,7 +41,7 @@ fn printHtmlStart() !void {
     );
 }
 
-fn printHtmlEnd() !void {
+fn printHtmlEnd(w: std.fs.File.Writer) !void {
     _ = try w.write(
         \\    </body>
         \\    <script>
@@ -60,7 +60,7 @@ fn printHtmlEnd() !void {
     );
 }
 
-fn printCurrentTimerSection(cur_timer: dt.CurrentTimer) !void {
+fn printCurrentTimerSection(w: std.fs.File.Writer, cur_timer: dt.CurrentTimer) !void {
     try w.print(
         \\    <h2>CURRENT TIMER</h2>
         \\    <ul>
@@ -71,21 +71,17 @@ fn printCurrentTimerSection(cur_timer: dt.CurrentTimer) !void {
     , .{ cur_timer.id_thing, cur_timer.id_last_timer, cur_timer.start });
 }
 
-fn processTag(data: []const u8) void {
-    const raw_fpt = std.mem.readInt(u24, data[0..dt.lgt_fixed_tag], little_end);
-    const fpt = dt.getTagFixedPartFromInt(raw_fpt);
-    const name = data[dt.lgt_fixed_tag .. dt.lgt_fixed_tag + fpt.lgt_name];
-
-    w.print(
+fn writeTagHtml(tag: dt.Tag, w: *const std.fs.File.Writer) void {
+    w.*.print(
         \\        <tr>
         \\            <td>{d}</td>
         \\            <td>{s}</td>
         \\            <td>{s}</td>
         \\        </tr>
-    , .{ fpt.id, @tagName(@as(dt.Status, @enumFromInt(fpt.status))), name }) catch unreachable;
+    , .{ tag.id, @tagName(tag.status), tag.name }) catch unreachable;
 }
 
-fn printTagsSection(parser: *dfr.DataFileReader) !void {
+fn printTagsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void {
     try w.print(
         \\    <h2>TAGS</h2>
         \\    <table>
@@ -96,41 +92,32 @@ fn printTagsSection(parser: *dfr.DataFileReader) !void {
         \\        </tr>
     , .{});
 
-    try parser.*.parseTags(processTag);
+    try parser.*.parseTags(.{ .WriteTagHtml = .{
+        .func = writeTagHtml,
+        .file = &w,
+    } });
 
     try w.print(
         \\    </table>
     , .{});
 }
 
-fn processThing(data: []const u8) void {
-    const int_fpt = std.mem.readInt(u136, data[0..dt.lgt_fixed_thing], little_end);
-    const fpt = dt.getThingFixedPartFromInt(int_fpt);
-
-    const s_idx_name = dt.lgt_fixed_thing;
-    const e_idx_name = dt.lgt_fixed_thing + fpt.lgt_name;
-
+fn writeThingHtml(thing: dt.Thing, w: *const std.fs.File.Writer) void {
     var tag_id_list = std.ArrayList(u8).init(globals.allocator);
     defer tag_id_list.deinit();
 
-    if (fpt.num_tags > 0) {
-        var s_idx_tags: usize = e_idx_name;
-
-        for (0..fpt.num_tags) |_| {
-            const tag_id = std.mem.readInt(u16, data[s_idx_tags .. s_idx_tags + 2][0..2], little_end);
-            std.fmt.format(tag_id_list.writer(), "{d}, ", .{tag_id}) catch unreachable;
-            s_idx_tags += 2;
-        }
+    for (thing.tags) |tag_id| {
+        std.fmt.format(tag_id_list.writer(), "{d}, ", .{tag_id}) catch unreachable;
     }
 
     const args = .{
-        fpt.id,
-        @tagName(@as(dt.Status, @enumFromInt(fpt.status))),
-        fpt.creation,
-        fpt.closure,
-        fpt.target,
-        fpt.estimation,
-        data[s_idx_name..e_idx_name],
+        thing.id,
+        @tagName(thing.status),
+        thing.creation,
+        thing.closure,
+        thing.target,
+        thing.estimation,
+        thing.name,
         tag_id_list.items,
     };
 
@@ -153,23 +140,14 @@ fn processThing(data: []const u8) void {
         \\                <table>
     , .{}) catch unreachable;
 
-    var s_idx_timers: usize = e_idx_name + fpt.num_tags * 2;
-
-    if (fpt.num_timers > 0) {
-        for (0..fpt.num_timers) |_| {
-            const int_data_timer = std.mem.readInt(u48, data[s_idx_timers .. s_idx_timers + 48][0..6], little_end);
-            const data_timer = dt.getTimerFromInt(int_data_timer);
-
-            w.print(
-                \\                    <tr>
-                \\                        <td>{d}</td>
-                \\                        <td>{d}</td>
-                \\                        <td>{d}</td>
-                \\                    </tr>
-            , .{ data_timer.id, data_timer.duration, data_timer.start }) catch unreachable;
-
-            s_idx_timers += 6;
-        }
+    for (thing.timers) |timer| {
+        w.print(
+            \\                    <tr>
+            \\                        <td>{d}</td>
+            \\                        <td>{d}</td>
+            \\                        <td>{d}</td>
+            \\                    </tr>
+        , .{ timer.id, timer.duration, timer.start }) catch unreachable;
     }
 
     w.print(
@@ -179,7 +157,7 @@ fn processThing(data: []const u8) void {
     , .{}) catch unreachable;
 }
 
-fn printThingsSection(parser: *dfr.DataFileReader) !void {
+fn printThingsSection(w: std.fs.File.Writer, parser: *dfr.DataFileReader) !void {
     try w.print(
         \\    <h2>THINGS</h2>
         \\    <table>
@@ -195,7 +173,10 @@ fn printThingsSection(parser: *dfr.DataFileReader) !void {
         \\        </tr>
     , .{});
 
-    try parser.*.parseThings(processThing);
+    try parser.*.parseThings(.{ .WriteThingHtml = .{
+        .func = writeThingHtml,
+        .file = &w,
+    } });
 
     try w.print(
         \\    </table>
@@ -209,19 +190,19 @@ pub fn main() !void {
     // create the file that will contain the printout
     const f = try std.fs.cwd().createFile("printout_date_file.html", .{});
     defer f.close();
-    w = f.writer();
+    const w = f.writer();
 
-    try printHtmlStart();
+    try printHtmlStart(w);
 
     var parser = dfr.DataFileReader{};
 
-    try printTagsSection(&parser);
-    try printThingsSection(&parser);
+    try printTagsSection(w, &parser);
+    try printThingsSection(w, &parser);
 
     const currentTimer = try parser.getCurrentTimer();
-    try printCurrentTimerSection(currentTimer);
+    try printCurrentTimerSection(w, currentTimer);
 
-    try printHtmlEnd();
+    try printHtmlEnd(w);
 
     globals.closeDataFiles();
     globals.deinitDataFileNames();
