@@ -24,25 +24,22 @@ pub var dfw: DataFileWriter = .{};
 pub var dfr: DataFileReader = .{};
 pub const num_sec_offset_1970_2020 = 1577836800;
 
-pub fn initDataFileNames(arg_dfp: ?[]const u8) !void {
-    if (arg_dfp) |dfp| {
+pub fn initDataFileNames() !void {
+    const df_env_var = if (builtin.mode == .Debug) test_data_file_path_env else data_file_path_env;
+
+    // Try to get the environement variable necessary for the data file path
+
+    if (std.process.getEnvVarOwned(allocator, df_env_var)) |dfp| {
         data_file_path = try allocator.dupe(u8, dfp);
-    } else {
-        const df_env_var = if (builtin.mode == .Debug) test_data_file_path_env else data_file_path_env;
-
-        // Try to get the environement variable necessary for the data file path
-        if (std.process.getEnvVarOwned(allocator, df_env_var)) |dfp| {
-            data_file_path = try allocator.dupe(u8, dfp);
-            allocator.free(dfp);
-        } else |err| {
-            switch (err) {
-                error.EnvironmentVariableNotFound => try user_feedback.missingEnvVar(df_env_var),
-                error.InvalidWtf8 => try user_feedback.errInvalidEnvVar(df_env_var),
-                else => try user_feedback.errUnexpectedGetEnvVar(df_env_var, err),
-            }
-
-            return err;
+        allocator.free(dfp);
+    } else |err| {
+        switch (err) {
+            error.EnvironmentVariableNotFound => try user_feedback.missingEnvVar(df_env_var),
+            error.InvalidWtf8 => try user_feedback.errInvalidEnvVar(df_env_var),
+            else => try user_feedback.errUnexpectedGetEnvVar(df_env_var, err),
         }
+
+        return err;
     }
 
     var buf_dfp: [2048]u8 = undefined;

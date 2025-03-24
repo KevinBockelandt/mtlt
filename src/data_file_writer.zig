@@ -31,6 +31,69 @@ pub fn generateEmptyDataFile() !void {
     try globals.data_file.writer().writeInt(u56, 0, little_end);
 }
 
+/// Write the full content of a data file (for test purposes)
+pub fn writeFullData(full_data: dt.FullData, file_path: []const u8) !void {
+    const f = try std.fs.cwd().createFile(file_path, .{});
+    defer f.close();
+    const w = f.writer();
+
+    // momentarily write 0 for the length of the tag section. Will be updated later
+    var lgt_tag_section: usize = 0;
+    try w.writeInt(u64, lgt_tag_section, little_end);
+    try w.writeInt(u16, @intCast(full_data.tags.items.len), little_end);
+    lgt_tag_section += 10;
+
+    // add all the tags
+    for (full_data.tags.items) |tag| {
+        try w.writeInt(u24, dt.getIntFromTagFixedPart(.{
+            .lgt_name = @intCast(tag.name.len),
+            .status = @intFromEnum(tag.status),
+            .id = tag.id,
+        }), little_end);
+        _ = try w.write(tag.name);
+        lgt_tag_section += dt.lgt_fixed_tag + tag.name.len;
+    }
+
+    // rewrite the correct length for the tag section
+    try f.seekTo(0);
+    try w.writeInt(u64, lgt_tag_section, little_end);
+    try f.seekTo(lgt_tag_section);
+
+    // add all the things
+    try w.writeInt(u24, @intCast(full_data.things.items.len), little_end);
+
+    for (full_data.things.items) |thing| {
+        try w.writeInt(u136, dt.getIntFromThingFixedPart(.{
+            .lgt_name = @intCast(thing.name.len),
+            .id = thing.id,
+            .num_timers = @intCast(thing.timers.len),
+            .num_tags = @intCast(thing.tags.len),
+            .status = @intFromEnum(thing.status),
+            .target = thing.target,
+            .estimation = thing.estimation,
+            .closure = thing.closure,
+        }), little_end);
+        _ = try w.write(thing.name);
+
+        // write the associated tags
+        for (thing.tags) |tag| {
+            try w.writeInt(u16, tag, little_end);
+        }
+
+        // write the associated timers
+        for (thing.timers) |timer| {
+            try w.writeInt(u48, dt.getIntFromTimer(.{
+                .id = timer.id,
+                .duration = timer.duration,
+                .start = timer.start,
+            }), little_end);
+        }
+    }
+
+    // add the current timer
+    try w.writeInt(u56, dt.getIntFromCurrentTimer(full_data.cur_timer), little_end);
+}
+
 /// Handle all operations related to writing in the data file
 pub const DataFileWriter = struct {
     /// contains what is read from the file

@@ -49,7 +49,7 @@ const Commands = enum {
 };
 
 pub fn main() !void {
-    try globals.initDataFileNames(null);
+    try globals.initDataFileNames();
     try globals.openDataFiles();
 
     try parseArgs();

@@ -82,14 +82,13 @@ The first part is composed of :
 
 - the size of the name of the `thing` on 1 byte
 - the ID of the `thing` on 19 bits
-- the number of `timers` associated to the `thing` on 13 bits
-- the number of `tags` associated to the `thing` on 7 bits
+- the number of `timers` associated to the `thing` on 11 bits
+- the number of `tags` associated to the `thing` on 6 bits
 - the current status of the `thing` on 1 bits
 - the creation timestamp of the `thing` on 25 bits
 - the target of the `thing` on 25 bits
-- the estimated amount of time necessary for the `thing` on 17 bits (stored in minutes)
-- the absolute value of the offset between the target and completion time on 21 bits
-- a boolean indicating if the completion offset is before or after the target
+- the estimated amount of time necessary for the `thing` on 16 bits (stored in minutes)
+- the closure completion timestamp on 25 bits
 - the name
 
 The second part is then composed of `tag` ids. The total size is the indicated number of `tags` * 2 bytes. Since each ID is on 16 bits.

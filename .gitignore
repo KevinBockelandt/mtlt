@@ -1,5 +1,7 @@
 .zig-cache/
 zig-cache/
 zig-out/
-test/data_file.mtlt*
 debug_trace.log
+test/data_file.mtlt*
+test/integration_test_data_file.mtlt
+test/*.html

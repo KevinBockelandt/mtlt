@@ -173,9 +173,9 @@ fn printThingsSection(w: std.fs.File.Writer, things: std.ArrayList(dt.Thing)) !v
     , .{});
 }
 
-pub fn printFileData(file_data: dt.FullData) !void {
+pub fn printFileData(file_data: dt.FullData, path_out_file: []const u8) !void {
     // create the file that will contain the printout
-    const f = try std.fs.cwd().createFile("printout_data_file.html", .{});
+    const f = try std.fs.cwd().createFile(path_out_file, .{});
     defer f.close();
     const w = f.writer();
 
@@ -193,7 +193,7 @@ pub fn main() !void {
     var parser = dfr.DataFileReader{};
     var file_data = try parser.getFullData();
 
-    try printFileData(file_data);
+    try printFileData(file_data, "printout_data_file.html");
 
     file_data.deinit();
     globals.closeDataFiles();
