@@ -17,7 +17,8 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ------------------------------------------------------------
  7b - length of the tag name                              T
  1b - status                                              A
-16b - id                                                  G
+ 2b - priority level                                      G
+14b - id
  ?? - name of the tag
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -31,7 +32,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  6b - number of tags                                      N
  1b - status                                              G
 25b - creation date
-25b - target
+25b - beginning target
 16b - estimation
 25b - completion
 
@@ -63,7 +64,8 @@ Then there is a succession of `tags` that consists of :
 
 - the size of the name of the `tag` on 7 bits
 - the status of the `tag` on 1 bit
-- the ID of the `tag` on 2 bytes
+- the priority level of the `tag` on 2 bits
+- the ID of the `tag` on 14 bits
 - the name
 
 
@@ -86,7 +88,7 @@ The first part is composed of :
 - the number of `tags` associated to the `thing` on 6 bits
 - the current status of the `thing` on 1 bits
 - the creation timestamp of the `thing` on 25 bits
-- the target of the `thing` on 25 bits
+- the target for where the `thing` should start on 25 bits
 - the estimated amount of time necessary for the `thing` on 16 bits (stored in minutes)
 - the closure completion timestamp on 25 bits
 - the name

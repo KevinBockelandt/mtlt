@@ -96,15 +96,10 @@ const ArgParserState = enum(u8) {
 };
 
 // Display an error received from the parsing of a duration string
-fn displayDurationError(dur: []const u8, err: anyerror) !void {
-    const w = std.io.getStdOut().writer();
-
+fn displayDurationError(t: type, err: std.fmt.ParseIntError) !void {
     switch (err) {
-        time_helper.TimeError.EmptyDuration => try user_feedback.errDurationMissing(),
-        time_helper.TimeError.InvalidDurationString => try user_feedback.errInvalidDurationString(dur),
-        time_helper.TimeError.DurationTooGreat => try user_feedback.errDurationTooGreat(dur),
-        std.fmt.ParseIntError.Overflow => try w.print("Error: the duration string \"{s}\" contains a number that is too big. TODO see that\n", .{dur}),
-        else => try user_feedback.errUnexpectedParsingDuration(dur, err),
+        std.fmt.ParseIntError.Overflow => try user_feedback.errDurationTooBig(t),
+        std.fmt.ParseIntError.InvalidCharacter => try user_feedback.errDurationInvalidCharacter(),
     }
 
     return ArgumentParsingError.CannotParseDuration;
@@ -518,12 +513,12 @@ pub const ArgumentParser = struct {
                         if (self.duration_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Duration", arg);
                             return ArgumentParsingError.DurationAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
+                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration = @intCast(parsed_duration);
                             self.duration_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u12, err);
                         }
                     }
                 },
@@ -532,12 +527,12 @@ pub const ArgumentParser = struct {
                         if (self.duration_more_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Duration more", arg);
                             return ArgumentParsingError.DurationMoreAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
+                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration_more = @intCast(parsed_duration);
                             self.duration_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u12, err);
                         }
                     }
                 },
@@ -546,12 +541,12 @@ pub const ArgumentParser = struct {
                         if (self.duration_less_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Duration less", arg);
                             return ArgumentParsingError.DurationLessAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u12)) |parsed_duration| {
+                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration_less = @intCast(parsed_duration);
                             self.duration_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u12, err);
                         }
                     }
                 },
@@ -560,12 +555,12 @@ pub const ArgumentParser = struct {
                         if (self.end_less_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("End less", arg);
                             return ArgumentParsingError.EndLessAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_end| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_end| {
                             self.end_less = @intCast(parsed_end);
                             self.end_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },
@@ -574,12 +569,12 @@ pub const ArgumentParser = struct {
                         if (self.estimation_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Estimation", arg);
                             return ArgumentParsingError.EstimationAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u16)) |parsed_estimation| {
+                        } else if (std.fmt.parseInt(u16, arg, 10)) |parsed_estimation| {
                             self.estimation = @intCast(parsed_estimation);
                             self.estimation_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u16, err);
                         }
                     }
                 },
@@ -588,12 +583,12 @@ pub const ArgumentParser = struct {
                         if (self.remain_more_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Remain more", arg);
                             return ArgumentParsingError.RemainMoreAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u16)) |parsed_remain| {
+                        } else if (std.fmt.parseInt(u16, arg, 10)) |parsed_remain| {
                             self.remain_more = @intCast(parsed_remain);
                             self.remain_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u16, err);
                         }
                     }
                 },
@@ -602,12 +597,12 @@ pub const ArgumentParser = struct {
                         if (self.remain_less_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Remain less", arg);
                             return ArgumentParsingError.RemainLessAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u16)) |parsed_remain| {
+                        } else if (std.fmt.parseInt(u16, arg, 10)) |parsed_remain| {
                             self.remain_less = @intCast(parsed_remain);
                             self.remain_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u16, err);
                         }
                     }
                 },
@@ -621,12 +616,12 @@ pub const ArgumentParser = struct {
                         if (self.limit_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Limit", arg);
                             return ArgumentParsingError.LimitAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u32)) |parsed_limit| {
+                        } else if (std.fmt.parseInt(u32, arg, 10)) |parsed_limit| {
                             self.limit = @intCast(parsed_limit);
                             self.limit_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u32, err);
                         }
                     }
                 },
@@ -645,12 +640,12 @@ pub const ArgumentParser = struct {
                         if (self.start_less_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Start less", arg);
                             return ArgumentParsingError.StartLessAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_start| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
                             self.start_less = @intCast(parsed_start);
                             self.start_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },
@@ -659,12 +654,12 @@ pub const ArgumentParser = struct {
                         if (self.start_more_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Start more", arg);
                             return ArgumentParsingError.StartMoreAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_start| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
                             self.start_more = @intCast(parsed_start);
                             self.start_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },
@@ -678,12 +673,12 @@ pub const ArgumentParser = struct {
                         if (self.target_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Target", arg);
                             return ArgumentParsingError.TargetAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_target| {
                             self.target = @intCast(parsed_target);
                             self.target_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },
@@ -692,12 +687,12 @@ pub const ArgumentParser = struct {
                         if (self.target_more_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Target more", arg);
                             return ArgumentParsingError.TargetMoreAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_target| {
                             self.target_more = @intCast(parsed_target);
                             self.target_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },
@@ -706,12 +701,12 @@ pub const ArgumentParser = struct {
                         if (self.target_less_already_parsed) {
                             try user_feedback.errOptionAlreadyParsed("Target less", arg);
                             return ArgumentParsingError.TargetLessAlreadyParsed;
-                        } else if (time_helper.parseDuration(arg, u25)) |parsed_target| {
+                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_target| {
                             self.target_less = @intCast(parsed_target);
                             self.target_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
-                            try displayDurationError(arg, err);
+                            try displayDurationError(u25, err);
                         }
                     }
                 },

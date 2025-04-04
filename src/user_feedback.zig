@@ -158,6 +158,14 @@ pub fn errDivisionTooBig() !void {
     try we.print("Division number too big. Maximum is: {d}\n", .{std.math.maxInt(u8)});
 }
 
+pub fn errDurationTooBig(t: type) !void {
+    try we.print("Duration number too big. Maximum is: {d}\n", .{std.math.maxInt(t)});
+}
+
+pub fn errDurationInvalidCharacter() !void {
+    _ = try we.write("Duration number contains invalid characters\n");
+}
+
 pub fn errOptionAlreadyParsed(option: []const u8, arg: []const u8) !void {
     try we.print("{s} already parsed. Please remove: \"{s}\"\n", .{ option, arg });
 }
@@ -266,11 +274,6 @@ pub fn errInvalidDurationString(dur_str: []const u8) !void {
 
 pub fn errDurationTooGreat(dur_str: []const u8) !void {
     try we.print("The duration \"{s}\" is too great. TODO indicate maximum\n", .{dur_str});
-}
-
-pub fn errUnexpectedParsingDuration(dur_str: []const u8, err: anyerror) !void {
-    try we.print("Unexpected error while parsing duration \"{s}\".\n", .{dur_str});
-    try we.print("{}\n", .{err});
 }
 
 pub fn errDurationMissing() !void {

@@ -19,7 +19,7 @@ fn displayTargetInfos(target: u25) !void {
         var buf_str: [128]u8 = undefined;
 
         const target_offset = @as(i64, target) - @as(i64, time_helper.curTimestamp());
-        const str_target_offset = try time_helper.formatDuration(&buf_str, target_offset);
+        const str_target_offset = try std.fmt.bufPrint(&buf_str, "{d}", .{target_offset});
         try user_feedback.reportTarget(str_target_offset, ansi.getDurCol(target_offset));
     }
 }
@@ -30,7 +30,7 @@ fn displayTimeLeftInfos(cur_thing: dt.Thing) !void {
         var buf_str: [128]u8 = undefined;
 
         const time_left = try time_helper.computeTimeLeft(cur_thing);
-        const str_time_left = try time_helper.formatDuration(&buf_str, time_left);
+        const str_time_left = try std.fmt.bufPrint(&buf_str, "{d}", .{time_left});
         try user_feedback.reportTimeLeftInfos(str_time_left, ansi.getDurCol(time_left));
     }
 }
@@ -44,7 +44,7 @@ fn displayCurTimerInfos(start: u25) !void {
         if (temp_dur > std.math.maxInt(u9)) {
             try user_feedback.errTimerDurationTooGreat(temp_dur);
         } else {
-            const str_duration = try time_helper.formatDurationNoSign(&buf_dur_id, @as(u9, @intCast(temp_dur)));
+            const str_duration = try std.fmt.bufPrint(&buf_dur_id, "{d}", .{@as(u9, @intCast(temp_dur))});
             try user_feedback.reportTimerStarted(str_duration);
         }
     } else {
