@@ -20,21 +20,21 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     // format the arguments properly
-    const target = if (args.*.target) |t| t + time_helper.curTimestamp() else 0;
+    const kickoff = if (args.*.kickoff) |t| t + time_helper.curTimestamp() else 0;
     const estimation = if (args.*.estimation) |e| e else 0;
 
     var infos_creation = dt.ThingCreated{};
     infos_creation.created_tags = std.ArrayList([]u8).init(globals.allocator);
     defer infos_creation.created_tags.deinit();
 
-    try globals.dfw.addThingToFile(args.*.payload.?, target, estimation, args.*.tags.items, &infos_creation);
+    try globals.dfw.addThingToFile(args.*.payload.?, kickoff, estimation, args.*.tags.items, &infos_creation);
 
     // display infos about the creation of the thing
     const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
     try user_feedback.createdThing(args.*.payload.?, str_id);
 
-    if (args.*.target != null) {
-        try user_feedback.reportTarget(args.*.target.?, &ansi.colposdur);
+    if (args.*.kickoff != null) {
+        try user_feedback.reportKickoff(args.*.kickoff.?, &ansi.colposdur);
     }
 
     for (infos_creation.created_tags.items) |tag| {

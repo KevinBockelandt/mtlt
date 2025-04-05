@@ -99,8 +99,8 @@ pub fn reportStatus(status: []const u8) !void {
     try wo.print("{s}status{s} : {s}\n", .{ ansi.colemp, ansi.colres, status });
 }
 
-pub fn reportTarget(target: u25, col_target: []const u8) !void {
-    try wo.print("{s}target{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_target, target, ansi.colres });
+pub fn reportKickoff(kickoff: u25, col_kickoff: []const u8) !void {
+    try wo.print("{s}kickoff{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_kickoff, kickoff, ansi.colres });
 }
 
 pub fn reportTimeLeftInfos(step_left: i25, col_time_left: []const u8) !void {

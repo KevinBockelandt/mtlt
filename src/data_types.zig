@@ -55,7 +55,7 @@ pub const Tag = struct {
 pub const Thing = struct {
     id: u19 = 0,
     creation: u25 = 0,
-    target: u25 = 0,
+    kickoff: u25 = 0,
     estimation: u16 = 0,
     closure: u25 = 0,
     status: Status = Status.ongoing,
@@ -76,7 +76,7 @@ pub const Thing = struct {
         return .{
             .id = self.id,
             .creation = self.creation,
-            .target = self.target,
+            .kickoff = self.kickoff,
             .estimation = self.estimation,
             .closure = self.closure,
             .status = self.status,
@@ -136,7 +136,7 @@ pub const FixedPartThing = struct {
     num_tags: u6 = 0,
     status: u1 = 0,
     creation: u25 = 0,
-    target: u25 = 0,
+    kickoff: u25 = 0,
     estimation: u16 = 0,
     closure: u25 = 0,
 };
@@ -179,7 +179,7 @@ pub const ThingCreated = struct {
 /// What needs to be updated in a thing
 pub const ThingToUpdate = struct {
     id: u19 = 0,
-    target: ?u25 = null,
+    kickoff: ?u25 = null,
     estimation: ?u16 = null,
     name: ?[]const u8 = null,
     tags: std.ArrayList([]u8) = undefined,
@@ -202,7 +202,7 @@ const mask_fpt_num_timers = 0b00000000000000000000000000011111111111000000000000
 const mask_fpt_num_tags = 0b0000000000000000000000000000000000000011111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
 const mask_fpt_status = 0b0000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
 const mask_fpt_creation = 0b0000000000000000000000000000000000000000000001111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000;
-const mask_fpt_target = 0b0000000000000000000000000000000000000000000000000000000000000000000000111111111111111111111111100000000000000000000000000000000000000000;
+const mask_fpt_kickoff = 0b0000000000000000000000000000000000000000000000000000000000000000000000111111111111111111111111100000000000000000000000000000000000000000;
 const mask_fpt_estimation = 0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111110000000000000000000000000;
 const mask_fpt_closure = 0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111;
 
@@ -227,7 +227,7 @@ pub fn getThingFixedPartFromInt(data: u136) FixedPartThing {
         .num_tags = @intCast((data & mask_fpt_num_tags) >> 92), // 98 - 6 - 92
         .status = @intCast((data & mask_fpt_status) >> 91), // 92 - 1 = 91
         .creation = @intCast((data & mask_fpt_creation) >> 66), // 91 - 25 = 66
-        .target = @intCast((data & mask_fpt_target) >> 41), // 66 - 25 = 41
+        .kickoff = @intCast((data & mask_fpt_kickoff) >> 41), // 66 - 25 = 41
         .estimation = @intCast((data & mask_fpt_estimation) >> 25), // 41 - 16 - 25
         .closure = @intCast(data & mask_fpt_closure),
     };
@@ -276,7 +276,7 @@ pub fn getIntFromThingFixedPart(fpt: FixedPartThing) u136 {
     to_ret = to_ret << 6 | fpt.num_tags;
     to_ret = to_ret << 1 | fpt.status;
     to_ret = to_ret << 25 | fpt.creation;
-    to_ret = to_ret << 25 | fpt.target;
+    to_ret = to_ret << 25 | fpt.kickoff;
     to_ret = to_ret << 16 | fpt.estimation;
     to_ret = to_ret << 25 | fpt.closure;
     return to_ret;

@@ -81,7 +81,7 @@ pub fn closedReport(args: *ArgumentParser) !void {
 
 /// Setup the table printer to display the data to the user
 fn displayTableReport(things: []dt.Thing) !void {
-    const num_cols: u8 = 8;
+    const num_cols: u8 = 7;
     const cur_time = th.curTimestamp();
 
     // used to display various numbers and values as strings
@@ -103,10 +103,9 @@ fn displayTableReport(things: []dt.Thing) !void {
     to_display[0][1] = .{ .content = "Name", .alignment = .left, .front_col = .title, .back_col = .gray };
     to_display[0][2] = .{ .content = "Created", .alignment = .left, .front_col = .title, .back_col = .gray };
     to_display[0][3] = .{ .content = "Closed", .alignment = .left, .front_col = .title, .back_col = .gray };
-    to_display[0][4] = .{ .content = "Target", .alignment = .left, .front_col = .title, .back_col = .gray };
-    to_display[0][5] = .{ .content = "Time Spent", .alignment = .left, .front_col = .title, .back_col = .gray };
-    to_display[0][6] = .{ .content = "Estimation", .alignment = .left, .front_col = .title, .back_col = .gray };
-    to_display[0][7] = .{ .content = "Tags", .alignment = .left, .front_col = .title, .back_col = .gray };
+    to_display[0][4] = .{ .content = "Time Spent", .alignment = .left, .front_col = .title, .back_col = .gray };
+    to_display[0][5] = .{ .content = "Estimation", .alignment = .left, .front_col = .title, .back_col = .gray };
+    to_display[0][6] = .{ .content = "Tags", .alignment = .left, .front_col = .title, .back_col = .gray };
 
     // setup the data of the table based on the list of things we want to display
     for (things, 1..things.len + 1) |thing, i| {
@@ -200,7 +199,8 @@ fn displayTableReport(things: []dt.Thing) !void {
         }
 
         // TAGS column
-        var buf_tags: [16384]u8 = undefined;
+        // TODO check the max lenght of content here
+        var buf_tags: [1024]u8 = undefined;
         var idx_buf_tags: usize = 0;
         var buf_str_tag_name: [128]u8 = undefined;
 

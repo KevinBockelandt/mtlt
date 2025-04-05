@@ -69,7 +69,7 @@ pub fn writeFullData(full_data: dt.FullData, file_path: []const u8) !void {
             .num_timers = @intCast(thing.timers.len),
             .num_tags = @intCast(thing.tags.len),
             .status = @intFromEnum(thing.status),
-            .target = thing.target,
+            .kickoff = thing.kickoff,
             .estimation = thing.estimation,
             .closure = thing.closure,
         }), little_end);
@@ -241,7 +241,7 @@ pub const DataFileWriter = struct {
     }
 
     /// Add a thing at the start of the thing section of the data file
-    pub fn addThingToFile(self: *DataFileWriter, name: []const u8, target: u25, estimation: u16, tags: [][]u8, res: *dt.ThingCreated) !void {
+    pub fn addThingToFile(self: *DataFileWriter, name: []const u8, kickoff: u25, estimation: u16, tags: [][]u8, res: *dt.ThingCreated) !void {
         // make sure there is not too many tags
         // TODO need to make sure that the tag names are not too long
         // TODO make sure that there are no duplicates in the tag list
@@ -312,7 +312,7 @@ pub const DataFileWriter = struct {
             .num_tags = num_tags,
             .status = @intFromEnum(dt.Status.ongoing),
             .creation = time_helper.curTimestamp(),
-            .target = target,
+            .kickoff = kickoff,
             .estimation = estimation,
             .closure = 0,
         });
@@ -732,7 +732,7 @@ pub const DataFileWriter = struct {
         var old_lgt_name: usize = 0;
 
         // update the fixed part data
-        fpt.target = if (input.target) |t| t else fpt.target;
+        fpt.kickoff = if (input.kickoff) |t| t else fpt.kickoff;
         fpt.estimation = if (input.estimation) |e| e else fpt.estimation;
 
         // update number of tags

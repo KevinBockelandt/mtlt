@@ -23,7 +23,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     const cur_time = time_helper.curTimestamp();
 
     // format the arguments properly
-    const target = if (args.*.target) |t| if (t == 0) t else t + cur_time else null;
+    const kickoff = if (args.*.kickoff) |t| if (t == 0) t else t + cur_time else null;
     const id_num = try base62_helper.b62ToB10(args.*.payload.?);
     const id_str = args.*.payload.?;
 
@@ -33,7 +33,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     if (globals.dfw.updateThing(.{
         .id = id_num,
-        .target = target,
+        .kickoff = kickoff,
         .estimation = args.*.estimation,
         .name = args.*.name,
         .tags = args.*.tags,

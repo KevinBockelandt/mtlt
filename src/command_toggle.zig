@@ -76,15 +76,6 @@ pub fn cmd(args: *ArgumentParser) !void {
                 try user_feedback.reportTimeLeftInfos(@intCast(remaining_time), col_remaining_time);
             }
         }
-
-        // Display recap on the closure time and target
-        if (thing_data.target > 0) {
-            const now = time_helper.curTimestamp();
-            const offset_target: i64 = @as(i64, @intCast(thing_data.target)) - @as(i64, @intCast(now));
-            const offset_in_steps = try time_helper.getStepsFromMinutes(u25, @intCast(@abs(offset_target)));
-            const col_target = ansi.getDurCol(offset_target);
-            try user_feedback.reportTarget(offset_in_steps, col_target);
-        }
     } else |err| {
         switch (err) {
             DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(str_id),

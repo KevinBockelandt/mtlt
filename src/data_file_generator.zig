@@ -27,12 +27,10 @@ const ParamGen = struct {
     num_things: u19,
     min_size_thing_name: u8,
     max_size_thing_name: u8,
-    // max percent of things with a target set
-    percent_target: u8,
-    // max offsets between now and the target to set
-    max_offset_target: u16,
-    // difference in minutes between the target and the actual close time
-    max_offset_target_close: u21,
+    // max percent of things with a kickoff set
+    percent_kickoff: u8,
+    // max offsets between now and the kickoff to set
+    max_offset_kickoff: u16,
     // max percent of things with an estimation set
     percent_estimation: u8,
     // maximum time estimated necessary to complete the thing (in minutes)
@@ -55,9 +53,8 @@ const param_gen_zero = ParamGen{
     .num_things = 0,
     .min_size_thing_name = 5,
     .max_size_thing_name = 50,
-    .percent_target = 0,
-    .max_offset_target = 0,
-    .max_offset_target_close = 0,
+    .percent_kickoff = 0,
+    .max_offset_kickoff = 0,
     .percent_estimation = 50,
     .max_estimated_time_necessary = 0,
     .max_offset_estimation_actual = 0,
@@ -76,9 +73,8 @@ const param_gen_minimal = ParamGen{
     .num_things = 3,
     .min_size_thing_name = 5,
     .max_size_thing_name = 20,
-    .percent_target = 50,
-    .max_offset_target = 3000,
-    .max_offset_target_close = 50,
+    .percent_kickoff = 50,
+    .max_offset_kickoff = 3000,
     .percent_estimation = 50,
     .max_estimated_time_necessary = 200,
     .max_offset_estimation_actual = 20,
@@ -97,9 +93,8 @@ const param_gen_enough = ParamGen{
     .num_things = 10,
     .min_size_thing_name = 5,
     .max_size_thing_name = 20,
-    .percent_target = 50,
-    .max_offset_target = 3000,
-    .max_offset_target_close = 200,
+    .percent_kickoff = 50,
+    .max_offset_kickoff = 3000,
     .percent_estimation = 50,
     .max_estimated_time_necessary = 200,
     .max_offset_estimation_actual = 20,
@@ -118,9 +113,8 @@ const param_gen_maximal = ParamGen{
     .num_things = 500000,
     .min_size_thing_name = 5,
     .max_size_thing_name = 200,
-    .percent_target = 50,
-    .max_offset_target = 1500000,
-    .max_offset_target_close = 5000,
+    .percent_kickoff = 50,
+    .max_offset_kickoff = 1500000,
     .percent_estimation = 50,
     .max_estimated_time_necessary = 1000,
     .max_offset_estimation_actual = 80,
@@ -139,9 +133,8 @@ const param_gen_test = ParamGen{
     .num_things = 60,
     .min_size_thing_name = 5,
     .max_size_thing_name = 20,
-    .percent_target = 70,
-    .max_offset_target = 3000,
-    .max_offset_target_close = 50,
+    .percent_kickoff = 70,
+    .max_offset_kickoff = 3000,
     .percent_estimation = 70,
     .max_estimated_time_necessary = 1000,
     .max_offset_estimation_actual = 20,
@@ -318,22 +311,19 @@ fn generateThings(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
         // get the current timestamp
         const creation = cur_time;
 
-        // compute the target based on the current time and an offset
-        var target: u25 = 0;
-        if (rand.uintAtMost(u8, 100) <= pgen.percent_target) {
-            const off_target = rand.uintAtMost(u16, pgen.max_offset_target);
-            target = if (rand.boolean())
-                cur_time + @as(u25, @intCast(off_target))
+        // compute the kickoff based on the current time and an offset
+        var kickoff: u25 = 0;
+        if (rand.uintAtMost(u8, 100) <= pgen.percent_kickoff) {
+            const off_kickoff = rand.uintAtMost(u16, pgen.max_offset_kickoff);
+            kickoff = if (rand.boolean())
+                cur_time + @as(u25, @intCast(off_kickoff))
             else
-                cur_time - @as(u25, @intCast(off_target));
+                cur_time - @as(u25, @intCast(off_kickoff));
         }
 
         // compute the closure offset and it's direction
-        const ref_closure = if (target > 0) target else cur_time;
-        const closure: u25 = if (status == @intFromEnum(dt.Status.closed))
-            rand.uintAtMost(u25, pgen.max_offset_target_close) + ref_closure
-        else
-            0;
+        const ref_closure = if (kickoff > 0) kickoff else cur_time;
+        const closure: u25 = if (status == @intFromEnum(dt.Status.closed)) ref_closure else 0;
 
         var estimation: u17 = 0;
         if (rand.uintAtMost(u8, 100) <= pgen.percent_estimation) {
@@ -357,7 +347,7 @@ fn generateThings(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
         to_write = to_write << 6 | num_tags;
         to_write = to_write << 1 | status;
         to_write = to_write << 25 | creation;
-        to_write = to_write << 25 | target;
+        to_write = to_write << 25 | kickoff;
         to_write = to_write << 16 | estimation;
         to_write = to_write << 25 | closure;
 
@@ -367,7 +357,7 @@ fn generateThings(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
         // std.debug.print("{b:0>136} num_tags\n", .{num_tags});
         // std.debug.print("{b:0>136} status\n", .{status});
         // std.debug.print("{b:0>136} creation\n", .{creation});
-        // std.debug.print("{b:0>136} target\n", .{target});
+        // std.debug.print("{b:0>136} kickoff\n", .{kickoff});
         // std.debug.print("{b:0>136} estimation\n", .{estimation});
         // std.debug.print("{b:0>136} closure\n", .{closure});
         // std.debug.print("{b:0>136} to_write\n", .{to_write});

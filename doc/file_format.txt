@@ -32,7 +32,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  6b - number of tags                                      N
  1b - status                                              G
 25b - creation date
-25b - beginning target
+25b - kickoff
 16b - estimation
 25b - completion
 
@@ -88,7 +88,7 @@ The first part is composed of :
 - the number of `tags` associated to the `thing` on 6 bits
 - the current status of the `thing` on 1 bits
 - the creation timestamp of the `thing` on 25 bits
-- the target for where the `thing` should start on 25 bits
+- the kickoff (i.e. the moment where we expect the `thing` to start) on 25 bits
 - the estimated amount of time necessary for the `thing` on 16 bits (stored in minutes)
 - the closure completion timestamp on 25 bits
 - the name

@@ -13,12 +13,12 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 const little_end = std.builtin.Endian.little;
 
-// display infos on the target of current thing
-fn displayTargetInfos(target: u25) !void {
-    if (target != 0) {
-        const target_offset_min = @as(i64, target) - @as(i64, time_helper.curTimestamp());
-        const target_offset_step = try time_helper.getStepsFromMinutes(u25, target_offset_min);
-        try user_feedback.reportTarget(target_offset_step, ansi.getDurCol(target_offset_min));
+// display infos on the kickoff of current thing
+fn displayKickoffInfos(kickoff: u25) !void {
+    if (kickoff != 0) {
+        const kickoff_offset_min = @as(i64, kickoff) - @as(i64, time_helper.curTimestamp());
+        const kickoff_offset_step = try time_helper.getStepsFromMinutes(u25, kickoff_offset_min);
+        try user_feedback.reportKickoff(kickoff_offset_step, ansi.getDurCol(kickoff_offset_min));
     }
 }
 
@@ -62,7 +62,7 @@ pub fn cmd() !void {
         try user_feedback.reportStatus(@tagName(cur_thing.status));
 
         if (cur_thing.status == .ongoing) {
-            try displayTargetInfos(cur_thing.target);
+            try displayKickoffInfos(cur_thing.kickoff);
             try displayTimeLeftInfos(cur_thing);
             try displayCurTimerInfos(cur_timer.start);
         }

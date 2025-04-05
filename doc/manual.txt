@@ -65,21 +65,21 @@ Short | Long               | Description                                 | Used 
 -s    | --start            | start a timer on the thing right away       | add, update, toggle
 -sl   | --start-less       | remove from start time                      | add-timer, update-timer, timers, stats
 -sm   | --start-more       | add to start time                           | add-timer, update-timer, timers
--t    | --target           | target for a thing (format h:m)             | add, update
--tm   | --target-more      | add to target or filter below value         | ongoing
--tl   | --target-less      | remove from target or filter above value    | ongoing
+-k    | --kickoff          | kickoff for a thing (in steps)              | add, update
+-km   | --kickoff-more     | add to kickoff or filter below value        | ongoing
+-kl   | --kickoff-less     | remove from kickoff or filter above value   | ongoing
 
 ---
 
-                                                                     Average    | Average
-                     |         | Number | Things | Things |        | Accuracy   | Accuracy
-Period               | Time in | Timers | Opened | Closed | Ratio  | Estimation | Target
--------------------------------------------------------------------------------------------
--3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
--3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
--3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
--------------------------------------------------------------------------------------------
-               TOTAL | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%     | +13:32   
+                                                                     Average
+                     |         | Number | Things | Things |        | Accuracy
+Period               | Time in | Timers | Opened | Closed | Ratio  | Estimation
+-------------------------------------------------------------------------------
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%
+-3000:00 to -2800:00 | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%
+---------------------------------------------------------------------------
+               TOTAL | 50:00   | 30     | 230    | 100    | 12.3%  | -10.3%
 
 ---
 
@@ -91,7 +91,7 @@ Limits of the application related to the way data are stored:
 - There can be a maximum of 2^11 timers associated to a thing -> 2048
 - The name of a tag can have a maximum length of 2^7 -> 128
 - The name of a thing can have a maximum length of 2^8 -> 256
-- The target of a thing can represent time up to approximately the year 2084
+- The kickoff of a thing can represent time up to approximately the year 2084
 - The estimation of time necessary for a thing can be up to 2^16 minutes -> ~1,092 h
 - The maximum duration of a timer is 2^12 minutes -> ~68h
 - The minimum precision is the minute. All durations are rounded to the minute

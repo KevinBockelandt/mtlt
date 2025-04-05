@@ -49,8 +49,8 @@ fn displayTableReport(thing: dt.Thing) !void {
     var buf_id_thing: [4]u8 = undefined;
     const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, thing.id);
 
-    // target
-    const offset_target: i64 = @as(i64, @intCast(thing.target)) - @as(i64, @intCast(cur_time));
+    // kickoff
+    const offset_kickoff: i64 = @as(i64, @intCast(thing.kickoff)) - @as(i64, @intCast(cur_time));
 
     // creation time
     const offset_creation: i64 = @as(i64, @intCast(thing.creation)) - @as(i64, @intCast(cur_time));
@@ -160,32 +160,32 @@ fn displayTableReport(thing: dt.Thing) !void {
     try w.print("{s}            Status{s} : {s}\n", .{ ansi.colemp, ansi.colres, @tagName(thing.status) });
     try w.print("{s}   Associated tags{s} : {s}\n", .{ ansi.colemp, ansi.colres, buf_tags[0..idx_buf_tags] });
     try w.print("\n", .{});
-    try w.print("{s}     Creation time{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_creation });
-    if (thing.target > 0) {
-        if (offset_target > 0) {
-            try w.print("{s}            Target{s} : in {d}\n", .{ ansi.colemp, ansi.colres, offset_target });
+    try w.print("{s}     Creation time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_creation });
+    if (thing.kickoff > 0) {
+        if (offset_kickoff > 0) {
+            try w.print("{s}           Kickoff{s} : in {d}\n", .{ ansi.colemp, ansi.colres, offset_kickoff });
         } else {
-            try w.print("{s}            Target{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_target });
+            try w.print("{s}           Kickoff{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_kickoff });
         }
     } else {
-        try w.print("{s}            Target{s} : -\n", .{ ansi.colemp, ansi.colres });
+        try w.print("{s}           Kickoff{s} :\n", .{ ansi.colemp, ansi.colres });
     }
     if (thing.closure > 0) {
-        try w.print("{s}      Closure time{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_closure });
+        try w.print("{s}      Closure time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_closure });
     } else {
-        try w.print("{s}      Closure time{s} : -\n", .{ ansi.colemp, ansi.colres });
+        try w.print("{s}      Closure time{s} :\n", .{ ansi.colemp, ansi.colres });
     }
     try w.print("\n", .{});
-    try w.print("{s}Initial estimation{s} : {d}\n", .{ ansi.colemp, ansi.colres, thing.estimation });
+    try w.print("{s}Initial estimation{s} : {d} steps\n", .{ ansi.colemp, ansi.colres, thing.estimation });
 
     if (thing.estimation > 0) {
         if (time_offset > 0) {
-            try w.print("{s}  Total time spent{s} : {d} ({s}{d} over{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colnegdur, @abs(time_offset), ansi.colres });
+            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} over{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colnegdur, @abs(time_offset), ansi.colres });
         } else {
-            try w.print("{s}  Total time spent{s} : {d} ({s}{d} under{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colposdur, @abs(time_offset), ansi.colres });
+            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} under{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colposdur, @abs(time_offset), ansi.colres });
         }
     } else {
-        try w.print("{s}  Total time spent{s} : {d}\n", .{ ansi.colemp, ansi.colres, total_spent_time });
+        try w.print("{s}  Total time spent{s} : {d} steps\n", .{ ansi.colemp, ansi.colres, total_spent_time });
     }
 
     if (thing.timers.len > 0) {

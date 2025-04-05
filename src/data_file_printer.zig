@@ -106,7 +106,7 @@ fn printThingsSection(w: std.fs.File.Writer, things: std.ArrayList(dt.Thing)) !v
         \\            <th>Status</th>
         \\            <th>Creation</th>
         \\            <th>Closure</th>
-        \\            <th>Target</th>
+        \\            <th>Kickoff</th>
         \\            <th>Estimation</th>
         \\            <th>Name</th>
         \\            <th>Tags</th>
@@ -126,7 +126,7 @@ fn printThingsSection(w: std.fs.File.Writer, things: std.ArrayList(dt.Thing)) !v
             @tagName(thing.status),
             thing.creation,
             thing.closure,
-            thing.target,
+            thing.kickoff,
             thing.estimation,
             thing.name,
             tag_id_list.items,
