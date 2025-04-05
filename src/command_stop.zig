@@ -6,7 +6,6 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
-const time_helper = @import("time_helper.zig");
 const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -29,8 +28,6 @@ pub fn cmd(args: *ArgumentParser) !void {
             .add_start_off = args.*.start_less == null,
         });
 
-        var buf: [20]u8 = undefined;
-        const str_dur = try time_helper.formatDuration(&buf, t.duration);
         const str_id = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
 
         // get the name of the thing to stop
@@ -39,7 +36,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         defer globals.allocator.free(thing_name);
         _ = try globals.data_file.reader().read(thing_name);
 
-        try user_feedback.stoppedTimer(t.id, str_id, thing_name, str_dur);
+        try user_feedback.stoppedTimer(t.id, str_id, thing_name, t.duration);
     } else {
         try user_feedback.noTimerRunning();
     }

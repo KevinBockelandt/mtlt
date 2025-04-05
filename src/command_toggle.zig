@@ -70,23 +70,20 @@ pub fn cmd(args: *ArgumentParser) !void {
             }
 
             const remaining_time: i64 = @as(i64, @intCast(thing_data.estimation)) - @as(i64, @intCast(total_time_spent));
-            var buf_remaining_time: [100]u8 = undefined;
-            const str_remaining_time = try time_helper.formatDurationNoSign(&buf_remaining_time, @abs(remaining_time));
             const col_remaining_time = ansi.getDurCol(remaining_time);
 
             if (thing_data.estimation > 0) {
-                try user_feedback.reportTimeLeftInfos(col_remaining_time, str_remaining_time);
+                try user_feedback.reportTimeLeftInfos(@intCast(remaining_time), col_remaining_time);
             }
         }
 
         // Display recap on the closure time and target
         if (thing_data.target > 0) {
-            const offset_target: i64 = @as(i64, @intCast(thing_data.target)) - @as(i64, @intCast(time_helper.curTimestamp()));
-            var buf_target: [100]u8 = undefined;
-            const str_target = try time_helper.formatDurationNoSign(&buf_target, @abs(offset_target));
+            const now = time_helper.curTimestamp();
+            const offset_target: i64 = @as(i64, @intCast(thing_data.target)) - @as(i64, @intCast(now));
+            const offset_in_steps = try time_helper.getStepsFromMinutes(u25, @intCast(@abs(offset_target)));
             const col_target = ansi.getDurCol(offset_target);
-
-            try user_feedback.reportTarget(str_target, col_target);
+            try user_feedback.reportTarget(offset_in_steps, col_target);
         }
     } else |err| {
         switch (err) {

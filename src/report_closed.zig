@@ -23,10 +23,12 @@ var things_to_display: std.ArrayList(dt.Thing) = undefined;
 
 /// Process the raw data of a thing to add it to the list of things
 fn addThingToList(thing: dt.Thing, arr: *std.ArrayList(dt.Thing)) void {
-    const dup_thing = thing.dupe();
-    arr.*.append(dup_thing) catch |err| {
-        std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
-    };
+    if (thing.closure > 0) {
+        const dup_thing = thing.dupe();
+        arr.*.append(dup_thing) catch |err| {
+            std.debug.print("ERROR: while trying to add a tag to a list during parsing: {}\n", .{err});
+        };
+    }
 }
 
 /// Display a report of the ongoing things
@@ -84,15 +86,9 @@ fn displayTableReport(things: []dt.Thing) !void {
 
     // used to display various numbers and values as strings
     var buf_id_base62: [4]u8 = undefined;
-    var buf_creation_dur: [64]u8 = undefined;
     var buf_creation_str: [64]u8 = undefined;
-    var buf_closure_dur: [64]u8 = undefined;
     var buf_closure_str: [64]u8 = undefined;
-    var buf_target_off: [64]u8 = undefined;
-    var buf_target_str: [64]u8 = undefined;
-    var buf_time_spent_dur: [64]u8 = undefined;
     var buf_time_spent_str: [64]u8 = undefined;
-    var buf_estimation_dur: [64]u8 = undefined;
     var buf_estimation_str: [64]u8 = undefined;
 
     // the array of data we want to display as a table
@@ -135,58 +131,28 @@ fn displayTableReport(things: []dt.Thing) !void {
         };
 
         // CREATED column
-        const nbr_creation_dur: i64 = @as(i64, @intCast(thing.creation)) - @as(i64, @intCast(cur_time));
-        const str_creation_dur = try th.formatDurationNoSign(&buf_creation_dur, @abs(nbr_creation_dur));
-        const str_creation_str = try std.fmt.bufPrint(&buf_creation_str, "{s}{s}{s} ago", .{ ansi.coldurntr, str_creation_dur, ansi.colres });
+        const offset_creation_min: i64 = @as(i64, @intCast(thing.creation)) - @as(i64, @intCast(cur_time));
+        const offset_creation_step = try th.getStepsFromMinutes(u25, @intCast(@abs(offset_creation_min)));
+        const offset_creation_str = try std.fmt.bufPrint(&buf_creation_str, "{s}{d}{s} ago", .{ ansi.coldurntr, offset_creation_step, ansi.colres });
+
         to_display[i][2] = .{
-            .content = try globals.allocator.dupe(u8, str_creation_str),
+            .content = try globals.allocator.dupe(u8, offset_creation_str),
             .alignment = .right,
             .front_col = null,
             .back_col = line_back_col,
         };
 
         // CLOSED column
-        const nbr_closure_dur: i64 = @as(i64, @intCast(thing.closure)) - @as(i64, @intCast(cur_time));
-        const str_closure_dur = try th.formatDurationNoSign(&buf_closure_dur, @abs(nbr_closure_dur));
-        const str_closure_str = try std.fmt.bufPrint(&buf_closure_str, "{s}{s}{s} ago", .{ ansi.coldurntr, str_closure_dur, ansi.colres });
+        const offset_closure_min: i64 = @as(i64, @intCast(thing.closure)) - @as(i64, @intCast(cur_time));
+        const offset_closure_step = try th.getStepsFromMinutes(u25, @intCast(@abs(offset_closure_min)));
+        const offset_closure_str = try std.fmt.bufPrint(&buf_closure_str, "{s}{d}{s} ago", .{ ansi.coldurntr, offset_closure_step, ansi.colres });
+
         to_display[i][3] = .{
-            .content = try globals.allocator.dupe(u8, str_closure_str),
+            .content = try globals.allocator.dupe(u8, offset_closure_str),
             .alignment = .right,
             .front_col = null,
             .back_col = line_back_col,
         };
-
-        // TARGET column
-        if (thing.target > 0) {
-            const num_target_dur: i64 = @as(i64, @intCast(thing.target)) - @as(i64, @intCast(cur_time));
-            const num_target_off: i64 = nbr_closure_dur - num_target_dur;
-            const str_target_off = try th.formatDurationNoSign(&buf_target_off, @abs(num_target_off));
-
-            if (num_target_off > 0) {
-                const str_target_str = try std.fmt.bufPrint(&buf_target_str, "{s}{s}{s} after", .{ ansi.colnegdur, str_target_off, ansi.colres });
-                to_display[i][4] = .{
-                    .content = try globals.allocator.dupe(u8, str_target_str),
-                    .alignment = .left,
-                    .front_col = null,
-                    .back_col = line_back_col,
-                };
-            } else {
-                const str_target_str = try std.fmt.bufPrint(&buf_target_str, "{s}{s}{s} before", .{ ansi.colposdur, str_target_off, ansi.colres });
-                to_display[i][4] = .{
-                    .content = try globals.allocator.dupe(u8, str_target_str),
-                    .alignment = .left,
-                    .front_col = null,
-                    .back_col = line_back_col,
-                };
-            }
-        } else {
-            to_display[i][4] = .{
-                .content = try globals.allocator.dupe(u8, "-"),
-                .alignment = .left,
-                .front_col = null,
-                .back_col = line_back_col,
-            };
-        }
 
         // get necessary infos on timers
         var total_time_spent: u64 = 0;
@@ -195,9 +161,8 @@ fn displayTableReport(things: []dt.Thing) !void {
         }
 
         // TIME SPENT column
-        const str_time_spent_dur = try th.formatDurationNoSign(&buf_time_spent_dur, total_time_spent);
-        const str_time_spent_str = try std.fmt.bufPrint(&buf_time_spent_str, "{s}{s}{s}", .{ ansi.coldurntr, str_time_spent_dur, ansi.colres });
-        to_display[i][5] = .{
+        const str_time_spent_str = try std.fmt.bufPrint(&buf_time_spent_str, "{s}{d}{s}", .{ ansi.coldurntr, total_time_spent, ansi.colres });
+        to_display[i][4] = .{
             .content = try globals.allocator.dupe(u8, str_time_spent_str),
             .alignment = .right,
             .front_col = null,
@@ -207,19 +172,18 @@ fn displayTableReport(things: []dt.Thing) !void {
         // ESTIMATION column
         if (thing.estimation > 0) {
             const nbr_estimation_dur: i64 = @as(i64, @intCast(thing.estimation)) - @as(i64, @intCast(total_time_spent));
-            const str_estimation_dur = try th.formatDurationNoSign(&buf_estimation_dur, @abs(nbr_estimation_dur));
 
             if (nbr_estimation_dur >= 0) {
-                const str_estimation_str = try std.fmt.bufPrint(&buf_estimation_str, "{s}{s}{s} below", .{ ansi.colposdur, str_estimation_dur, ansi.colres });
-                to_display[i][6] = .{
+                const str_estimation_str = try std.fmt.bufPrint(&buf_estimation_str, "{s}{d}{s} below", .{ ansi.colposdur, nbr_estimation_dur, ansi.colres });
+                to_display[i][5] = .{
                     .content = try globals.allocator.dupe(u8, str_estimation_str),
                     .alignment = .left,
                     .front_col = null,
                     .back_col = line_back_col,
                 };
             } else {
-                const str_estimation_str = try std.fmt.bufPrint(&buf_estimation_str, "{s}{s}{s} over", .{ ansi.colnegdur, str_estimation_dur, ansi.colres });
-                to_display[i][6] = .{
+                const str_estimation_str = try std.fmt.bufPrint(&buf_estimation_str, "{s}{d}{s} over", .{ ansi.colnegdur, nbr_estimation_dur, ansi.colres });
+                to_display[i][5] = .{
                     .content = try globals.allocator.dupe(u8, str_estimation_str),
                     .alignment = .left,
                     .front_col = null,
@@ -227,7 +191,7 @@ fn displayTableReport(things: []dt.Thing) !void {
                 };
             }
         } else {
-            to_display[i][6] = .{
+            to_display[i][5] = .{
                 .content = try globals.allocator.dupe(u8, "-"),
                 .alignment = .left,
                 .front_col = null,
@@ -268,7 +232,7 @@ fn displayTableReport(things: []dt.Thing) !void {
             idx_buf_tags = 1;
         }
 
-        to_display[i][7] = .{
+        to_display[i][6] = .{
             .content = try globals.allocator.dupe(u8, buf_tags[0..idx_buf_tags]),
             .alignment = .left,
             .front_col = null,
@@ -286,7 +250,6 @@ fn displayTableReport(things: []dt.Thing) !void {
         globals.allocator.free(to_display[i][4].content);
         globals.allocator.free(to_display[i][5].content);
         globals.allocator.free(to_display[i][6].content);
-        globals.allocator.free(to_display[i][7].content);
         globals.allocator.free(to_display[i]);
     }
 }

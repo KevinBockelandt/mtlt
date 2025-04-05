@@ -20,7 +20,6 @@ const data_types = @import("data_types.zig");
 const globals = @import("globals.zig");
 const report_closed = @import("report_closed.zig");
 const report_infos = @import("report_infos.zig");
-const report_ongoing = @import("report_ongoing.zig");
 const report_tags = @import("report_tags.zig");
 const user_feedback = @import("user_feedback.zig");
 
@@ -39,7 +38,6 @@ const Commands = enum {
     delete,
     help,
     infos,
-    ongoing,
     start,
     stop,
     tags,
@@ -95,7 +93,6 @@ fn parseArgs() !void {
         .delete => try command_delete.cmd(&arg_parser),
         .help => try command_help.cmd(&arg_parser),
         .infos => try report_infos.infosReport(&arg_parser),
-        .ongoing => try report_ongoing.ongoingReport(&arg_parser),
         .start => try command_start.cmd(&arg_parser),
         .stop => try command_stop.cmd(&arg_parser),
         .tags => try report_tags.tagsReport(&arg_parser),

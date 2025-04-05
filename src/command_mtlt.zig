@@ -16,22 +16,17 @@ const little_end = std.builtin.Endian.little;
 // display infos on the target of current thing
 fn displayTargetInfos(target: u25) !void {
     if (target != 0) {
-        var buf_str: [128]u8 = undefined;
-
-        const target_offset = @as(i64, target) - @as(i64, time_helper.curTimestamp());
-        const str_target_offset = try std.fmt.bufPrint(&buf_str, "{d}", .{target_offset});
-        try user_feedback.reportTarget(str_target_offset, ansi.getDurCol(target_offset));
+        const target_offset_min = @as(i64, target) - @as(i64, time_helper.curTimestamp());
+        const target_offset_step = try time_helper.getStepsFromMinutes(u25, target_offset_min);
+        try user_feedback.reportTarget(target_offset_step, ansi.getDurCol(target_offset_min));
     }
 }
 
 // display infos on the time left if there is an estimation
 fn displayTimeLeftInfos(cur_thing: dt.Thing) !void {
     if (cur_thing.estimation != 0) {
-        var buf_str: [128]u8 = undefined;
-
         const time_left = try time_helper.computeTimeLeft(cur_thing);
-        const str_time_left = try std.fmt.bufPrint(&buf_str, "{d}", .{time_left});
-        try user_feedback.reportTimeLeftInfos(str_time_left, ansi.getDurCol(time_left));
+        try user_feedback.reportTimeLeftInfos(@intCast(time_left), ansi.getDurCol(time_left));
     }
 }
 

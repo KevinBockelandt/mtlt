@@ -34,9 +34,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     try user_feedback.createdThing(args.*.payload.?, str_id);
 
     if (args.*.target != null) {
-        var str_target: [20]u8 = undefined;
-        const slice_str_target = try time_helper.formatDuration(&str_target, args.*.target.?);
-        try user_feedback.reportTarget(slice_str_target, &ansi.colposdur);
+        try user_feedback.reportTarget(args.*.target.?, &ansi.colposdur);
     }
 
     for (infos_creation.created_tags.items) |tag| {

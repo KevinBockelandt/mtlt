@@ -38,8 +38,8 @@ pub fn startedTimer(str_id: []const u8, thing_name: []const u8) !void {
     try wo.print("Started a timer for: {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
 }
 
-pub fn stoppedTimer(id_timer: u11, str_id_thing: []const u8, thing_name: []const u8, str_dur: []const u8) !void {
-    try wo.print("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{s}{s}\n", .{ ansi.colid, id_timer, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, str_dur, ansi.colres });
+pub fn stoppedTimer(id_timer: u11, str_id_thing: []const u8, thing_name: []const u8, duration: u12) !void {
+    try wo.print("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{d}{s}\n", .{ ansi.colid, id_timer, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, duration, ansi.colres });
 }
 
 pub fn addedTimer(str_id_thing: []const u8, id_timer: u11) !void {
@@ -99,12 +99,12 @@ pub fn reportStatus(status: []const u8) !void {
     try wo.print("{s}status{s} : {s}\n", .{ ansi.colemp, ansi.colres, status });
 }
 
-pub fn reportTarget(str_target: []const u8, col_target: []const u8) !void {
-    try wo.print("{s}target{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, col_target, str_target, ansi.colres });
+pub fn reportTarget(target: u25, col_target: []const u8) !void {
+    try wo.print("{s}target{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_target, target, ansi.colres });
 }
 
-pub fn reportTimeLeftInfos(str_time_left: []const u8, col_time_left: []const u8) !void {
-    try wo.print("  {s}left{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, col_time_left, str_time_left, ansi.colres });
+pub fn reportTimeLeftInfos(step_left: i25, col_time_left: []const u8) !void {
+    try wo.print("  {s}left{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_time_left, step_left, ansi.colres });
 }
 
 pub fn reportNoTimer() !void {
@@ -121,15 +121,11 @@ pub fn reportTimerStarted(str_duration: []const u8) !void {
 }
 
 pub fn reportStarted(offset: u25) !void {
-    var buf_offset: [16]u8 = undefined;
-    const str_offset = try time_helper.formatDurationNoSign(&buf_offset, offset);
-    try wo.print(" {s}started{s} : {s}{s}{s} ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_offset, ansi.colres });
+    try wo.print(" {s}started{s} : {s}{d}{s} ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, offset, ansi.colres });
 }
 
 pub fn reportDuration(duration: u12) !void {
-    var buf_duration: [16]u8 = undefined;
-    const str_duration = try time_helper.formatDurationNoSign(&buf_duration, duration);
-    try wo.print("{s}duration{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_duration, ansi.colres });
+    try wo.print("{s}duration{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
 }
 
 // ERRORS COMMAND PARSER SPECIFIC
@@ -198,12 +194,8 @@ pub fn errContradictionAddRemoveStartTime() !void {
 }
 
 pub fn errTimerDurationTooGreat(duration: u25) !void {
-    var buf_dur: [24]u8 = undefined;
-    const str_dur = try time_helper.formatDurationNoSign(&buf_dur, duration);
-    try we.print("The current timer has a duration of {s}{s}{s}\n", .{ ansi.colemp, str_dur, ansi.colres });
-
-    const str_max_dur = try time_helper.formatDurationNoSign(&buf_dur, std.math.maxInt(u9));
-    try we.print("The maximum duration is {s}{s}{s}\n", .{ ansi.colemp, str_max_dur, ansi.colres });
+    try we.print("The current timer has a duration of {s}{d}{s}\n", .{ ansi.colemp, duration, ansi.colres });
+    try we.print("The maximum duration is {s}{d}{s}\n", .{ ansi.colemp, std.math.maxInt(u9), ansi.colres });
 }
 
 // ERRORS RELATED TO THINGS

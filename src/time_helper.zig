@@ -8,10 +8,9 @@ const dt = @import("data_types.zig");
 pub const num_sec_offset_1970_2020 = 1577836800;
 
 pub const TimeError = error{
-    InvalidDurationString,
     EmptyDuration,
     NumberTooBig,
-    DurationTooGreat,
+    StepVarTypeTooSmall,
 };
 
 /// Get the number of minutes since January 1 2020
@@ -20,23 +19,15 @@ pub fn curTimestamp() u25 {
     return @intCast(@divFloor(cur_time_sec, 60));
 }
 
-/// Create a XXhXXm formated string for a given duration (indicated in minutes)
-pub fn formatDuration(str: []u8, dur: i64) ![]const u8 {
-    const abs_dur = @abs(dur);
+/// Get the number of steps corresponding to a certain number of minutes
+pub fn getStepsFromMinutes(comptime T: type, min: i64) !T {
+    const steps: f64 = @as(f64, @floatFromInt(min)) / 7.2;
 
-    const numHours = try std.math.divFloor(u64, abs_dur, 60);
-    const numMin = abs_dur - (numHours * 60);
-
-    const without_sign = try std.fmt.bufPrint(str[1..], "{d}:{d:0>2}", .{ numHours, numMin });
-    str[0] = if (dur < 0) '-' else '+';
-    return str[0 .. without_sign.len + 1];
-}
-
-/// Create a XXhXXm formated string for a given positive duration (indicated in minutes)
-pub fn formatDurationNoSign(str: []u8, dur: u64) ![]const u8 {
-    const numHours = try std.math.divFloor(u64, dur, 60);
-    const numMin = dur - (numHours * 60);
-    return try std.fmt.bufPrint(str[0..], "{d}:{d:0>2}", .{ numHours, numMin });
+    if (steps > std.math.maxInt(T)) {
+        return TimeError.StepVarTypeTooSmall;
+    } else {
+        return @intFromFloat(@round(steps));
+    }
 }
 
 /// Compute the remaining time for a particular thing
@@ -56,32 +47,31 @@ pub fn computeTimeLeft(thing: dt.Thing) !i64 {
     return @as(i64, thing.estimation) - @as(i64, time_spent_already);
 }
 
-test "formatDuration - 0h0m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, 0), "+0:00"));
+test "getStepsFromMinutes - u8 - 0" {
+    const res = try getStepsFromMinutes(u8, 0);
+    std.testing.expect(res == 0) catch |err| {
+        std.debug.print("Actual: {}\n", .{res});
+        return err;
+    };
 }
 
-test "formatDuration - 0h2m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, 2), "+0:02"));
+test "getStepsFromMinutes - u8 - 3" {
+    const res = try getStepsFromMinutes(u8, 3);
+    std.testing.expect(res == 0) catch |err| {
+        std.debug.print("Actual: {}\n", .{res});
+        return err;
+    };
 }
 
-test "formatDuration - 2h30m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, 150), "+2:30"));
+test "getStepsFromMinutes - u8 - 5" {
+    const res = try getStepsFromMinutes(u8, 5);
+    std.testing.expect(res == 1) catch |err| {
+        std.debug.print("Actual: {}\n", .{res});
+        return err;
+    };
 }
 
-test "formatDuration - 1h0m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, 60), "+1:00"));
-}
-
-test "formatDuration - -0h10m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, -10), "-0:10"));
-}
-
-test "formatDuration - -2h30m" {
-    var buf: [20]u8 = undefined;
-    try std.testing.expect(std.mem.eql(u8, try formatDuration(&buf, -150), "-2:30"));
+test "getStepsFromMinutes - u8 - 50000" {
+    const res = getStepsFromMinutes(u8, 50000);
+    try std.testing.expect(res == TimeError.StepVarTypeTooSmall);
 }
