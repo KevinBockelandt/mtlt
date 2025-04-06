@@ -4,7 +4,6 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -30,20 +29,20 @@ pub fn cmd(args: *ArgumentParser) !void {
                 .add_start_off = args.*.start_less == null,
             }, cur_timer.id_thing)) |_| {
                 const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try user_feedback.updatedTimer(str_id_thing, cur_timer.id_last_timer);
+                try globals.printer.updatedTimer(str_id_thing, cur_timer.id_last_timer);
 
                 // TODO pass the new start offset
-                try user_feedback.reportStarted(0);
+                try globals.printer.reportStarted(0);
                 // TODO pass the new duration
-                try user_feedback.reportDuration(0);
+                try globals.printer.reportDuration(0);
                 return;
             } else |err| {
-                try user_feedback.errUnexpectedUpdateTimer(err);
+                try globals.printer.errUnexpectedUpdateTimer(err);
                 return err;
             }
         }
 
-        try user_feedback.noLastTimerToWorkOn();
+        try globals.printer.noLastTimerToWorkOn();
         return;
     }
 
@@ -53,11 +52,11 @@ pub fn cmd(args: *ArgumentParser) !void {
     const str_id_timer = arg_it.rest();
 
     const id_thing = base62_helper.b62ToB10(str_id_thing) catch |err| {
-        try user_feedback.errUnexpectedTimerIdParsing(err);
+        try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };
     const id_timer = std.fmt.parseInt(u11, str_id_timer, 10) catch |err| {
-        try user_feedback.errUnexpectedTimerIdParsing(err);
+        try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };
 
@@ -86,7 +85,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     if (args.*.duration == null and duration_off == null and start_off == null) {
-        try user_feedback.nothingToUpdateTimer();
+        try globals.printer.nothingToUpdateTimer();
     }
 
     const update_data = dt.TimerToUpdate{
@@ -106,7 +105,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     defer globals.allocator.free(name_thing);
     _ = try globals.data_file.readAll(name_thing);
 
-    try user_feedback.updatedTimer(str_id_thing, id_timer);
+    try globals.printer.updatedTimer(str_id_thing, id_timer);
 }
 
 /// Print out help for the update-timer command

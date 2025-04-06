@@ -7,7 +7,6 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const th = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const CellAlignment = @import("table_printer.zig").CellAlignment;
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -221,9 +220,9 @@ fn displayTableReport(things: []dt.Thing) !void {
                     }
                 } else |err| {
                     if (err == dfr.DataParsingError.TagNotFound) {
-                        try user_feedback.errTagNotFoundId(tag_id);
+                        try globals.printer.errTagNotFoundId(tag_id);
                     } else {
-                        try user_feedback.errUnexpectedGetTagName(tag_id, err);
+                        try globals.printer.errUnexpectedGetTagName(tag_id, err);
                     }
                 }
             }

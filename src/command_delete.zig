@@ -3,7 +3,6 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -23,7 +22,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         if (cur_timer.id_thing != 0) {
             id_thing_to_delete = cur_timer.id_thing;
         } else {
-            try user_feedback.errIdThingMissing();
+            try globals.printer.errIdThingMissing();
         }
     } else {
         id_thing_to_delete = try base62_helper.b62ToB10(args.*.payload.?);
@@ -50,10 +49,10 @@ pub fn cmd(args: *ArgumentParser) !void {
         // try to delete the thing
         try globals.dfw.deleteThingFromFile(id_thing_to_delete);
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, id_thing_to_delete);
-        try user_feedback.deletedThing(str_id_thing, thing_name);
+        try globals.printer.deletedThing(str_id_thing, thing_name);
     } else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(args.*.payload.?),
+            DataParsingError.ThingNotFound => try globals.printer.errThingNotFoundStr(args.*.payload.?),
             else => return err,
         }
     }

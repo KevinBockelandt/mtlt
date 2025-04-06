@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const data_file_writer = @import("data_file_writer.zig");
-const user_feedback = @import("user_feedback.zig");
+const printer_header = @import("printer.zig");
 
 const DataFileReader = @import("data_file_reader.zig").DataFileReader;
 const DataFileWriter = @import("data_file_writer.zig").DataFileWriter;
@@ -22,6 +22,7 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub var allocator = gpa.allocator();
 pub var dfw: DataFileWriter = .{};
 pub var dfr: DataFileReader = .{};
+pub var printer: printer_header.Printer = .{};
 pub const num_sec_offset_1970_2020 = 1577836800;
 
 pub fn initDataFileNames() !void {
@@ -34,9 +35,9 @@ pub fn initDataFileNames() !void {
         allocator.free(dfp);
     } else |err| {
         switch (err) {
-            error.EnvironmentVariableNotFound => try user_feedback.missingEnvVar(df_env_var),
-            error.InvalidWtf8 => try user_feedback.errInvalidEnvVar(df_env_var),
-            else => try user_feedback.errUnexpectedGetEnvVar(df_env_var, err),
+            error.EnvironmentVariableNotFound => try printer.missingEnvVar(df_env_var),
+            error.InvalidWtf8 => try printer.errInvalidEnvVar(df_env_var),
+            else => try printer.errUnexpectedGetEnvVar(df_env_var, err),
         }
 
         return err;

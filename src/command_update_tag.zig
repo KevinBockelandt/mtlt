@@ -2,7 +2,6 @@ const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
 const globals = @import("globals.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataOperationError = @import("data_file_writer.zig").DataOperationError;
@@ -11,7 +10,7 @@ const DataParsingError = @import("data_file_reader.zig").DataParsingError;
 /// Update the name of a tag
 pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
-        try user_feedback.errUpdateTagMissingOldName();
+        try globals.printer.errUpdateTagMissingOldName();
         return;
     }
 
@@ -20,19 +19,19 @@ pub fn cmd(args: *ArgumentParser) !void {
     // Update the priority of the tag if it's appropriate
     if (args.*.priority != null) {
         try globals.dfw.updateTagPriority(args.*.payload.?, args.*.priority.?);
-        try user_feedback.updatedTagPriority(args.*.payload.?, args.*.priority.?);
+        try globals.printer.updatedTagPriority(args.*.payload.?, args.*.priority.?);
         was_something_updated = true;
     }
 
     // Update the name of the tag if it's appropriate
     if (args.*.name != null) {
         if (globals.dfw.updateTagName(args.*.payload.?, args.*.name.?)) |_| {
-            try user_feedback.updatedTagName(args.*.payload.?, args.*.name.?);
+            try globals.printer.updatedTagName(args.*.payload.?, args.*.name.?);
         } else |err| {
             switch (err) {
-                DataParsingError.TagNotFound => try user_feedback.errTagNotFoundName(args.*.payload.?),
-                DataOperationError.NameTooLong => try user_feedback.errNameTagTooLong(args.*.name.?),
-                DataOperationError.TagWithThisNameAlreadyExisting => try user_feedback.errNameTagAlreadyExisting(args.*.name.?),
+                DataParsingError.TagNotFound => try globals.printer.errTagNotFoundName(args.*.payload.?),
+                DataOperationError.NameTooLong => try globals.printer.errNameTagTooLong(args.*.name.?),
+                DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(args.*.name.?),
                 else => return err,
             }
         }
@@ -41,7 +40,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     if (!was_something_updated) {
-        try user_feedback.updatedTagNothing(args.*.payload.?);
+        try globals.printer.updatedTagNothing(args.*.payload.?);
     }
 }
 

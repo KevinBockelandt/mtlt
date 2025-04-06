@@ -2,7 +2,6 @@ const std = @import("std");
 const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const globals = @import("globals.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -18,17 +17,17 @@ pub fn cmd(args: *ArgumentParser) !void {
         if (cur_timer.id_thing != 0 and cur_timer.id_last_timer != 0) {
             if (globals.dfw.deleteTimerFromFile(cur_timer.id_thing, cur_timer.id_last_timer)) |_| {
                 const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try user_feedback.deletedTimer(str_id_thing, cur_timer.id_last_timer);
+                try globals.printer.deletedTimer(str_id_thing, cur_timer.id_last_timer);
                 try globals.dfw.resetIdLastCurrentTimer(cur_timer.id_thing, cur_timer.start);
                 return;
             } else |err| {
-                try user_feedback.errUnexpectedTimerDeletion(err);
+                try globals.printer.errUnexpectedTimerDeletion(err);
                 try globals.dfw.resetIdLastCurrentTimer(cur_timer.id_thing, cur_timer.start);
                 return err;
             }
         }
 
-        try user_feedback.noLastTimerToWorkOn();
+        try globals.printer.noLastTimerToWorkOn();
         return;
     }
 
@@ -38,19 +37,19 @@ pub fn cmd(args: *ArgumentParser) !void {
     const str_id_timer = arg_it.rest();
 
     const id_thing = base62_helper.b62ToB10(str_id_thing) catch |err| {
-        try user_feedback.errUnexpectedTimerIdParsing(err);
+        try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };
     const id_timer = std.fmt.parseInt(u11, str_id_timer, 10) catch |err| {
-        try user_feedback.errUnexpectedTimerIdParsing(err);
+        try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };
 
     // Actually delete and write feedback message
     if (globals.dfw.deleteTimerFromFile(id_thing, id_timer)) |_| {
-        try user_feedback.deletedTimer(str_id_thing, id_timer);
+        try globals.printer.deletedTimer(str_id_thing, id_timer);
     } else |err| {
-        try user_feedback.errUnexpectedTimerDeletion(err);
+        try globals.printer.errUnexpectedTimerDeletion(err);
         return err;
     }
 }

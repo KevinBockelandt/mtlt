@@ -131,7 +131,7 @@ pub const FullData = struct {
 
 /// The fixed part of a tag
 pub const FixedPartTag = struct {
-    lgt_name: u7 = 0,
+    lgt_name: u6 = 0,
     status: u2 = 0,
     id: u16 = 0,
 };

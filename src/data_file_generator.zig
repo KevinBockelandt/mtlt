@@ -22,8 +22,8 @@ const StatsGen = struct {
 
 const ParamGen = struct {
     num_tags: u16,
-    min_size_tag_name: u7,
-    max_size_tag_name: u7,
+    min_size_tag_name: u6,
+    max_size_tag_name: u6,
     num_things: u19,
     min_size_thing_name: u8,
     max_size_thing_name: u8,
@@ -188,7 +188,7 @@ fn generateTags(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
 
     while (num_tags_generated < pgen.num_tags) {
         // generate the fixed part of the tag
-        var lgt_name: u7 = rand.uintAtMost(u7, pgen.max_size_tag_name - pgen.min_size_tag_name) + pgen.min_size_tag_name;
+        var lgt_name: u6 = rand.uintAtMost(u6, pgen.max_size_tag_name - pgen.min_size_tag_name) + pgen.min_size_tag_name;
         const status: u1 = rand.uintAtMost(u1, 1);
         const id: u16 = @intCast(pgen.num_tags - num_tags_generated);
 
@@ -202,7 +202,7 @@ fn generateTags(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
                 if (std.mem.eql(u8, stored_name, name)) {
                     already_generated = true;
                     std.debug.print("Tag name \"{s}\" already generated\n", .{name});
-                    lgt_name = rand.uintAtMost(u7, pgen.max_size_tag_name - pgen.min_size_tag_name) + pgen.min_size_tag_name;
+                    lgt_name = rand.uintAtMost(u6, pgen.max_size_tag_name - pgen.min_size_tag_name) + pgen.min_size_tag_name;
                     name = generateRandomString(rand, buf_random_name[0..lgt_name], false);
                     break;
                 }

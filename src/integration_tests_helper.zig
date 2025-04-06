@@ -1,7 +1,7 @@
-const std = @import("std");
-const globals = @import("globals.zig");
-const dt = @import("data_types.zig");
 const data_file_printer = @import("data_file_printer.zig");
+const dt = @import("data_types.zig");
+const globals = @import("globals.zig");
+const std = @import("std");
 
 pub const integration_test_file_path = "test/integration_test_data_file.mtlt";
 
@@ -52,6 +52,7 @@ pub fn compareFiles(ex_file_data: dt.FullData) !void {
 }
 
 pub fn initTest() !void {
+    try globals.printer.init();
     try globals.initDataFileNames();
 
     // delete the potentially existing test file
@@ -64,7 +65,17 @@ pub fn initTest() !void {
     try globals.openDataFiles();
 }
 
+pub fn getStarterFile() !dt.FullData {
+    var to_ret: dt.FullData = .{};
+    to_ret.init();
+    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
+    try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
+    try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
+    return to_ret;
+}
+
 pub fn deinitTest() void {
     globals.closeDataFiles();
     globals.deinitDataFileNames();
+    globals.printer.deinit();
 }

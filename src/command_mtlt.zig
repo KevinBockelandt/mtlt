@@ -7,7 +7,6 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const time_helper = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -18,7 +17,7 @@ fn displayKickoffInfos(kickoff: u25) !void {
     if (kickoff != 0) {
         const kickoff_offset_min = @as(i64, kickoff) - @as(i64, time_helper.curTimestamp());
         const kickoff_offset_step = try time_helper.getStepsFromMinutes(u25, kickoff_offset_min);
-        try user_feedback.reportKickoff(kickoff_offset_step, ansi.getDurCol(kickoff_offset_min));
+        try globals.printer.reportKickoff(kickoff_offset_step, ansi.getDurCol(kickoff_offset_min));
     }
 }
 
@@ -26,7 +25,7 @@ fn displayKickoffInfos(kickoff: u25) !void {
 fn displayTimeLeftInfos(cur_thing: dt.Thing) !void {
     if (cur_thing.estimation != 0) {
         const time_left = try time_helper.computeTimeLeft(cur_thing);
-        try user_feedback.reportTimeLeftInfos(@intCast(time_left), ansi.getDurCol(time_left));
+        try globals.printer.reportTimeLeftInfos(@intCast(time_left), ansi.getDurCol(time_left));
     }
 }
 
@@ -37,13 +36,13 @@ fn displayCurTimerInfos(start: u25) !void {
         const temp_dur: u25 = time_helper.curTimestamp() - start;
 
         if (temp_dur > std.math.maxInt(u9)) {
-            try user_feedback.errTimerDurationTooGreat(temp_dur);
+            try globals.printer.errTimerDurationTooGreat(temp_dur);
         } else {
             const str_duration = try std.fmt.bufPrint(&buf_dur_id, "{d}", .{@as(u9, @intCast(temp_dur))});
-            try user_feedback.reportTimerStarted(str_duration);
+            try globals.printer.reportTimerStarted(str_duration);
         }
     } else {
-        try user_feedback.reportNoTimer();
+        try globals.printer.reportNoTimer();
     }
 }
 
@@ -58,8 +57,8 @@ pub fn cmd() !void {
 
         const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_thing.id);
 
-        try user_feedback.reportThingIdName(str_id_thing, cur_thing.name);
-        try user_feedback.reportStatus(@tagName(cur_thing.status));
+        try globals.printer.reportThingIdName(str_id_thing, cur_thing.name);
+        try globals.printer.reportStatus(@tagName(cur_thing.status));
 
         if (cur_thing.status == .open) {
             try displayKickoffInfos(cur_thing.kickoff);
@@ -67,6 +66,6 @@ pub fn cmd() !void {
             try displayCurTimerInfos(cur_timer.start);
         }
     } else {
-        try user_feedback.reportNoCurrentThing();
+        try globals.printer.reportNoCurrentThing();
     }
 }

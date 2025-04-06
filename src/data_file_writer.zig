@@ -3,10 +3,12 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
+const string_helper = @import("string_helper.zig");
 
 pub const DataOperationError = error{
     TagWithThisNameAlreadyExisting,
     NameTooLong,
+    NameContainingInvalidCharacters,
     TooManyTags,
     TagAlreadyPresent,
     TooManyThings,
@@ -22,9 +24,37 @@ const lgt_buf_read_from_file: usize = 2048;
 /// Generate an empty template for the data file
 pub fn generateEmptyDataFile() !void {
     // length of the tag section
-    try globals.data_file.writer().writeInt(u64, 10, little_end);
+    try globals.data_file.writer().writeInt(u64, 33, little_end);
     // number of tags in the file
-    try globals.data_file.writer().writeInt(u16, 0, little_end);
+    try globals.data_file.writer().writeInt(u16, 3, little_end);
+
+    // add 'now' tag
+    const fp_now_tag = dt.getIntFromTagFixedPart(.{
+        .lgt_name = 3,
+        .status = @intFromEnum(dt.StatusTag.now),
+        .id = 1,
+    });
+    try globals.data_file.writer().writeInt(u24, fp_now_tag, little_end);
+    _ = try globals.data_file.writer().write("now");
+
+    // add 'soon' tag
+    const fp_soon_tag = dt.getIntFromTagFixedPart(.{
+        .lgt_name = 4,
+        .status = @intFromEnum(dt.StatusTag.soon),
+        .id = 2,
+    });
+    try globals.data_file.writer().writeInt(u24, fp_soon_tag, little_end);
+    _ = try globals.data_file.writer().write("soon");
+
+    // add 'someday' tag
+    const fp_someday_tag = dt.getIntFromTagFixedPart(.{
+        .lgt_name = 7,
+        .status = @intFromEnum(dt.StatusTag.someday),
+        .id = 3,
+    });
+    try globals.data_file.writer().writeInt(u24, fp_someday_tag, little_end);
+    _ = try globals.data_file.writer().write("someday");
+
     // number of things in the file
     try globals.data_file.writer().writeInt(u24, 0, little_end);
     // current timer
@@ -187,8 +217,15 @@ pub const DataFileWriter = struct {
 
     /// Add a tag at the start of the tag section of the data file
     pub fn addTagToFile(self: *DataFileWriter, name: []const u8, status: dt.StatusTag) !u16 {
-        if (name.len > std.math.maxInt(u7)) {
+        if (name.len > std.math.maxInt(u6)) {
             return DataOperationError.NameTooLong;
+        }
+
+        // check for invalid characters in the tag name
+        for (name) |c| {
+            if (!string_helper.isValidTagNameChar(c)) {
+                return DataOperationError.NameContainingInvalidCharacters;
+            }
         }
 
         const r = globals.data_file.reader();
@@ -649,7 +686,7 @@ pub const DataFileWriter = struct {
     pub fn updateTagName(self: *DataFileWriter, old_name: []const u8, new_name: []const u8) !void {
         const w = globals.data_file.writer();
 
-        if (new_name.len > std.math.maxInt(u7)) {
+        if (new_name.len > std.math.maxInt(u6)) {
             return DataOperationError.NameTooLong;
         }
 

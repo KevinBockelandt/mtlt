@@ -6,7 +6,6 @@ const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -16,7 +15,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
 
     if (args.*.payload == null) {
-        try user_feedback.errIdThingMissing();
+        try globals.printer.errIdThingMissing();
         return;
     }
 
@@ -39,8 +38,8 @@ pub fn cmd(args: *ArgumentParser) !void {
         .tags = args.*.tags,
     }, &created_tags)) |_| {} else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(args.*.payload.?),
-            else => try user_feedback.errUnexpectedUpdatingThing(err),
+            DataParsingError.ThingNotFound => try globals.printer.errThingNotFoundStr(args.*.payload.?),
+            else => try globals.printer.errUnexpectedUpdatingThing(err),
         }
     }
 
@@ -50,17 +49,17 @@ pub fn cmd(args: *ArgumentParser) !void {
     defer globals.allocator.free(thing_name);
     _ = try globals.data_file.reader().read(thing_name);
 
-    try user_feedback.updatedThing(thing_name, id_str);
+    try globals.printer.updatedThing(thing_name, id_str);
 
     for (created_tags.items) |ct| {
-        try user_feedback.createdTag(ct.name);
+        try globals.printer.createdTag(ct.name);
     }
 
     // if wanted and possible, start the current timer on the updated thing right away
     if (args.*.should_start) {
         if (thing_data.status == @intFromEnum(dt.StatusThing.closed)) {
             const str_id = base62_helper.b10ToB62(&buf_str_id, thing_data.id);
-            try user_feedback.cantStartIfClosed(str_id);
+            try globals.printer.cantStartIfClosed(str_id);
             return;
         }
 

@@ -4,7 +4,6 @@ const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -13,7 +12,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     const cur_time = time_helper.curTimestamp();
 
     if (args.*.payload == null) {
-        try user_feedback.errIdThingMissing();
+        try globals.printer.errIdThingMissing();
         return;
     }
     const id_thing_str = args.*.payload.?;
@@ -25,14 +24,14 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // Check that there is a start offset value in the command arguments
     if (args.*.start_less == null) {
-        try user_feedback.errStartOffsetMissing();
+        try globals.printer.errStartOffsetMissing();
         return;
     }
     const start_less = args.*.start_less.?;
 
     // Check that the time offset for start is not too big
     if (cur_time < start_less) {
-        try user_feedback.errStartOffsetTooBig(cur_time);
+        try globals.printer.errStartOffsetTooBig(cur_time);
         return;
     }
 
@@ -40,9 +39,9 @@ pub fn cmd(args: *ArgumentParser) !void {
     const start_abs = cur_time - start_less;
 
     if (globals.dfw.addTimerToThing(id_thing_num, start_abs, duration)) |id_timer| {
-        try user_feedback.addedTimer(id_thing_str, id_timer);
+        try globals.printer.addedTimer(id_thing_str, id_timer);
     } else |err| {
-        try user_feedback.errUnexpectedTimerAddition(err);
+        try globals.printer.errUnexpectedTimerAddition(err);
         return;
     }
 }

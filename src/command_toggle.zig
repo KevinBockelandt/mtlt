@@ -6,7 +6,6 @@ const command_stop = @import("command_stop.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -26,7 +25,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         // no argument and no previous current timer
         if (cur_timer.id_thing == 0) {
-            try user_feedback.errIdThingMissing();
+            try globals.printer.errIdThingMissing();
             return;
         } else {
             id_thing = cur_timer.id_thing;
@@ -44,7 +43,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
-            try user_feedback.errThingNotFoundNum(id_thing);
+            try globals.printer.errThingNotFoundNum(id_thing);
             return err;
         } else {
             return err;
@@ -58,8 +57,8 @@ pub fn cmd(args: *ArgumentParser) !void {
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {
         const str_new_status: []const u8 = @tagName(new_status);
-        try user_feedback.reportThingIdName(str_id, thing_data.name);
-        try user_feedback.reportStatus(str_new_status);
+        try globals.printer.reportThingIdName(str_id, thing_data.name);
+        try globals.printer.reportStatus(str_new_status);
 
         // Display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
@@ -73,13 +72,13 @@ pub fn cmd(args: *ArgumentParser) !void {
             const col_remaining_time = ansi.getDurCol(remaining_time);
 
             if (thing_data.estimation > 0) {
-                try user_feedback.reportTimeLeftInfos(@intCast(remaining_time), col_remaining_time);
+                try globals.printer.reportTimeLeftInfos(@intCast(remaining_time), col_remaining_time);
             }
         }
     } else |err| {
         switch (err) {
-            DataParsingError.ThingNotFound => try user_feedback.errThingNotFoundStr(str_id),
-            else => try user_feedback.errUnexpectedToggleThing(err),
+            DataParsingError.ThingNotFound => try globals.printer.errThingNotFoundStr(str_id),
+            else => try globals.printer.errUnexpectedToggleThing(err),
         }
     }
 }

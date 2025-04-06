@@ -7,7 +7,6 @@ const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const th = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const CellAlignment = @import("table_printer.zig").CellAlignment;
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -25,7 +24,7 @@ pub fn infosReport(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         // and no previous current timer
         if (cur_timer.id_thing == 0) {
-            try user_feedback.errIdThingMissing();
+            try globals.printer.errIdThingMissing();
             return;
         } else {
             id_thing = cur_timer.id_thing;
@@ -84,9 +83,9 @@ fn displayTableReport(thing: dt.Thing) !void {
                 }
             } else |err| {
                 if (err == dfr.DataParsingError.TagNotFound) {
-                    try user_feedback.errTagNotFoundId(tag_id);
+                    try globals.printer.errTagNotFoundId(tag_id);
                 } else {
-                    try user_feedback.errUnexpectedGetTagName(tag_id, err);
+                    try globals.printer.errUnexpectedGetTagName(tag_id, err);
                 }
             }
         }

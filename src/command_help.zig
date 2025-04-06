@@ -5,7 +5,6 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const string_helper = @import("string_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const help_add = @import("command_add.zig").help;
 const help_add_tag = @import("command_add_tag.zig").help;
@@ -144,6 +143,6 @@ pub fn cmd(args: *ArgumentParser) !void {
     } else if (std.mem.eql(u8, args.*.payload.?, "update-timer")) {
         try help_update_timer();
     } else {
-        try user_feedback.errUnknownHelpTopic();
+        try globals.printer.errUnknownHelpTopic();
     }
 }

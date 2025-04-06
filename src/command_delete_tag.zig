@@ -1,7 +1,6 @@
 const std = @import("std");
 const ansi = @import("ansi_codes.zig");
 const globals = @import("globals.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -11,16 +10,16 @@ const little_end = std.builtin.Endian.little;
 /// Delete a tag from the data file
 pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
-        try user_feedback.errMissingTagName();
+        try globals.printer.errMissingTagName();
         return;
     }
 
     if (globals.dfw.deleteTagFromFile(args.*.payload.?)) |_| {
-        try user_feedback.deletedTag(args.*.payload.?);
+        try globals.printer.deletedTag(args.*.payload.?);
     } else |err| {
         // TODO use a switch here
         if (err == DataParsingError.TagNotFound) {
-            try user_feedback.errTagNotFoundName(args.*.payload.?);
+            try globals.printer.errTagNotFoundName(args.*.payload.?);
         } else {
             return err;
         }

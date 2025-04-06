@@ -5,7 +5,6 @@ const base62_helper = @import("base62_helper.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const command_stop = @import("command_stop.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -20,7 +19,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         // and no previous current timer
         if (cur_timer.id_thing == 0) {
-            try user_feedback.errIdThingMissing();
+            try globals.printer.errIdThingMissing();
             return;
         } else {
             // start a timer on the same ID than the previous one
@@ -48,7 +47,7 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
     // If there is no previous current timer and we have an ID to start on
     if (cur_timer.id_thing == 0 and id != 0) {
         try globals.dfw.startCurrentTimer(id);
-        try user_feedback.startedTimer(str_id, thing_name);
+        try globals.printer.startedTimer(str_id, thing_name);
         return;
     }
 
@@ -58,27 +57,27 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
         var arg_parser = ArgumentParser{};
         try command_stop.cmd(&arg_parser);
         try globals.dfw.startCurrentTimer(id);
-        try user_feedback.startedTimer(str_id, thing_name);
+        try globals.printer.startedTimer(str_id, thing_name);
         return;
     }
 
     // If there is a stopped previous current timer
     if (cur_timer.id_thing != 0 and cur_timer.id_thing != id and cur_timer.start == 0) {
         try globals.dfw.startCurrentTimer(id);
-        try user_feedback.startedTimer(str_id, thing_name);
+        try globals.printer.startedTimer(str_id, thing_name);
         return;
     }
 
     // If there is already a current timer running with the same ID
     if (cur_timer.id_thing != 0 and cur_timer.id_thing == id and cur_timer.start != 0) {
-        try user_feedback.timerAlreadyRunning(str_id, thing_name);
+        try globals.printer.timerAlreadyRunning(str_id, thing_name);
         return;
     }
 
     // If there is a stopped previous current timer with the same ID
     if (cur_timer.id_thing != 0 and cur_timer.id_thing == id and cur_timer.start == 0) {
         try globals.dfw.startCurrentTimer(id);
-        try user_feedback.startedTimer(str_id, thing_name);
+        try globals.printer.startedTimer(str_id, thing_name);
         return;
     }
 }

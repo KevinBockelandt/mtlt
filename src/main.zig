@@ -21,7 +21,6 @@ const globals = @import("globals.zig");
 const report_closed = @import("report_closed.zig");
 const report_infos = @import("report_infos.zig");
 const report_tags = @import("report_tags.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -47,6 +46,7 @@ const Commands = enum {
 };
 
 pub fn main() !void {
+    try globals.printer.init();
     try globals.initDataFileNames();
     try globals.openDataFiles();
 
@@ -54,6 +54,7 @@ pub fn main() !void {
 
     globals.closeDataFiles();
     globals.deinitDataFileNames();
+    globals.printer.deinit();
     globals.deinitMemAllocator();
 }
 
@@ -98,6 +99,6 @@ fn parseArgs() !void {
         .tags => try report_tags.tagsReport(&arg_parser),
         .toggle => try command_toggle.cmd(&arg_parser),
         .update => try command_update.cmd(&arg_parser),
-        else => try user_feedback.errUnknownCommand(args[1]),
+        else => try globals.printer.errUnknownCommand(args[1]),
     }
 }

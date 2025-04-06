@@ -6,7 +6,6 @@ const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -15,7 +14,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
 
     if (args.*.payload == null) {
-        try user_feedback.errNameThingMissing();
+        try globals.printer.errNameThingMissing();
         return;
     }
 
@@ -31,14 +30,14 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // display infos about the creation of the thing
     const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
-    try user_feedback.createdThing(args.*.payload.?, str_id);
+    try globals.printer.createdThing(args.*.payload.?, str_id);
 
     if (args.*.kickoff != null) {
-        try user_feedback.reportKickoff(args.*.kickoff.?, &ansi.colposdur);
+        try globals.printer.reportKickoff(args.*.kickoff.?, &ansi.colposdur);
     }
 
     for (infos_creation.created_tags.items) |tag| {
-        try user_feedback.createdTag(tag);
+        try globals.printer.createdTag(tag);
     }
 
     // if wanted, start the current timer on the created thing right away

@@ -5,7 +5,6 @@ const dfr = @import("data_file_reader.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
-const user_feedback = @import("user_feedback.zig");
 
 const CellAlignment = @import("table_printer.zig").CellAlignment;
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -56,7 +55,7 @@ pub fn tagsReport(args: *ArgumentParser) !void {
     } });
 
     if (tags_to_sort.items.len < 1) {
-        try user_feedback.noTagsToList();
+        try globals.printer.noTagsToList();
         return;
     }
 
