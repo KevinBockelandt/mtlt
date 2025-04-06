@@ -15,10 +15,9 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 64b - number of bytes in the tag section
 16b - number of tags
 ------------------------------------------------------------
- 7b - length of the tag name                              T
- 1b - status                                              A
- 2b - priority level                                      G
-14b - id
+ 6b - length of the tag name                              T
+ 2b - status                                              A
+16b - id                                                  G
  ?? - name of the tag
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

@@ -32,7 +32,7 @@ pub const ThingParsingCallbacks = union(enum) {
     CheckThingForTagAssociation: struct {
         func: *const CheckThingForTagAssociation,
         tag_id: u16,
-        num_ongoing: *u24,
+        num_open: *u24,
         num_closed: *u24,
     },
 };

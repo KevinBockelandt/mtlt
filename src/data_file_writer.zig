@@ -186,7 +186,7 @@ pub const DataFileWriter = struct {
     }
 
     /// Add a tag at the start of the tag section of the data file
-    pub fn addTagToFile(self: *DataFileWriter, name: []const u8) !u16 {
+    pub fn addTagToFile(self: *DataFileWriter, name: []const u8, status: dt.StatusTag) !u16 {
         if (name.len > std.math.maxInt(u7)) {
             return DataOperationError.NameTooLong;
         }
@@ -221,7 +221,7 @@ pub const DataFileWriter = struct {
 
             const raw_int_fixed_part = dt.getIntFromTagFixedPart(.{
                 .lgt_name = @intCast(name.len),
-                .status = @intFromEnum(dt.Status.ongoing),
+                .status = @intFromEnum(status),
                 .id = new_tag_id,
             });
 
@@ -271,7 +271,7 @@ pub const DataFileWriter = struct {
             } else |err| {
                 // create the tag if it doesn't already exists and add it to the list
                 if (err == dfr.DataParsingError.TagNotFound) {
-                    const t_id = try self.addTagToFile(t_name);
+                    const t_id = try self.addTagToFile(t_name, dt.StatusTag.someday);
                     buf_tag_ids[num_buf_tag_ids] = t_id;
                     num_buf_tag_ids += 1;
 
@@ -310,7 +310,7 @@ pub const DataFileWriter = struct {
             .id = new_id,
             .num_timers = 0,
             .num_tags = num_tags,
-            .status = @intFromEnum(dt.Status.ongoing),
+            .status = @intFromEnum(dt.StatusThing.open),
             .creation = time_helper.curTimestamp(),
             .kickoff = kickoff,
             .estimation = estimation,
@@ -583,26 +583,32 @@ pub const DataFileWriter = struct {
     }
 
     /// Update the status of the tag with the given ID
-    pub fn toggleTagStatus(self: *DataFileWriter, name: []const u8) !dt.Status {
+    pub fn toggleTagStatus(self: *DataFileWriter, tag_name: []const u8) !dt.StatusTag {
         _ = self;
-        const r = globals.data_file.reader();
+        const w = globals.data_file.writer();
 
-        if (globals.dfr.getPosTag(name)) |tag_pos| {
-            try globals.data_file.seekTo(tag_pos);
-            const tag_fixed_part = try r.readInt(u24, little_end);
-            const fpt = dt.getTagFixedPartFromInt(tag_fixed_part);
+        if (globals.dfr.getFixedPartTag(tag_name)) |fpt| {
+            var new_fpt = fpt;
 
+            if (fpt.status != @intFromEnum(dt.StatusTag.closed)) {
+                new_fpt.status = @intFromEnum(dt.StatusTag.closed);
+            } else {
+                new_fpt.status = @intFromEnum(dt.StatusTag.someday);
+            }
+
+            // rewrite the fixed part with the new data
             try globals.data_file.seekBy(-dt.lgt_fixed_tag);
-            try globals.data_file.writer().writeInt(u24, tag_fixed_part ^ 0b000000010000000000000000, little_end);
+            const raw_int_fpt = dt.getIntFromTagFixedPart(new_fpt);
+            try w.writeInt(u24, raw_int_fpt, little_end);
 
-            return @enumFromInt(fpt.status ^ 1);
+            return @enumFromInt(new_fpt.status);
         } else |err| {
             return err;
         }
     }
 
     /// Update the status of the thing with the given ID
-    pub fn toggleThingStatus(self: *DataFileWriter, id: u19) !dt.Status {
+    pub fn toggleThingStatus(self: *DataFileWriter, id: u19) !dt.StatusThing {
         _ = self;
         var fpt = try globals.dfr.getFixedPartThing(id);
 
@@ -617,6 +623,26 @@ pub const DataFileWriter = struct {
         try globals.data_file.writer().writeInt(u136, raw_fpt_int, little_end);
 
         return @enumFromInt(fpt.status);
+    }
+
+    /// Update the priority of a tag
+    pub fn updateTagPriority(self: *DataFileWriter, tag_name: []const u8, priority: dt.StatusTag) !void {
+        _ = self;
+        const w = globals.data_file.writer();
+
+        if (globals.dfr.getFixedPartTag(tag_name)) |fpt| {
+            var new_fpt = fpt;
+
+            // udpate the status (priority) of the tag
+            new_fpt.status = @intFromEnum(priority);
+
+            // rewrite the fixed part with the new data
+            try globals.data_file.seekBy(-dt.lgt_fixed_tag);
+            const raw_int_fpt = dt.getIntFromTagFixedPart(new_fpt);
+            try w.writeInt(u24, raw_int_fpt, little_end);
+        } else |err| {
+            return err;
+        }
     }
 
     /// Update the name of a tag
@@ -672,7 +698,7 @@ pub const DataFileWriter = struct {
             if (globals.dfr.getPosTag(t)) |_| {} else |err| {
                 if (err == dfr.DataParsingError.TagNotFound) {
                     // need to create the tag
-                    const id_new_tag = try self.addTagToFile(t);
+                    const id_new_tag = try self.addTagToFile(t, dt.StatusTag.someday);
                     try output.append(.{
                         .id = id_new_tag,
                         .name = t,

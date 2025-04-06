@@ -39,7 +39,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     //  stop a potential current timer running associated to the thing to toggle
     if (globals.dfr.getFixedPartThing(id_thing)) |fpt| {
-        if (fpt.status == @intFromEnum(dt.Status.ongoing) and cur_timer.id_thing == id_thing and cur_timer.start != 0) {
+        if (fpt.status == @intFromEnum(dt.StatusThing.open) and cur_timer.id_thing == id_thing and cur_timer.start != 0) {
             try command_stop.cmd(args);
         }
     } else |err| {

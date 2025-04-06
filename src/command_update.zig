@@ -58,7 +58,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // if wanted and possible, start the current timer on the updated thing right away
     if (args.*.should_start) {
-        if (thing_data.status == @intFromEnum(dt.Status.closed)) {
+        if (thing_data.status == @intFromEnum(dt.StatusThing.closed)) {
             const str_id = base62_helper.b10ToB62(&buf_str_id, thing_data.id);
             try user_feedback.cantStartIfClosed(str_id);
             return;

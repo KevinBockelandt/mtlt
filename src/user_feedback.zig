@@ -14,12 +14,24 @@ pub fn createdTag(tag_name: []const u8) !void {
     try wo.print("Created the tag {s}{s}{s}\n", .{ ansi.colemp, tag_name, ansi.colres });
 }
 
-pub fn toggledTag(new_status: []const u8, tag_name: []const u8) !void {
-    try wo.print("Tag {s}{s}{s} is now {s}{s}{s}\n", .{ ansi.colemp, tag_name, ansi.colres, ansi.colemp, new_status, ansi.colres });
+pub fn toggledTagClosed(tag_name: []const u8) !void {
+    try wo.print("Tag {s}{s}{s} is now {s}closed{s}.\n", .{ ansi.colemp, tag_name, ansi.colres, ansi.colemp, ansi.colres });
 }
 
-pub fn updatedTag(old_name: []const u8, new_name: []const u8) !void {
+pub fn toggledTagOpenned(new_priority: []const u8, tag_name: []const u8) !void {
+    try wo.print("Tag {s}{s}{s} is now {s}open{s} with priority {s}{s}{s}.\n", .{ ansi.colemp, tag_name, ansi.colres, ansi.colemp, ansi.colres, ansi.colemp, new_priority, ansi.colres });
+}
+
+pub fn updatedTagName(old_name: []const u8, new_name: []const u8) !void {
     try wo.print("Tag {s}{s}{s} is now nammed {s}{s}{s}\n", .{ ansi.colemp, old_name, ansi.colres, ansi.colemp, new_name, ansi.colres });
+}
+
+pub fn updatedTagPriority(tag_name: []const u8, priority: dt.StatusTag) !void {
+    try wo.print("Tag {s}{s}{s} has now the priority: {s}{s}{s}\n", .{ ansi.colemp, tag_name, ansi.colres, ansi.colemp, @tagName(priority), ansi.colres });
+}
+
+pub fn updatedTagNothing(old_name: []const u8) !void {
+    try wo.print("Nothing was updated on the tag {s}{s}{s}.\n", .{ ansi.colemp, old_name, ansi.colres });
 }
 
 pub fn deletedTag(tag_name: []const u8) !void {
@@ -166,6 +178,11 @@ pub fn errOptionAlreadyParsed(option: []const u8, arg: []const u8) !void {
     try we.print("{s} already parsed. Please remove: \"{s}\"\n", .{ option, arg });
 }
 
+pub fn errInvalidPriority() !void {
+    _ = try we.write("The specified priority level does not exist.\n");
+    _ = try we.write("Valid values are \"someday\" (default), \"soon\" and \"now\".\n");
+}
+
 pub fn errContradictionAllTagsFlags() !void {
     _ = try wo.write("Warning: you specified the --no-tags flag along the --tags and --excluded-tags flags.\n");
     _ = try wo.write("Since these are contradictory only the --no-tags flag will be taken into account\n");
@@ -249,13 +266,8 @@ pub fn errNameTagAlreadyExisting(tag_name: []const u8) !void {
 }
 
 pub fn errUpdateTagMissingOldName() !void {
-    _ = try we.write("The current name of the tag to udpate is missing\n");
-    _ = try we.write("The format of the command is \"mtlt udpate-tag <old_name> -n <new_name>\"\n");
-}
-
-pub fn errUpdateTagMissingNewName() !void {
-    _ = try we.write("The new name for the tag needs to be specified with the \"-n\" or \"--name\" flag\n");
-    _ = try we.write("The format of the command is \"mtlt udpate-tag <old_name> -n <new_name>\"\n");
+    _ = try we.write("The current name of the tag to udpate is missing.\n");
+    _ = try we.write("The format of the command can be seen with \"mtlt help update-tag\".\n");
 }
 
 // ERRORS RELATED TO DURATION

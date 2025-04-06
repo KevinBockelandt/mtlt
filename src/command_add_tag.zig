@@ -34,7 +34,9 @@ pub fn cmd(args: *ArgumentParser) !void {
         }
     }
 
-    if (globals.dfw.addTagToFile(args.*.payload.?)) |new_tag_id| {
+    const priority = if (args.*.priority) |p| p else dt.StatusTag.someday;
+
+    if (globals.dfw.addTagToFile(args.*.payload.?, priority)) |new_tag_id| {
         _ = new_tag_id;
         try user_feedback.createdTag(args.*.payload.?);
     } else |err| {
@@ -86,7 +88,7 @@ test "add tag in empty file" {
     defer ex_file.tags.deinit();
     defer ex_file.things.deinit();
 
-    try ex_file.tags.append(.{ .id = 1, .status = dt.Status.ongoing, .name = "testtag" });
+    try ex_file.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "testtag" });
     try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
 
     // create the actual file by executing the command
@@ -107,7 +109,7 @@ test "add tag in file containing only tags" {
     defer ex_file.tags.deinit();
     defer ex_file.things.deinit();
 
-    try ex_file.tags.append(.{ .id = 2, .status = dt.Status.ongoing, .name = "newtest" });
+    try ex_file.tags.append(.{ .id = 2, .status = dt.StatusTag.someday, .name = "newtest" });
     try ex_file.tags.append(.{ .id = 1, .status = dt.Status.closed, .name = "testtag" });
     try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
 

@@ -31,7 +31,7 @@ fn addThingToList(thing: dt.Thing, arr: *std.ArrayList(dt.Thing)) void {
     }
 }
 
-/// Display a report of the ongoing things
+/// Display a report of the open things
 pub fn closedReport(args: *ArgumentParser) !void {
     // TODO add necessary filters
 

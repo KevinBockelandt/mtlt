@@ -23,6 +23,8 @@ pub fn curTimestamp() u25 {
 pub fn getStepsFromMinutes(comptime T: type, min: i64) !T {
     const steps: f64 = @as(f64, @floatFromInt(min)) / 7.2;
 
+    // TODO check that `min` is not negative if `T` is unsigned
+
     if (steps > std.math.maxInt(T)) {
         return TimeError.StepVarTypeTooSmall;
     } else {

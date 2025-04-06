@@ -62,6 +62,7 @@ Short | Long               | Description                                 | Used 
 -el   | --estimation-less  | remove to estimation or filter above value  | ongoing
 -l    | --limit            | limit the number of displayed result        | ongoing, closed, timers, tags
 -n    | --name             | name for a thing                            | add, update, closed, ongoing, tags
+-p    | --priority         | priority for a tag                          | add-tag, update-tag, tags
 -s    | --start            | start a timer on the thing right away       | add, update, toggle
 -sl   | --start-less       | remove from start time                      | add-timer, update-timer, timers, stats
 -sm   | --start-more       | add to start time                           | add-timer, update-timer, timers

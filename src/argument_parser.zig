@@ -2,7 +2,7 @@ const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
 const base62_helper = @import("base62_helper.zig");
-const data_types = @import("data_types.zig");
+const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
@@ -28,19 +28,20 @@ pub const ArgumentParsingError = error{
     EmptyAlreadyParsed,
     EndLessAlreadyParsed,
     EstimationAlreadyParsed,
-    RemainMoreAlreadyParsed,
-    RemainLessAlreadyParsed,
     ExcludeTagsAlreadyParsed,
+    KickoffAlreadyParsed,
+    KickoffLessAlreadyParsed,
+    KickoffMoreAlreadyParsed,
     LimitAlreadyParsed,
     NameAlreadyParsed,
     NoTagsAlreadyParsed,
+    PriorityAlreadyParsed,
+    RemainLessAlreadyParsed,
+    RemainMoreAlreadyParsed,
     StartAlreadyParsed,
     StartLessAlreadyParsed,
     StartMoreAlreadyParsed,
     TagsAlreadyParsed,
-    KickoffAlreadyParsed,
-    KickoffMoreAlreadyParsed,
-    KickoffLessAlreadyParsed,
     // related to the parsed data
     NoDuration,
     SeveralDurationArgs,
@@ -56,19 +57,20 @@ const ArgType = enum(u8) {
     empty,
     end_less,
     estimation,
-    remain_more,
-    remain_less,
     exclude_tags,
+    kickoff,
+    kickoff_less,
+    kickoff_more,
     limit,
     name,
     no_tags,
+    priority,
+    remain_less,
+    remain_more,
     start,
     start_less,
     start_more,
     tags,
-    kickoff,
-    kickoff_more,
-    kickoff_less,
     unknown,
     unknown_flag,
 };
@@ -81,17 +83,18 @@ const ArgParserState = enum(u8) {
     expecting_duration_more,
     expecting_end_less,
     expecting_estimation,
-    expecting_remain_more,
-    expecting_remain_less,
     expecting_exclude_tags,
+    expecting_kickoff,
+    expecting_kickoff_less,
+    expecting_kickoff_more,
     expecting_limit,
     expecting_name,
+    expecting_priority,
+    expecting_remain_less,
+    expecting_remain_more,
     expecting_start_less,
     expecting_start_more,
     expecting_tags,
-    expecting_kickoff,
-    expecting_kickoff_more,
-    expecting_kickoff_less,
     not_expecting,
 };
 
@@ -129,10 +132,18 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.duration_more;
     } else if (std.mem.eql(u8, arg, "-e") or std.mem.eql(u8, arg, "--estimation")) {
         return ArgType.estimation;
+    } else if (std.mem.eql(u8, arg, "-k") or std.mem.eql(u8, arg, "--kickoff")) {
+        return ArgType.kickoff;
+    } else if (std.mem.eql(u8, arg, "-km") or std.mem.eql(u8, arg, "--kickoff-more")) {
+        return ArgType.kickoff_more;
+    } else if (std.mem.eql(u8, arg, "-kl") or std.mem.eql(u8, arg, "--kickoff-less")) {
+        return ArgType.kickoff_less;
     } else if (std.mem.eql(u8, arg, "-l") or std.mem.eql(u8, arg, "--limit")) {
         return ArgType.limit;
     } else if (std.mem.eql(u8, arg, "-n") or std.mem.eql(u8, arg, "--name")) {
         return ArgType.name;
+    } else if (std.mem.eql(u8, arg, "-p") or std.mem.eql(u8, arg, "--priority")) {
+        return ArgType.priority;
     } else if (std.mem.eql(u8, arg, "-rl") or std.mem.eql(u8, arg, "--remain-less")) {
         return ArgType.remain_less;
     } else if (std.mem.eql(u8, arg, "-rm") or std.mem.eql(u8, arg, "--remain-more")) {
@@ -143,12 +154,6 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.start_less;
     } else if (std.mem.eql(u8, arg, "-sm") or std.mem.eql(u8, arg, "--start-more")) {
         return ArgType.start_more;
-    } else if (std.mem.eql(u8, arg, "-k") or std.mem.eql(u8, arg, "--kickoff")) {
-        return ArgType.kickoff;
-    } else if (std.mem.eql(u8, arg, "-km") or std.mem.eql(u8, arg, "--kickoff-more")) {
-        return ArgType.kickoff_more;
-    } else if (std.mem.eql(u8, arg, "-kl") or std.mem.eql(u8, arg, "--kickoff-less")) {
-        return ArgType.kickoff_less;
     } else if (arg[0] == '-') {
         return ArgType.unknown_flag;
     } else {
@@ -174,19 +179,20 @@ pub const ArgumentParser = struct {
     duration_more: ?u12 = null, // --duration-more
     end_less: ?u25 = null, // --end-less
     estimation: ?u16 = null, // --estimation
-    remain_more: ?u16 = null, // --remain-more
-    remain_less: ?u16 = null, // --remain-less
     excluded_tags: std.ArrayList([]u8) = undefined, // --exclude-tags
+    kickoff: ?u25 = null, // --kickoff
+    kickoff_less: ?u25 = null, // --kickoff-less
+    kickoff_more: ?u25 = null, // --kickoff-more
     limit: ?u32 = null, // --limit
     name: ?[]const u8 = null, // --name
     no_tags: bool = false, // --no-tags
+    priority: ?dt.StatusTag = null, // --priority
+    remain_less: ?u16 = null, // --remain-less
+    remain_more: ?u16 = null, // --remain-more
     should_start: bool = false, // --start
     start_less: ?u25 = null, // --start-less
     start_more: ?u25 = null, // --start-more
     tags: std.ArrayList([]u8) = undefined, // --tags
-    kickoff: ?u25 = null, // --kickoff
-    kickoff_more: ?u25 = null, // --kickoff-more
-    kickoff_less: ?u25 = null, // --kickoff-less
 
     current_state: ArgParserState = ArgParserState.not_expecting,
 
@@ -197,8 +203,12 @@ pub const ArgumentParser = struct {
     end_less_already_parsed: bool = false,
     estimation_already_parsed: bool = false,
     excluded_tags_already_parsed: bool = false,
+    kickoff_already_parsed: bool = false,
+    kickoff_less_already_parsed: bool = false,
+    kickoff_more_already_parsed: bool = false,
     limit_already_parsed: bool = false,
     name_already_parsed: bool = false,
+    priority_already_parsed: bool = false,
     payload_already_parsed: bool = false,
     remain_less_already_parsed: bool = false,
     remain_more_already_parsed: bool = false,
@@ -206,9 +216,6 @@ pub const ArgumentParser = struct {
     start_less_already_parsed: bool = false,
     start_more_already_parsed: bool = false,
     tags_already_parsed: bool = false,
-    kickoff_already_parsed: bool = false,
-    kickoff_less_already_parsed: bool = false,
-    kickoff_more_already_parsed: bool = false,
 
     divisions_flag_already_parsed: bool = false,
     duration_flag_already_parsed: bool = false,
@@ -217,18 +224,19 @@ pub const ArgumentParser = struct {
     end_less_flag_already_parsed: bool = false,
     estimation_flag_already_parsed: bool = false,
     excluded_tags_flag_already_parsed: bool = false,
+    kickoff_flag_already_parsed: bool = false,
+    kickoff_less_flag_already_parsed: bool = false,
+    kickoff_more_flag_already_parsed: bool = false,
     limit_flag_already_parsed: bool = false,
     name_flag_already_parsed: bool = false,
     no_tags_flag_already_parsed: bool = false,
+    priority_flag_already_parsed: bool = false,
     remain_less_flag_already_parsed: bool = false,
     remain_more_flag_already_parsed: bool = false,
     should_flag_start_already_parsed: bool = false,
     start_less_flag_already_parsed: bool = false,
     start_more_flag_already_parsed: bool = false,
     tags_flag_already_parsed: bool = false,
-    kickoff_flag_already_parsed: bool = false,
-    kickoff_less_flag_already_parsed: bool = false,
-    kickoff_more_flag_already_parsed: bool = false,
 
     at_least_1_arg_parsed_after_flag: bool = false,
 
@@ -408,6 +416,17 @@ pub const ArgumentParser = struct {
         }
     }
 
+    /// Switch the parser to the expecting_priority
+    fn switchExpectingPriority(self: *ArgumentParser) !void {
+        if (!self.priority_flag_already_parsed) {
+            self.current_state = ArgParserState.expecting_priority;
+            self.priority_flag_already_parsed = true;
+        } else {
+            try user_feedback.errMultipleFlagsShortLong("-p", "--priority");
+            return ArgumentParsingError.PriorityAlreadyParsed;
+        }
+    }
+
     /// Switch the parser to the expecting_name state
     fn switchExpectingName(self: *ArgumentParser) !void {
         if (!self.name_flag_already_parsed) {
@@ -436,17 +455,18 @@ pub const ArgumentParser = struct {
             ArgType.duration_more => try self.switchExpectingDurationMore(),
             ArgType.end_less => try self.switchExpectingEndLess(),
             ArgType.estimation => try self.switchExpectingEstimation(),
-            ArgType.remain_more => try self.switchExpectingRemainMore(),
-            ArgType.remain_less => try self.switchExpectingRemainLess(),
             ArgType.exclude_tags => try self.switchExpectingExcludeTags(),
+            ArgType.kickoff => try self.switchExpectingKickoff(),
+            ArgType.kickoff_less => try self.switchExpectingKickoffLess(),
+            ArgType.kickoff_more => try self.switchExpectingKickoffMore(),
             ArgType.limit => try self.switchExpectingLimit(),
             ArgType.name => try self.switchExpectingName(),
+            ArgType.priority => try self.switchExpectingPriority(),
+            ArgType.remain_less => try self.switchExpectingRemainLess(),
+            ArgType.remain_more => try self.switchExpectingRemainMore(),
             ArgType.start_less => try self.switchExpectingStartLess(),
             ArgType.start_more => try self.switchExpectingStartMore(),
             ArgType.tags => try self.switchExpectingTags(),
-            ArgType.kickoff => try self.switchExpectingKickoff(),
-            ArgType.kickoff_more => try self.switchExpectingKickoffMore(),
-            ArgType.kickoff_less => try self.switchExpectingKickoffLess(),
             ArgType.unknown => {},
             else => try self.unexpectedArgument(arg),
         }
@@ -635,6 +655,28 @@ pub const ArgumentParser = struct {
                         }
                     }
                 },
+                ArgParserState.expecting_priority => {
+                    if (cur_arg_type == ArgType.unknown) {
+                        if (self.priority_already_parsed) {
+                            try user_feedback.errOptionAlreadyParsed("Priority", arg);
+                            return ArgumentParsingError.PriorityAlreadyParsed;
+                        } else if (std.mem.eql(u8, arg, "someday")) {
+                            self.priority = dt.StatusTag.someday;
+                            self.priority_already_parsed = true;
+                            self.current_state = ArgParserState.not_expecting;
+                        } else if (std.mem.eql(u8, arg, "soon")) {
+                            self.priority = dt.StatusTag.soon;
+                            self.priority_already_parsed = true;
+                            self.current_state = ArgParserState.not_expecting;
+                        } else if (std.mem.eql(u8, arg, "now")) {
+                            self.priority = dt.StatusTag.now;
+                            self.priority_already_parsed = true;
+                            self.current_state = ArgParserState.not_expecting;
+                        } else {
+                            try user_feedback.errInvalidPriority();
+                        }
+                    }
+                },
                 ArgParserState.expecting_start_less => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (self.start_less_already_parsed) {
@@ -759,13 +801,14 @@ pub const ArgumentParser = struct {
         printNullableInt(self.duration_more, "Duration More");
         printNullableInt(self.end_less, "End Less");
         printNullableInt(self.estimation, "Estimation");
-        printNullableInt(self.remain_more, "Remain More");
+        printNullableInt(self.kickoff, "Kickoff");
+        printNullableInt(self.kickoff_less, "Kickoff Less");
+        printNullableInt(self.kickoff_more, "Kickoff More");
+        printNullableInt(self.priority, "Priority");
         printNullableInt(self.remain_less, "Remain Less");
+        printNullableInt(self.remain_more, "Remain More");
         printNullableInt(self.start_less, "Start Less");
         printNullableInt(self.start_more, "Start More");
-        printNullableInt(self.kickoff, "Kickoff");
-        printNullableInt(self.kickoff_more, "Kickoff More");
-        printNullableInt(self.kickoff_less, "Kickoff Less");
 
         if (self.tags.items.len == 0) {
             std.debug.print(" - Tags: EMPTY\n", .{});
@@ -966,20 +1009,20 @@ test "parse: --divisions 4A0" {
     globals.allocator.free(args);
 }
 
-test "parse: -d 34:2" {
+test "parse: -d 34" {
     var arg_parser = ArgumentParser{};
     arg_parser.init();
     defer arg_parser.init();
 
     const args = try globals.allocator.alloc([:0]u8, 2);
     args[0] = try globals.allocator.dupeZ(u8, "-d");
-    args[1] = try globals.allocator.dupeZ(u8, "5:23");
+    args[1] = try globals.allocator.dupeZ(u8, "34");
 
     try arg_parser.parse(args);
 
     try std.testing.expect(arg_parser.payload == null);
     try std.testing.expect(arg_parser.divisions == null);
-    try std.testing.expect(arg_parser.duration.? == 323);
+    try std.testing.expect(arg_parser.duration.? == 34);
     try std.testing.expect(arg_parser.duration_less == null);
     try std.testing.expect(arg_parser.duration_more == null);
     try std.testing.expect(arg_parser.end_less == null);
@@ -1068,6 +1111,42 @@ test "parse: coucou --no-tags" {
     globals.allocator.free(args);
 }
 
+test "parse: -a test" {
+    var arg_parser = ArgumentParser{};
+    arg_parser.init();
+    defer arg_parser.init();
+
+    const args = try globals.allocator.alloc([:0]u8, 2);
+    args[0] = try globals.allocator.dupeZ(u8, "-a");
+    args[1] = try globals.allocator.dupeZ(u8, "test");
+
+    try arg_parser.parse(args);
+
+    try std.testing.expect(arg_parser.payload == null);
+    try std.testing.expect(arg_parser.divisions == null);
+    try std.testing.expect(arg_parser.duration == null);
+    try std.testing.expect(arg_parser.duration_less == null);
+    try std.testing.expect(arg_parser.duration_more == null);
+    try std.testing.expect(arg_parser.end_less == null);
+    try std.testing.expect(arg_parser.estimation == null);
+    try std.testing.expect(arg_parser.remain_more == null);
+    try std.testing.expect(arg_parser.remain_less == null);
+    try std.testing.expect(arg_parser.excluded_tags.items.len == 0);
+    try std.testing.expect(arg_parser.limit == null);
+    try std.testing.expect(arg_parser.name == null);
+    try std.testing.expect(arg_parser.no_tags == false);
+    try std.testing.expect(arg_parser.priority == null);
+    try std.testing.expect(arg_parser.should_start == false);
+    try std.testing.expect(arg_parser.start_less == null);
+    try std.testing.expect(arg_parser.start_more == null);
+    try std.testing.expect(arg_parser.tags.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, arg_parser.tags.items[0], "test"));
+    try std.testing.expect(arg_parser.kickoff == null);
+    try std.testing.expect(arg_parser.kickoff_more == null);
+    try std.testing.expect(arg_parser.kickoff_less == null);
+    globals.allocator.free(args);
+}
+
 test "parse: --no-tags -a test" {
     var arg_parser = ArgumentParser{};
     arg_parser.init();
@@ -1097,6 +1176,44 @@ test "parse: --no-tags -a test" {
     try std.testing.expect(arg_parser.start_less == null);
     try std.testing.expect(arg_parser.start_more == null);
     try std.testing.expect(arg_parser.tags.items.len == 0);
+    try std.testing.expect(arg_parser.kickoff == null);
+    try std.testing.expect(arg_parser.kickoff_more == null);
+    try std.testing.expect(arg_parser.kickoff_less == null);
+    globals.allocator.free(args);
+}
+
+test "parse: -a test -p now" {
+    var arg_parser = ArgumentParser{};
+    arg_parser.init();
+    defer arg_parser.init();
+
+    const args = try globals.allocator.alloc([:0]u8, 4);
+    args[0] = try globals.allocator.dupeZ(u8, "-a");
+    args[1] = try globals.allocator.dupeZ(u8, "test");
+    args[2] = try globals.allocator.dupeZ(u8, "-p");
+    args[3] = try globals.allocator.dupeZ(u8, "now");
+
+    try arg_parser.parse(args);
+
+    try std.testing.expect(arg_parser.payload == null);
+    try std.testing.expect(arg_parser.divisions == null);
+    try std.testing.expect(arg_parser.duration == null);
+    try std.testing.expect(arg_parser.duration_less == null);
+    try std.testing.expect(arg_parser.duration_more == null);
+    try std.testing.expect(arg_parser.end_less == null);
+    try std.testing.expect(arg_parser.estimation == null);
+    try std.testing.expect(arg_parser.remain_more == null);
+    try std.testing.expect(arg_parser.remain_less == null);
+    try std.testing.expect(arg_parser.excluded_tags.items.len == 0);
+    try std.testing.expect(arg_parser.limit == null);
+    try std.testing.expect(arg_parser.name == null);
+    try std.testing.expect(arg_parser.no_tags == false);
+    try std.testing.expect(arg_parser.priority == 3);
+    try std.testing.expect(arg_parser.should_start == false);
+    try std.testing.expect(arg_parser.start_less == null);
+    try std.testing.expect(arg_parser.start_more == null);
+    try std.testing.expect(arg_parser.tags.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, arg_parser.tags.items[0], "test"));
     try std.testing.expect(arg_parser.kickoff == null);
     try std.testing.expect(arg_parser.kickoff_more == null);
     try std.testing.expect(arg_parser.kickoff_less == null);

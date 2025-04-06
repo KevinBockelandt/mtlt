@@ -461,7 +461,7 @@ pub const DataFileReader = struct {
                     cb_handler.func(thing, cb_handler.thing_array);
                 },
                 .CheckThingForTagAssociation => |cb_handler| {
-                    cb_handler.func(thing, cb_handler.tag_id, cb_handler.num_ongoing, cb_handler.num_closed);
+                    cb_handler.func(thing, cb_handler.tag_id, cb_handler.num_open, cb_handler.num_closed);
                 },
             }
 

@@ -15,21 +15,33 @@ pub fn cmd(args: *ArgumentParser) !void {
         return;
     }
 
-    if (args.*.name == null) {
-        try user_feedback.errUpdateTagMissingNewName();
-        return;
+    var was_something_updated = false;
+
+    // Update the priority of the tag if it's appropriate
+    if (args.*.priority != null) {
+        try globals.dfw.updateTagPriority(args.*.payload.?, args.*.priority.?);
+        try user_feedback.updatedTagPriority(args.*.payload.?, args.*.priority.?);
+        was_something_updated = true;
     }
 
-    // perform the operation
-    if (globals.dfw.updateTagName(args.*.payload.?, args.*.name.?)) |_| {
-        try user_feedback.updatedTag(args.payload.?, args.*.name.?);
-    } else |err| {
-        switch (err) {
-            DataParsingError.TagNotFound => try user_feedback.errTagNotFoundName(args.*.payload.?),
-            DataOperationError.NameTooLong => try user_feedback.errNameTagTooLong(args.*.name.?),
-            DataOperationError.TagWithThisNameAlreadyExisting => try user_feedback.errNameTagAlreadyExisting(args.*.name.?),
-            else => return err,
+    // Update the name of the tag if it's appropriate
+    if (args.*.name != null) {
+        if (globals.dfw.updateTagName(args.*.payload.?, args.*.name.?)) |_| {
+            try user_feedback.updatedTagName(args.*.payload.?, args.*.name.?);
+        } else |err| {
+            switch (err) {
+                DataParsingError.TagNotFound => try user_feedback.errTagNotFoundName(args.*.payload.?),
+                DataOperationError.NameTooLong => try user_feedback.errNameTagTooLong(args.*.name.?),
+                DataOperationError.TagWithThisNameAlreadyExisting => try user_feedback.errNameTagAlreadyExisting(args.*.name.?),
+                else => return err,
+            }
         }
+
+        was_something_updated = true;
+    }
+
+    if (!was_something_updated) {
+        try user_feedback.updatedTagNothing(args.*.payload.?);
     }
 }
 

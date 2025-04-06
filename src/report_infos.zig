@@ -50,13 +50,16 @@ fn displayTableReport(thing: dt.Thing) !void {
     const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, thing.id);
 
     // kickoff
-    const offset_kickoff: i64 = @as(i64, @intCast(thing.kickoff)) - @as(i64, @intCast(cur_time));
+    const offset_kickoff_min: i64 = @as(i64, @intCast(thing.kickoff)) - @as(i64, @intCast(cur_time));
+    const offset_kickoff_steps = try th.getStepsFromMinutes(i32, offset_kickoff_min);
 
     // creation time
-    const offset_creation: i64 = @as(i64, @intCast(thing.creation)) - @as(i64, @intCast(cur_time));
+    const offset_creation_min: i64 = @as(i64, @intCast(thing.creation)) - @as(i64, @intCast(cur_time));
+    const offset_creation_steps = try th.getStepsFromMinutes(i32, offset_creation_min);
 
     // closure time
-    const offset_closure: i64 = @as(i64, @intCast(thing.closure)) - @as(i64, @intCast(cur_time));
+    const offset_closure_min: i64 = @as(i64, @intCast(thing.closure)) - @as(i64, @intCast(cur_time));
+    const offset_closure_steps = try th.getStepsFromMinutes(i32, offset_closure_min);
 
     // will contain the string for all the associated tags
     var buf_tags: [20000]u8 = undefined;
@@ -125,13 +128,14 @@ fn displayTableReport(thing: dt.Thing) !void {
 
         // START column
         var buf_start_str: [128]u8 = undefined;
-        const offset_start: i64 = @as(i64, @intCast(timer.start)) - @as(i64, @intCast(cur_time));
+        const offset_start_min: i64 = @as(i64, @intCast(timer.start)) - @as(i64, @intCast(cur_time));
+        const offset_start_steps = try th.getStepsFromMinutes(i32, offset_start_min);
 
         var str_start_str: []u8 = undefined;
-        if (offset_start < 0) {
-            str_start_str = try std.fmt.bufPrint(&buf_start_str, "{s}{d}{s} ago", .{ ansi.coldurntr, @abs(offset_start), ansi.colres });
+        if (offset_start_min < 0) {
+            str_start_str = try std.fmt.bufPrint(&buf_start_str, "{s}{d}{s} ago", .{ ansi.coldurntr, @abs(offset_start_steps), ansi.colres });
         } else {
-            str_start_str = try std.fmt.bufPrint(&buf_start_str, "{s}{d}{s} hence", .{ ansi.coldurntr, @abs(offset_start), ansi.colres });
+            str_start_str = try std.fmt.bufPrint(&buf_start_str, "{s}{d}{s} hence", .{ ansi.coldurntr, @abs(offset_start_steps), ansi.colres });
         }
 
         timers_table[i][1] = .{
@@ -160,18 +164,18 @@ fn displayTableReport(thing: dt.Thing) !void {
     try w.print("{s}            Status{s} : {s}\n", .{ ansi.colemp, ansi.colres, @tagName(thing.status) });
     try w.print("{s}   Associated tags{s} : {s}\n", .{ ansi.colemp, ansi.colres, buf_tags[0..idx_buf_tags] });
     try w.print("\n", .{});
-    try w.print("{s}     Creation time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_creation });
+    try w.print("{s}     Creation time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_creation_steps });
     if (thing.kickoff > 0) {
-        if (offset_kickoff > 0) {
-            try w.print("{s}           Kickoff{s} : in {d}\n", .{ ansi.colemp, ansi.colres, offset_kickoff });
+        if (offset_kickoff_steps > 0) {
+            try w.print("{s}           Kickoff{s} : in {d}\n", .{ ansi.colemp, ansi.colres, offset_kickoff_steps });
         } else {
-            try w.print("{s}           Kickoff{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_kickoff });
+            try w.print("{s}           Kickoff{s} : {d} ago\n", .{ ansi.colemp, ansi.colres, offset_kickoff_steps });
         }
     } else {
         try w.print("{s}           Kickoff{s} :\n", .{ ansi.colemp, ansi.colres });
     }
     if (thing.closure > 0) {
-        try w.print("{s}      Closure time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_closure });
+        try w.print("{s}      Closure time{s} : {d} steps ago\n", .{ ansi.colemp, ansi.colres, offset_closure_steps });
     } else {
         try w.print("{s}      Closure time{s} :\n", .{ ansi.colemp, ansi.colres });
     }

@@ -41,8 +41,8 @@ const ParamGen = struct {
     max_timers_per_thing: u11,
     max_timers_duration: u11,
     max_offset_between_timers: u32,
-    // max percent of things with status ongoing
-    percent_ongoing: u8,
+    // max percent of things with status open
+    percent_open: u8,
 };
 
 // generate an empty file
@@ -62,7 +62,7 @@ const param_gen_zero = ParamGen{
     .max_timers_per_thing = 5,
     .max_timers_duration = 500,
     .max_offset_between_timers = 20000,
-    .percent_ongoing = 0,
+    .percent_open = 0,
 };
 
 // generate a file with a few elements mainly stuff happening now
@@ -82,7 +82,7 @@ const param_gen_minimal = ParamGen{
     .max_timers_per_thing = 4,
     .max_timers_duration = 50,
     .max_offset_between_timers = 200,
-    .percent_ongoing = 80,
+    .percent_open = 80,
 };
 
 // generate a file with enough elements to test a bit of everything
@@ -102,7 +102,7 @@ const param_gen_enough = ParamGen{
     .max_timers_per_thing = 4,
     .max_timers_duration = 50,
     .max_offset_between_timers = 200,
-    .percent_ongoing = 50,
+    .percent_open = 50,
 };
 
 // generate a file with the maximum content possible
@@ -122,7 +122,7 @@ const param_gen_maximal = ParamGen{
     .max_timers_per_thing = 4,
     .max_timers_duration = 50,
     .max_offset_between_timers = 200,
-    .percent_ongoing = 50,
+    .percent_open = 50,
 };
 
 // TEST
@@ -142,7 +142,7 @@ const param_gen_test = ParamGen{
     .max_timers_per_thing = 4,
     .max_timers_duration = 50,
     .max_offset_between_timers = 200,
-    .percent_ongoing = 80,
+    .percent_open = 80,
 };
 
 // conveniance variable to select a generation profile easily
@@ -303,10 +303,10 @@ fn generateThings(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
 
         // determine the status of the thing
         const rand_status = rand.uintAtMost(u8, 100);
-        const status = if (rand_status <= pgen.percent_ongoing)
-            @intFromEnum(dt.Status.ongoing)
+        const status = if (rand_status <= pgen.percent_open)
+            @intFromEnum(dt.StatusThing.open)
         else
-            @intFromEnum(dt.Status.closed);
+            @intFromEnum(dt.StatusThing.closed);
 
         // get the current timestamp
         const creation = cur_time;
@@ -323,7 +323,7 @@ fn generateThings(rand: std.Random, w: anytype, stats_gen: *StatsGen) !void {
 
         // compute the closure offset and it's direction
         const ref_closure = if (kickoff > 0) kickoff else cur_time;
-        const closure: u25 = if (status == @intFromEnum(dt.Status.closed)) ref_closure else 0;
+        const closure: u25 = if (status == @intFromEnum(dt.StatusThing.closed)) ref_closure else 0;
 
         var estimation: u17 = 0;
         if (rand.uintAtMost(u8, 100) <= pgen.percent_estimation) {

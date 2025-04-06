@@ -12,10 +12,18 @@ pub const lgt_fixed_timer = 6;
 // length (in bytes) of the current timer section of the data file
 pub const lgt_fixed_current_timer = 7;
 
-/// Potential statuses a Tag or Thing can be in
-pub const Status = enum(u1) {
-    ongoing = 0,
+/// Potential statuses a thing can be in
+pub const StatusThing = enum(u1) {
+    open = 0,
     closed = 1,
+};
+
+/// Potential statuses a Tag can be in
+pub const StatusTag = enum(u2) {
+    closed = 0,
+    someday = 1,
+    soon = 2,
+    now = 3,
 };
 
 /// Durations in the application
@@ -34,7 +42,7 @@ pub const CurrentTimer = struct {
 /// The structure of a tag element in the data file
 pub const Tag = struct {
     id: u16,
-    status: Status = Status.ongoing,
+    status: StatusTag = StatusTag.someday,
     name: []const u8,
 
     pub fn deinit(self: *const Tag) void {
@@ -58,7 +66,7 @@ pub const Thing = struct {
     kickoff: u25 = 0,
     estimation: u16 = 0,
     closure: u25 = 0,
-    status: Status = Status.ongoing,
+    status: StatusThing = StatusThing.open,
     name: []const u8 = undefined,
     tags: []u16 = undefined,
     timers: []Timer = undefined,
@@ -124,7 +132,7 @@ pub const FullData = struct {
 /// The fixed part of a tag
 pub const FixedPartTag = struct {
     lgt_name: u7 = 0,
-    status: u1 = 0,
+    status: u2 = 0,
     id: u16 = 0,
 };
 
@@ -151,7 +159,7 @@ pub const VariablePartThing = struct {
 /// Association of a tag and a sorting coefficient
 pub const TagToSort = struct {
     tag: Tag = undefined,
-    num_ongoing_things_associated: u24 = 0,
+    num_open_things_associated: u24 = 0,
     num_closed_things_associated: u24 = 0,
     coef: u64 = 0,
 
@@ -207,7 +215,7 @@ const mask_fpt_estimation = 0b00000000000000000000000000000000000000000000000000
 const mask_fpt_closure = 0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111;
 
 // tag
-const mask_tag_status = 0b000000010000000000000000;
+const mask_tag_status = 0b000000110000000000000000;
 const mask_tag_id = 0b000000001111111111111111;
 
 // timer
@@ -236,7 +244,7 @@ pub fn getThingFixedPartFromInt(data: u136) FixedPartThing {
 /// return the data contained in a u24 corresponding to a tag
 pub fn getTagFixedPartFromInt(data: u24) FixedPartTag {
     return FixedPartTag{
-        .lgt_name = @intCast(data >> 17),
+        .lgt_name = @intCast(data >> 18),
         .status = @intCast((data & mask_tag_status) >> 16),
         .id = @intCast(data & mask_tag_id),
     };
@@ -263,7 +271,7 @@ pub fn getCurrentTimerFromInt(data: u56) CurrentTimer {
 /// Get a u24 corresponding to the fixed part of a tag
 pub fn getIntFromTagFixedPart(fpt: FixedPartTag) u24 {
     var to_ret: u24 = fpt.lgt_name;
-    to_ret = to_ret << 1 | fpt.status;
+    to_ret = to_ret << 2 | fpt.status;
     to_ret = to_ret << 16 | fpt.id;
     return to_ret;
 }

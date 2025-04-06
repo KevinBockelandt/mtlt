@@ -37,10 +37,6 @@ fn benchDataFileReaderGetPosThing() void {
     std.debug.print("Should benchmark 'data_file_reader.getPosThing'\n", .{});
 }
 
-fn benchReportOngoingOngoingReport() void {
-    std.debug.print("Should benchmark 'report_ongoing.ongoingReport'\n", .{});
-}
-
 fn benchBase62B10ToB62() void {
     std.debug.print("Should benchmark 'base62.b10ToB62'\n", .{});
 }

@@ -61,7 +61,7 @@ pub fn cmd() !void {
         try user_feedback.reportThingIdName(str_id_thing, cur_thing.name);
         try user_feedback.reportStatus(@tagName(cur_thing.status));
 
-        if (cur_thing.status == .ongoing) {
+        if (cur_thing.status == .open) {
             try displayKickoffInfos(cur_thing.kickoff);
             try displayTimeLeftInfos(cur_thing);
             try displayCurTimerInfos(cur_timer.start);
