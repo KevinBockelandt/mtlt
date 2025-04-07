@@ -191,27 +191,27 @@ pub const Printer = struct {
     }
 
     pub fn errUnexpectedArgument(self: *Printer, arg: []const u8) !void {
-        try self.writeErr("Unexpected argument: {s}\n", .{arg});
+        try self.writeErr("Unexpected argument: \"{s}\".\n", .{arg});
     }
 
     pub fn errUnexpectedFlag(self: *Printer, flag: []const u8) !void {
-        try self.writeErr("Unexpected flag: {s}\n", .{flag});
+        try self.writeErr("Unexpected flag: \"{s}\".\n", .{flag});
     }
 
     pub fn errDivisionInvalidCharacter(self: *Printer) !void {
-        try self.writeErr("Division number contains invalid characters\n", .{});
+        try self.writeErr("Division number contains invalid characters.\n", .{});
     }
 
     pub fn errDivisionTooBig(self: *Printer) !void {
-        try self.writeErr("Division number too big. Maximum is: {d}\n", .{std.math.maxInt(u8)});
+        try self.writeErr("Division number too big. Maximum is: {d}.\n", .{std.math.maxInt(u4)});
     }
 
     pub fn errDurationTooBig(self: *Printer, t: type) !void {
-        try self.writeErr("Duration number too big. Maximum is: {d}\n", .{std.math.maxInt(t)});
+        try self.writeErr("Duration number too big. Maximum is: {d}.\n", .{std.math.maxInt(t)});
     }
 
     pub fn errDurationInvalidCharacter(self: *Printer) !void {
-        try self.writeErr("Duration number contains invalid characters\n", .{});
+        try self.writeErr("Duration number contains invalid characters.\n", .{});
     }
 
     pub fn errOptionAlreadyParsed(self: *Printer, option: []const u8, arg: []const u8) !void {
@@ -404,9 +404,5 @@ pub const Printer = struct {
 
     pub fn errInvalidEnvVar(self: *Printer, env_var: []const u8) !void {
         try self.writeErr("The {s} environment variable is not valid WTF-8.\n", .{env_var});
-    }
-
-    pub fn errDivisionNumberTooBig(self: *Printer) !void {
-        try self.writeErr("Division number too big. Maximum is: {d}.\n", .{std.math.maxInt(u8)});
     }
 };

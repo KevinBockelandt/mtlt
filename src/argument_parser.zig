@@ -7,6 +7,7 @@ const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
 const time_helper = @import("time_helper.zig");
+const string_helper = @import("string_helper.zig");
 
 const little_end = std.builtin.Endian.little;
 const colemp = ansi.col_emphasis;
@@ -19,6 +20,7 @@ pub const ArgumentParsingError = error{
     UnexpectedArgument,
     UnknownFlag,
     CannotParseDuration,
+    CannotParseDivisions,
     // flags already parsed
     DivisionsAlreadyParsed,
     DurationAlreadyParsed,
@@ -121,8 +123,6 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.exclude_tags;
     } else if (std.mem.eql(u8, arg, "--no-tags")) {
         return ArgType.no_tags;
-    } else if (std.mem.eql(u8, arg, "-a") or std.mem.eql(u8, arg, "--tags")) {
-        return ArgType.tags;
     } else if (std.mem.eql(u8, arg, "-d") or std.mem.eql(u8, arg, "--duration")) {
         return ArgType.duration;
     } else if (std.mem.eql(u8, arg, "-dl") or std.mem.eql(u8, arg, "--duration-less")) {
@@ -153,6 +153,8 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.start_less;
     } else if (std.mem.eql(u8, arg, "-sm") or std.mem.eql(u8, arg, "--start-more")) {
         return ArgType.start_more;
+    } else if (std.mem.eql(u8, arg, "-t") or std.mem.eql(u8, arg, "--tags")) {
+        return ArgType.tags;
     } else if (arg[0] == '-') {
         return ArgType.unknown_flag;
     } else {
@@ -161,7 +163,7 @@ fn getArgType(arg: []const u8) ArgType {
 }
 
 /// Display the content of a nullable int (for debug purposes)
-fn printNullableInt(to_print: ?type, text: []const u8) void {
+fn printNullableInt(T: type, to_print: T, text: []const u8) void {
     if (to_print) |val| {
         std.debug.print(" - {s}: {d}\n", .{ text, val });
     } else {
@@ -172,7 +174,7 @@ fn printNullableInt(to_print: ?type, text: []const u8) void {
 pub const ArgumentParser = struct {
     /// the main thing regarding the command (an id to work on, the name of a thing to add, etc.)
     payload: ?[]const u8 = null,
-    divisions: ?u8 = null, // --divisions
+    divisions: ?u4 = null, // --divisions
     duration: ?u12 = null, // --duration
     duration_less: ?u12 = null, // --duration-less
     duration_more: ?u12 = null, // --duration-more
@@ -244,7 +246,7 @@ pub const ArgumentParser = struct {
             self.current_state = ArgParserState.expecting_tags;
             self.tags_flag_already_parsed = true;
         } else {
-            try globals.printer.errMultipleFlagsShortLong("-a", "--tags");
+            try globals.printer.errMultipleFlagsShortLong("-t", "--tags");
             return ArgumentParsingError.TagsAlreadyParsed;
         }
     }
@@ -510,19 +512,16 @@ pub const ArgumentParser = struct {
             switch (self.current_state) {
                 ArgParserState.expecting_divisions => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.divisions_already_parsed) {
-                            try globals.printer.errDivisionInvalidCharacter();
-                            return ArgumentParsingError.DivisionsAlreadyParsed;
-                        } else if (std.fmt.parseInt(u8, arg, 10)) |parsed_divisions| {
+                        if (std.fmt.parseInt(u4, arg, 10)) |parsed_divisions| {
                             self.divisions = @intCast(parsed_divisions);
                             self.divisions_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             switch (err) {
                                 std.fmt.ParseIntError.InvalidCharacter => try globals.printer.errDivisionInvalidCharacter(),
-                                std.fmt.ParseIntError.Overflow => try globals.printer.errDivisionNumberTooBig(),
+                                std.fmt.ParseIntError.Overflow => try globals.printer.errDivisionTooBig(),
                             }
-                            return err;
+                            return ArgumentParsingError.CannotParseDivisions;
                         }
                     }
                 },
@@ -753,7 +752,8 @@ pub const ArgumentParser = struct {
                 ArgParserState.not_expecting => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (!self.payload_already_parsed) {
-                            self.payload = arg;
+                            const idx_last = string_helper.getIdxLastNonSpace(arg);
+                            self.payload = arg[0 .. idx_last + 1];
                             self.payload_already_parsed = true;
                         } else {
                             try self.unexpectedArgument(arg);
@@ -793,20 +793,25 @@ pub const ArgumentParser = struct {
             std.debug.print(" - Name: NULL\n", .{});
         }
 
-        printNullableInt(self.divisions, "Divisions");
-        printNullableInt(self.duration, "Duration");
-        printNullableInt(self.duration_less, "Duration Less");
-        printNullableInt(self.duration_more, "Duration More");
-        printNullableInt(self.end_less, "End Less");
-        printNullableInt(self.estimation, "Estimation");
-        printNullableInt(self.kickoff, "Kickoff");
-        printNullableInt(self.kickoff_less, "Kickoff Less");
-        printNullableInt(self.kickoff_more, "Kickoff More");
-        printNullableInt(self.priority, "Priority");
-        printNullableInt(self.remain_less, "Remain Less");
-        printNullableInt(self.remain_more, "Remain More");
-        printNullableInt(self.start_less, "Start Less");
-        printNullableInt(self.start_more, "Start More");
+        if (self.priority) |p| {
+            std.debug.print(" - Priority: {s}\n", .{@tagName(p)});
+        } else {
+            std.debug.print(" - Priority: NULL\n", .{});
+        }
+
+        printNullableInt(?u4, self.divisions, "Divisions");
+        printNullableInt(?u12, self.duration, "Duration");
+        printNullableInt(?u12, self.duration_less, "Duration Less");
+        printNullableInt(?u12, self.duration_more, "Duration More");
+        printNullableInt(?u25, self.end_less, "End Less");
+        printNullableInt(?u16, self.estimation, "Estimation");
+        printNullableInt(?u25, self.kickoff, "Kickoff");
+        printNullableInt(?u25, self.kickoff_less, "Kickoff Less");
+        printNullableInt(?u25, self.kickoff_more, "Kickoff More");
+        printNullableInt(?u16, self.remain_less, "Remain Less");
+        printNullableInt(?u16, self.remain_more, "Remain More");
+        printNullableInt(?u25, self.start_less, "Start Less");
+        printNullableInt(?u25, self.start_more, "Start More");
 
         if (self.tags.items.len == 0) {
             std.debug.print(" - Tags: EMPTY\n", .{});
@@ -918,214 +923,577 @@ pub const ArgumentParser = struct {
     }
 };
 
-fn initTest() ArgumentParser {
+const TestData = struct {
+    args: []const []const u8,
+    ex_stdout: ?[]const u8 = null,
+    ex_stderr: ?[]const u8 = null,
+    ex_state: *ArgumentParser,
+    ex_err: ?anyerror = null,
+};
+
+fn performTest(td: TestData) !void {
+    try globals.printer.init();
+    defer globals.printer.deinit();
+
+    // the actual parser instance to test
     var arg_parser = ArgumentParser{};
     arg_parser.init();
-    globals.printer.init() catch unreachable;
-    return arg_parser;
-}
+    defer arg_parser.deinit();
 
-fn deinitTest(arg_parser: *ArgumentParser) void {
-    arg_parser.init();
-    globals.printer.deinit();
-}
-
-test "parse: \"nice weather outside\"" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
-
-    const args = try globals.allocator.alloc([:0]u8, 1);
-    args[0] = try globals.allocator.dupeZ(u8, "nice weather outside");
+    // create the array of args to parse
+    const args = try globals.allocator.alloc([:0]u8, td.args.len);
+    for (0..td.args.len) |i| {
+        args[i] = try globals.allocator.dupeZ(u8, td.args[i]);
+    }
     defer globals.allocator.free(args);
 
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.payload = "nice weather outside";
+    // if we expect an error, check it's the correct one
+    if (td.ex_err) |ex_err| {
+        arg_parser.parse(args) catch |ac_err| {
+            std.testing.expectEqual(ac_err, ex_err) catch |err| {
+                std.debug.print("ac_err: {}\n", .{ac_err});
+                std.debug.print("ex_err: {}\n", .{ex_err});
+                return err;
+            };
+        };
+    } else {
+        try arg_parser.parse(args);
+    }
 
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
-}
+    // if there should be something on the stdout
+    if (td.ex_stdout) |ex_stdout| {
+        const ac_stdout = globals.printer.out_buff[0..globals.printer.cur_pos_out_buff];
+        std.testing.expect(std.mem.eql(u8, ac_stdout, ex_stdout)) catch |err| {
+            std.debug.print("ac_stdout: {s}\n", .{ac_stdout});
+            std.debug.print("ex_stdout: {s}\n", .{ex_stdout});
+            return err;
+        };
+    }
 
-test "parse: --divisions 34" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+    // if there should be something on the stderr
+    if (td.ex_stderr) |ex_stderr| {
+        const ac_stderr = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
+        std.testing.expect(std.mem.eql(u8, ac_stderr, ex_stderr)) catch |err| {
+            std.debug.print("ac_stderr: {s}\n", .{ac_stderr});
+            std.debug.print("ex_stderr: {s}\n", .{ex_stderr});
+            return err;
+        };
+    }
 
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "--divisions");
-    args[1] = try globals.allocator.dupeZ(u8, "34");
-    defer globals.allocator.free(args);
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.divisions = 34;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
-}
-
-test "parse: --divisions 4A0" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
-
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "--divisions");
-    args[1] = try globals.allocator.dupeZ(u8, "4A0");
-    defer globals.allocator.free(args);
-
-    arg_parser.parse(args) catch |err| {
-        try std.testing.expect(err == std.fmt.ParseIntError.InvalidCharacter);
+    std.testing.expect(arg_parser.compare(td.ex_state)) catch |err| {
+        arg_parser.print();
+        td.ex_state.print();
+        return err;
     };
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.current_state = ArgParserState.expecting_divisions;
-
-    try std.testing.expect(arg_parser.compare(&expected_res));
 }
 
-test "parse: -d 34" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+// ---------------------------------------------------------
+// TEST PAYLOAD
+// ---------------------------------------------------------
 
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "-d");
-    args[1] = try globals.allocator.dupeZ(u8, "34");
-    defer globals.allocator.free(args);
+test "Payload \"nice weather outside\"" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "nice weather outside";
 
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.duration = 34;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{"nice weather outside"},
+        .ex_state = &ex_state,
+    });
 }
 
-test "parse: --limit 53" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+test "Payload \"#nice weat@@er  \"" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "#nice weat@@er";
 
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "--limit");
-    args[1] = try globals.allocator.dupeZ(u8, "53");
-    defer globals.allocator.free(args);
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.limit = 53;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{"#nice weat@@er  "},
+        .ex_state = &ex_state,
+    });
 }
 
-test "parse: coucou --no-tags" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+test "Payload already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "nice";
+    ex_state.estimation = 4;
 
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "coucou");
-    args[1] = try globals.allocator.dupeZ(u8, "--no-tags");
-    defer globals.allocator.free(args);
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.payload = "coucou";
-    expected_res.no_tags = true;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{ "nice", "-e", "4", "cool" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.UnexpectedArgument,
+        .ex_stderr = "Unexpected argument: \"cool\".\n",
+    });
 }
 
-test "parse: -a test" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+// ---------------------------------------------------------
+// TEST DIVISIONS
+// ---------------------------------------------------------
 
-    const args = try globals.allocator.alloc([:0]u8, 2);
-    args[0] = try globals.allocator.dupeZ(u8, "-a");
-    args[1] = try globals.allocator.dupeZ(u8, "test");
-    defer globals.allocator.free(args);
+test "Divisions OK case" {
+    var ex_state = ArgumentParser{};
+    ex_state.divisions = 10;
 
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    try expected_res.tags.append(try globals.allocator.dupeZ(u8, "test"));
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{ "--divisions", "10" },
+        .ex_state = &ex_state,
+    });
 }
 
-test "parse: --no-tags -a test" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+test "Division number contains invalid characters" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_divisions;
 
-    const args = try globals.allocator.alloc([:0]u8, 3);
-    args[0] = try globals.allocator.dupeZ(u8, "--no-tags");
-    args[1] = try globals.allocator.dupeZ(u8, "-a");
-    args[2] = try globals.allocator.dupeZ(u8, "test");
-    defer globals.allocator.free(args);
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    expected_res.no_tags = true;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{ "--divisions", "4A0" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDivisions,
+        .ex_stderr = "Division number contains invalid characters.\n",
+    });
 }
 
-test "parse: -a test -p now" {
-    var arg_parser = initTest();
-    defer deinitTest(&arg_parser);
+test "Division number too big" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_divisions;
 
-    const args = try globals.allocator.alloc([:0]u8, 4);
-    args[0] = try globals.allocator.dupeZ(u8, "-a");
-    args[1] = try globals.allocator.dupeZ(u8, "test");
-    args[2] = try globals.allocator.dupeZ(u8, "-p");
-    args[3] = try globals.allocator.dupeZ(u8, "now");
-    defer globals.allocator.free(args);
-
-    var expected_res = ArgumentParser{};
-    expected_res.init();
-    defer expected_res.deinit();
-    try expected_res.tags.append(try globals.allocator.dupe(u8, "test"));
-    expected_res.priority = dt.StatusTag.now;
-
-    try arg_parser.parse(args);
-    try std.testing.expect(arg_parser.compare(&expected_res));
+    try performTest(.{
+        .args = &.{ "--divisions", "20" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDivisions,
+        .ex_stderr = "Division number too big. Maximum is: 15.\n",
+    });
 }
 
+test "Divisions already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.not_expecting;
+    ex_state.divisions = 10;
+
+    try performTest(.{
+        .args = &.{ "--divisions", "10", "--divisions", "5" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.DivisionsAlreadyParsed,
+        .ex_stderr = "There can be only one \"--divisions\" flag.\n",
+    });
+}
+
+// ---------------------------------------------------------
+// TEST DURATION
+// ---------------------------------------------------------
+
+test "Duration OK case short" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration = 34;
+
+    try performTest(.{
+        .args = &.{ "-d", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration = 34;
+
+    try performTest(.{
+        .args = &.{ "--duration", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration invalid characters" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration;
+
+    try performTest(.{
+        .args = &.{ "--duration", "3H4" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number contains invalid characters.\n",
+    });
+}
+
+test "Duration number too big" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration;
+
+    try performTest(.{
+        .args = &.{ "--duration", "5000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number too big. Maximum is: 4095.\n",
+    });
+}
+
+test "Duration already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.not_expecting;
+    ex_state.duration = 38;
+
+    try performTest(.{
+        .args = &.{ "--duration", "38", "-d", "5" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.DurationAlreadyParsed,
+        .ex_stderr = "There can be only one \"-d\" or \"--duration\" flag.\n",
+    });
+}
+
+// ---------------------------------------------------------
+// TEST DURATION-LESS
+// ---------------------------------------------------------
+
+test "Duration-less OK case short" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration_less = 34;
+
+    try performTest(.{
+        .args = &.{ "-dl", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration-less OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration_less = 34;
+
+    try performTest(.{
+        .args = &.{ "--duration-less", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration-less invalid characters" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_less;
+
+    try performTest(.{
+        .args = &.{ "-dl", "3H4" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number contains invalid characters.\n",
+    });
+}
+
+test "Duration-less number too big" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_less;
+
+    try performTest(.{
+        .args = &.{ "--duration-less", "5000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number too big. Maximum is: 4095.\n",
+    });
+}
+
+test "Duration-less already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.not_expecting;
+    ex_state.duration_less = 38;
+
+    try performTest(.{
+        .args = &.{ "--duration-less", "38", "-dl", "5" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.DurationLessAlreadyParsed,
+        .ex_stderr = "There can be only one \"-dl\" or \"--duration-less\" flag.\n",
+    });
+}
+
+// ---------------------------------------------------------
+// TEST DURATION-MORE
+// ---------------------------------------------------------
+
+test "Duration-more OK case short" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration_more = 34;
+
+    try performTest(.{
+        .args = &.{ "-dm", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration-more OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration_more = 34;
+
+    try performTest(.{
+        .args = &.{ "--duration-more", "34" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Duration-more invalid characters" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_more;
+
+    try performTest(.{
+        .args = &.{ "-dm", "3H4" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number contains invalid characters.\n",
+    });
+}
+
+test "Duration-more number too big" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_more;
+
+    try performTest(.{
+        .args = &.{ "--duration-more", "5000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number too big. Maximum is: 4095.\n",
+    });
+}
+
+test "Duration-more already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.not_expecting;
+    ex_state.duration_more = 38;
+
+    try performTest(.{
+        .args = &.{ "--duration-more", "38", "-dm", "5" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.DurationMoreAlreadyParsed,
+        .ex_stderr = "There can be only one \"-dm\" or \"--duration-more\" flag.\n",
+    });
+}
+
+// ---------------------------------------------------------
+// TEST END-LESS
+// ---------------------------------------------------------
+
+// ok case
+// TODO end-less number contains invalid characters
+// TODO end-less number too big (u25)
+// TODO end-less already parsed
+// TODO end-less-flag already parsed
+
+// ---------------------------------------------------------
+// TEST ESTIMATION
+// ---------------------------------------------------------
+
+// ok case
+// TODO estimation number contains invalid characters
+// TODO estimation number too big (u16)
+// TODO estimation already parsed
+// TODO estimation-flag already parsed
+
+// ---------------------------------------------------------
+// TEST EXCLUDED-TAGS
+// ---------------------------------------------------------
+
+// ok case
+// TODO trim trailing spaces
+// TODO excluded-tags-flag but no tag after
+// TODO excluded-tags-flag already parsed
+// TODO multiple same tags
+
+// ---------------------------------------------------------
+// TEST KICKOFF
+// ---------------------------------------------------------
+
+// ok case
+// TODO kickoff number contains invalid characters
+// TODO kickoff number too big (u25)
+// TODO kickoff already parsed
+// TODO kickoff-flag already parsed
+
+// ---------------------------------------------------------
+// TEST KICKOFF-LESS
+// ---------------------------------------------------------
+
+// ok case
+// TODO kickoff-less number contains invalid characters
+// TODO kickoff-less number too big (u25)
+// TODO kickoff-less already parsed
+// TODO kickoff-less-flag already parsed
+
+// ---------------------------------------------------------
+// TEST KICKOFF-MORE
+// ---------------------------------------------------------
+
+// ok case
+// TODO kickoff-more number contains invalid characters
+// TODO kickoff-more number too big (u25)
+// TODO kickoff-more already parsed
+// TODO kickoff-more-flag already parsed
+
+// ---------------------------------------------------------
+// TEST LIMIT
+// ---------------------------------------------------------
+
+test "Limit OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.limit = 53;
+
+    try performTest(.{
+        .args = &.{ "--limit", "53" },
+        .ex_state = &ex_state,
+    });
+}
+
+// TODO limit number contains invalid characters
+// TODO limit number too big (u32)
+// TODO limit already parsed
+// TODO limit-flag already parsed
+
+// ---------------------------------------------------------
+// TEST NAME
+// ---------------------------------------------------------
+
+// ok case
+// TODO trim trailing spaces
+// TODO limit already parsed
+// TODO limit-flag already parsed
+
+// ---------------------------------------------------------
+// TEST NO-TAGS
+// ---------------------------------------------------------
+
+test "No-tags OK case" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "coucou";
+    ex_state.no_tags = true;
+
+    try performTest(.{
+        .args = &.{ "coucou", "--no-tags" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "--no-tags has priority on --tags" {
+    var ex_state = ArgumentParser{};
+    ex_state.no_tags = true;
+    ex_state.current_state = ArgParserState.expecting_tags;
+
+    try performTest(.{
+        .args = &.{ "--no-tags", "-t", "test" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stdout = "Warning: you specified the --no-tags flag along the --tags flag.\nSince these are contradictory only the --no-tags flag will be taken into account\n",
+    });
+}
+
+// TODO --no-tags has priority on --exclude-tags
+// TODO --no-tags has priority on --tags and --exclude-tags
+// TODO flag already parsed (is ok)
+
+// ---------------------------------------------------------
+// TEST PRIORITY
+// ---------------------------------------------------------
+
+test "Priority OK case short now" {
+    var ex_state = ArgumentParser{};
+    ex_state.priority = dt.StatusTag.now;
+
+    try performTest(.{
+        .args = &.{ "-p", "now" },
+        .ex_state = &ex_state,
+    });
+}
+
+// TODO ok case someday
+// TODO ok case soon
+// TODO invalid option
+// TODO priority already parsed
+// TODO priority-flag already parsed
+
+// ---------------------------------------------------------
+// TEST REMAIN-LESS
+// ---------------------------------------------------------
+
+// ok case
+// TODO remain-less number contains invalid characters
+// TODO remain-less number too big (u16)
+// TODO remain-less already parsed
+// TODO remain-less-flag already parsed
+
+// ---------------------------------------------------------
+// TEST REMAIN-MORE
+// ---------------------------------------------------------
+
+// ok case
+// TODO remain-more number contains invalid characters
+// TODO remain-more number too big (u16)
+// TODO remain-more already parsed
+// TODO remain-more-flag already parsed
+
+// ---------------------------------------------------------
+// TEST SHOULD-START
+// ---------------------------------------------------------
+
+// TODO ok case
+// TODO flag already parsed (is ok)
+
+// ---------------------------------------------------------
+// TEST START-LESS
+// ---------------------------------------------------------
+
+// ok case
+// TODO start-less number contains invalid characters
+// TODO start-less number too big (u25)
+// TODO start-less already parsed
+// TODO start-less-flag already parsed
+
+// ---------------------------------------------------------
+// TEST START-MORE
+// ---------------------------------------------------------
+
+// ok case
+// TODO start-more number contains invalid characters
+// TODO start-more number too big (u25)
+// TODO start-more already parsed
+// TODO start-more-flag already parsed
+
+// ---------------------------------------------------------
+// TEST TAGS
+// ---------------------------------------------------------
+
+test "Tags OK case short single tag" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "test"));
+
+    try performTest(.{
+        .args = &.{ "-t", "test" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Tags OK case long multiple tag" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "othertag"));
+
+    try performTest(.{
+        .args = &.{ "--tags", "tag1", "othertag" },
+        .ex_state = &ex_state,
+    });
+}
+
+// TODO do we check tag name size here?
+// TODO do we trim trailing spaces here?
+// TODO tags already parsed
+
+// ---------------------------------------------------------
+// TEST GENERIC
+// ---------------------------------------------------------
+
+// TODO unknown flag
+
+// test "Multiple payload" {
 // TODO
-// duration too big
-// duration impossible to parse
-// test both flags
-
-// Tests to perform on the argument parser:
-
-// - A test with a single type of argument for all the possible arguments
-// - A test with everything
-// - A test with contradicting flags
-// - A test with several times the same flag
-
-// try std.testing.expect(arg_parser.divisions.? == todo);
-// try std.testing.expect(arg_parser.duration.? == todo);
-// try std.testing.expect(arg_parser.duration_less.? == todo);
-// try std.testing.expect(arg_parser.duration_more.? == todo);
-// try std.testing.expect(arg_parser.end_less.? == todo);
-// try std.testing.expect(arg_parser.estimation.? == todo);
-// try std.testing.expect(arg_parser.remain_more.? == todo);
-// try std.testing.expect(arg_parser.remain_less.? == todo);
-// try std.testing.expect(arg_parser.excluded_tags.items.len == 0);
-// try std.testing.expect(std.mem.eql(u8, arg_parser.name.?, todo));
-// try std.testing.expect(arg_parser.no_tags == false);
-// try std.testing.expect(arg_parser.should_start == false);
-// try std.testing.expect(arg_parser.start_less.? == todo);
-// try std.testing.expect(arg_parser.start_more.? == todo);
-// try std.testing.expect(arg_parser.tags.items.len == 0);
-// try std.testing.expect(arg_parser.kickoff.? == todo);
-// try std.testing.expect(arg_parser.kickoff_more.? == todo);
-// try std.testing.expect(arg_parser.kickoff_less.? == todo);
+// var ex_state = ArgumentParser{};
+// ex_state.current_state = ArgParserState.not_expecting;
+// ex_state.divisions = 10;
+//
+// try performTest(.{
+//     .args = &.{ "payload", "--divisions", "10", "5" },
+//     .ex_state = &ex_state,
+//     .ex_err = ArgumentParsingError.DivisionsAlreadyParsed,
+//     .ex_stderr = "Divisions already parsed. Please remove: \"5\".\n",
+// });
+// }

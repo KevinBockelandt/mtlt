@@ -48,9 +48,42 @@ pub fn cmd(args: *ArgumentParser) !void {
 
 /// Display help text for this command
 pub fn help() !void {
-    const w = std.io.getStdOut().writer();
-
-    try w.print(
-        \\TODO help for add
-    , .{});
+    try std.io.getStdOut().writer().print(
+        \\Usage: {s}mtlt add <thing_name> [OPTIONS]{s}
+        \\
+        \\Creates a new thing.
+        \\
+        \\Options:
+        \\  {s}-e{s}, {s}--estimation{s}         How many steps will it take to complete
+        \\  {s}-k{s}, {s}--kickoff{s}            When should the thing start
+        \\  {s}-s{s}, {s}--start{s}              Start a timer on the thing right away
+        \\  {s}-t{s}, {s}--tags{s}               Tags associated to this thing
+        \\
+        \\Examples:
+        \\  {s}mtlt add "myCoolThing"{s}
+        \\      Create a new thing called 'myCoolThing' without additional data.
+        \\
+        \\  {s}mtlt add "new_thing" -t tag1 tag2 -e 20{s}
+        \\      Create a new thing called 'new_thing' with the associated tags 'tag1'
+        \\      and 'tag2' and an estimation of 20 steps.
+        \\
+        \\  {s}mtlt add "# the name can contain anything@@" -k 10 -s{s}
+        \\      Create a new thing called '# the name can contain anything@@' with a
+        \\      theoric kickoff in 10 steps and start a timer right away on it even
+        \\      though it's contradictory with the theoric kickoff.
+        \\
+    , .{
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+        ansi.colemp, ansi.colres,
+    });
 }
