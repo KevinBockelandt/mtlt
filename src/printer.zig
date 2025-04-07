@@ -198,20 +198,12 @@ pub const Printer = struct {
         try self.writeErr("Unexpected flag: \"{s}\".\n", .{flag});
     }
 
-    pub fn errDivisionInvalidCharacter(self: *Printer) !void {
-        try self.writeErr("Division number contains invalid characters.\n", .{});
+    pub fn errOptionTooBig(self: *Printer, opt: []const u8, t: type) !void {
+        try self.writeErr("{s} number too big. Maximum is: {d}.\n", .{ opt, std.math.maxInt(t) });
     }
 
-    pub fn errDivisionTooBig(self: *Printer) !void {
-        try self.writeErr("Division number too big. Maximum is: {d}.\n", .{std.math.maxInt(u4)});
-    }
-
-    pub fn errDurationTooBig(self: *Printer, t: type) !void {
-        try self.writeErr("Duration number too big. Maximum is: {d}.\n", .{std.math.maxInt(t)});
-    }
-
-    pub fn errDurationInvalidCharacter(self: *Printer) !void {
-        try self.writeErr("Duration number contains invalid characters.\n", .{});
+    pub fn errOptionInvalidCharacter(self: *Printer, opt: []const u8) !void {
+        try self.writeErr("{s} number contains invalid characters.\n", .{opt});
     }
 
     pub fn errOptionAlreadyParsed(self: *Printer, option: []const u8, arg: []const u8) !void {

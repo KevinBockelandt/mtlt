@@ -217,10 +217,12 @@ pub const DataFileWriter = struct {
 
     /// Add a tag at the start of the tag section of the data file
     pub fn addTagToFile(self: *DataFileWriter, name: []const u8, status: dt.StatusTag) !u16 {
+        // TODO the argument parsing makes this error impossible. Should be removed
         if (name.len > std.math.maxInt(u6)) {
             return DataOperationError.NameTooLong;
         }
 
+        // TODO the argument parsing makes this error impossible. Should be removed
         // check for invalid characters in the tag name
         for (name) |c| {
             if (!string_helper.isValidTagNameChar(c)) {
@@ -686,6 +688,7 @@ pub const DataFileWriter = struct {
     pub fn updateTagName(self: *DataFileWriter, old_name: []const u8, new_name: []const u8) !void {
         const w = globals.data_file.writer();
 
+        // TODO the argument parser makes this error impossble. Should be removed
         if (new_name.len > std.math.maxInt(u6)) {
             return DataOperationError.NameTooLong;
         }
