@@ -11,16 +11,22 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 pub fn cmd(args: *ArgumentParser) !void {
     const cur_time = time_helper.curTimestamp();
 
+    //  get the id of the thing associated to the timer to add
     if (args.*.payload == null) {
         try globals.printer.errIdThingMissing();
+        // TODO should return an error
         return;
     }
     const id_thing_str = args.*.payload.?;
     const id_thing_num = try base62_helper.b62ToB10(id_thing_str);
 
-    try args.checkNoStartLessAndMore();
-
-    const duration = try args.checkDurationPresence();
+    //  get the duration of the timer to add
+    if (args.*.duration == null) {
+        try globals.printer.errDurationMissing();
+        // TODO should return an error
+        return;
+    }
+    const duration = args.*.duration.?;
 
     // Check that there is a start offset value in the command arguments
     if (args.*.start_less == null) {

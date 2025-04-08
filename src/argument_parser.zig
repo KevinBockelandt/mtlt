@@ -24,18 +24,24 @@ pub const ArgumentParsingError = error{
     CannotParseDurationMore,
     CannotParseEndLess,
     CannotParseEstimation,
-    CannotParseLimit,
-    CannotParseStartLess,
-    CannotParseStartMore,
+    CannotParseExcludeTags,
     CannotParseKickoff,
     CannotParseKickoffLess,
     CannotParseKickoffMore,
+    CannotParseLimit,
+    CannotParseName,
+    CannotParsePriority,
+    CannotParseStartLess,
+    CannotParseStartMore,
+    CannotParseTags,
+    // tag parsing errors
+    TagNameTooLong,
+    TagNameInvalid,
     // flags already parsed
     DivisionsAlreadyParsed,
     DurationAlreadyParsed,
     DurationLessAlreadyParsed,
     DurationMoreAlreadyParsed,
-    EmptyAlreadyParsed,
     EndLessAlreadyParsed,
     EstimationAlreadyParsed,
     ExcludeTagsAlreadyParsed,
@@ -44,17 +50,13 @@ pub const ArgumentParsingError = error{
     KickoffMoreAlreadyParsed,
     LimitAlreadyParsed,
     NameAlreadyParsed,
-    NoTagsAlreadyParsed,
     PriorityAlreadyParsed,
-    StartAlreadyParsed,
     StartLessAlreadyParsed,
     StartMoreAlreadyParsed,
     TagsAlreadyParsed,
     // related to the parsed content
-    InvalidPriority,
-    NoDuration,
     SeveralDurationArgs,
-    StartLessAndMore,
+    SeveralStartArgs,
     UnexpectedArgument,
     UnknownFlag,
 };
@@ -171,6 +173,31 @@ fn printNullableInt(T: type, to_print: T, text: []const u8) void {
     }
 }
 
+/// Adds a tag to the given array list if it checks out
+fn addTagIfApplicable(al: *std.ArrayList([]const u8), to_add: []const u8) !void {
+    // check for the size of the name
+    if (to_add.len > std.math.maxInt(u6)) {
+        try globals.printer.errNameTagTooLong(to_add);
+        return ArgumentParsingError.TagNameTooLong;
+    }
+
+    // check for invalid characters in the name
+    if (!string_helper.isValidTagName(to_add)) {
+        try globals.printer.errNameTagInvalidChara();
+        return ArgumentParsingError.TagNameInvalid;
+    }
+
+    // check if the tag does not already exist in the list
+    for (al.items) |existing| {
+        if (std.mem.eql(u8, existing, to_add)) {
+            try globals.printer.outDuplicateTag(to_add);
+            return;
+        }
+    }
+
+    try al.append(to_add);
+}
+
 pub const ArgumentParser = struct {
     /// the main thing regarding the command (an id to work on, the name of a thing to add, etc.)
     payload: ?[]const u8 = null,
@@ -180,7 +207,7 @@ pub const ArgumentParser = struct {
     duration_more: ?u12 = null, // --duration-more
     end_less: ?u25 = null, // --end-less
     estimation: ?u16 = null, // --estimation
-    excluded_tags: std.ArrayList([]u8) = undefined, // --exclude-tags
+    excluded_tags: std.ArrayList([]const u8) = undefined, // --exclude-tags
     kickoff: ?u25 = null, // --kickoff
     kickoff_less: ?u25 = null, // --kickoff-less
     kickoff_more: ?u25 = null, // --kickoff-more
@@ -191,29 +218,11 @@ pub const ArgumentParser = struct {
     should_start: bool = false, // --start
     start_less: ?u25 = null, // --start-less
     start_more: ?u25 = null, // --start-more
-    tags: std.ArrayList([]u8) = undefined, // --tags
+    tags: std.ArrayList([]const u8) = undefined, // --tags
 
     current_state: ArgParserState = ArgParserState.not_expecting,
 
-    divisions_already_parsed: bool = false,
-    duration_already_parsed: bool = false,
-    duration_less_already_parsed: bool = false,
-    duration_more_already_parsed: bool = false,
-    end_less_already_parsed: bool = false,
-    estimation_already_parsed: bool = false,
-    excluded_tags_already_parsed: bool = false,
-    kickoff_already_parsed: bool = false,
-    kickoff_less_already_parsed: bool = false,
-    kickoff_more_already_parsed: bool = false,
-    limit_already_parsed: bool = false,
-    name_already_parsed: bool = false,
-    priority_already_parsed: bool = false,
     payload_already_parsed: bool = false,
-    should_start_already_parsed: bool = false,
-    start_less_already_parsed: bool = false,
-    start_more_already_parsed: bool = false,
-    tags_already_parsed: bool = false,
-
     divisions_flag_already_parsed: bool = false,
     duration_flag_already_parsed: bool = false,
     duration_less_flag_already_parsed: bool = false,
@@ -443,8 +452,8 @@ pub const ArgumentParser = struct {
     }
 
     pub fn init(self: *ArgumentParser) void {
-        self.tags = std.ArrayList([]u8).init(globals.allocator);
-        self.excluded_tags = std.ArrayList([]u8).init(globals.allocator);
+        self.tags = std.ArrayList([]const u8).init(globals.allocator);
+        self.excluded_tags = std.ArrayList([]const u8).init(globals.allocator);
     }
 
     pub fn deinit(self: *ArgumentParser) void {
@@ -484,7 +493,6 @@ pub const ArgumentParser = struct {
                     if (cur_arg_type == ArgType.unknown) {
                         if (std.fmt.parseInt(u4, arg, 10)) |parsed_divisions| {
                             self.divisions = @intCast(parsed_divisions);
-                            self.divisions_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u4, err, "Divisions");
@@ -494,12 +502,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_duration => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.duration_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Duration", arg);
-                            return ArgumentParsingError.DurationAlreadyParsed;
-                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
+                        if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration = @intCast(parsed_duration);
-                            self.duration_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u12, err, "Duration");
@@ -509,12 +513,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_duration_more => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.duration_more_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Duration more", arg);
-                            return ArgumentParsingError.DurationMoreAlreadyParsed;
-                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
+                        if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration_more = @intCast(parsed_duration);
-                            self.duration_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u12, err, "Duration more");
@@ -524,12 +524,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_duration_less => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.duration_less_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Duration less", arg);
-                            return ArgumentParsingError.DurationLessAlreadyParsed;
-                        } else if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
+                        if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
                             self.duration_less = @intCast(parsed_duration);
-                            self.duration_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u12, err, "Duration less");
@@ -539,12 +535,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_end_less => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.end_less_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("End less", arg);
-                            return ArgumentParsingError.EndLessAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_end| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_end| {
                             self.end_less = @intCast(parsed_end);
-                            self.end_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "End less");
@@ -554,12 +546,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_estimation => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.estimation_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Estimation", arg);
-                            return ArgumentParsingError.EstimationAlreadyParsed;
-                        } else if (std.fmt.parseInt(u16, arg, 10)) |parsed_estimation| {
+                        if (std.fmt.parseInt(u16, arg, 10)) |parsed_estimation| {
                             self.estimation = @intCast(parsed_estimation);
-                            self.estimation_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u16, err, "Estimation");
@@ -569,17 +557,28 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_exclude_tags => {
                     if (cur_arg_type == ArgType.unknown) {
-                        try self.excluded_tags.append(arg);
+                        if (string_helper.trimSurroundingSpaces(arg)) |tag| {
+                            addTagIfApplicable(&self.excluded_tags, tag) catch |err| {
+                                switch (err) {
+                                    error.TagNameTooLong => return ArgumentParsingError.CannotParseExcludeTags,
+                                    error.TagNameInvalid => return ArgumentParsingError.CannotParseExcludeTags,
+                                    else => return err,
+                                }
+                            };
+                        } else |err| {
+                            switch (err) {
+                                error.EmptyString => {
+                                    try globals.printer.errOptionEmptyString("exclude tags");
+                                    return ArgumentParsingError.CannotParseExcludeTags;
+                                },
+                            }
+                        }
                     }
                 },
                 ArgParserState.expecting_limit => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.limit_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Limit", arg);
-                            return ArgumentParsingError.LimitAlreadyParsed;
-                        } else if (std.fmt.parseInt(u32, arg, 10)) |parsed_limit| {
+                        if (std.fmt.parseInt(u32, arg, 10)) |parsed_limit| {
                             self.limit = @intCast(parsed_limit);
-                            self.limit_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u32, err, "Limit");
@@ -589,45 +588,39 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_name => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (!self.name_already_parsed) {
-                            self.name = arg;
-                            self.name_already_parsed = true;
-                        } else {
-                            try self.unexpectedArgument(arg);
+                        if (string_helper.trimSurroundingSpaces(arg)) |name| {
+                            self.name = name;
+                        } else |err| {
+                            switch (err) {
+                                error.EmptyString => {
+                                    try globals.printer.errOptionEmptyString("name");
+                                    return ArgumentParsingError.CannotParseName;
+                                },
+                            }
                         }
                     }
                 },
                 ArgParserState.expecting_priority => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.priority_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Priority", arg);
-                            return ArgumentParsingError.PriorityAlreadyParsed;
-                        } else if (std.mem.eql(u8, arg, "someday")) {
+                        if (std.mem.eql(u8, arg, "someday")) {
                             self.priority = dt.StatusTag.someday;
-                            self.priority_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else if (std.mem.eql(u8, arg, "soon")) {
                             self.priority = dt.StatusTag.soon;
-                            self.priority_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else if (std.mem.eql(u8, arg, "now")) {
                             self.priority = dt.StatusTag.now;
-                            self.priority_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else {
                             try globals.printer.errInvalidPriority();
-                            return ArgumentParsingError.InvalidPriority;
+                            return ArgumentParsingError.CannotParsePriority;
                         }
                     }
                 },
                 ArgParserState.expecting_start_less => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.start_less_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Start less", arg);
-                            return ArgumentParsingError.StartLessAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
                             self.start_less = @intCast(parsed_start);
-                            self.start_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "Start less");
@@ -637,12 +630,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_start_more => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.start_more_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Start more", arg);
-                            return ArgumentParsingError.StartMoreAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
                             self.start_more = @intCast(parsed_start);
-                            self.start_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "Start more");
@@ -652,17 +641,28 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_tags => {
                     if (cur_arg_type == ArgType.unknown) {
-                        try self.tags.append(arg);
+                        if (string_helper.trimSurroundingSpaces(arg)) |tag| {
+                            addTagIfApplicable(&self.tags, tag) catch |err| {
+                                switch (err) {
+                                    error.TagNameTooLong => return ArgumentParsingError.CannotParseTags,
+                                    error.TagNameInvalid => return ArgumentParsingError.CannotParseTags,
+                                    else => return err,
+                                }
+                            };
+                        } else |err| {
+                            switch (err) {
+                                error.EmptyString => {
+                                    try globals.printer.errOptionEmptyString("tags");
+                                    return ArgumentParsingError.CannotParseTags;
+                                },
+                            }
+                        }
                     }
                 },
                 ArgParserState.expecting_kickoff => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.kickoff_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Kickoff", arg);
-                            return ArgumentParsingError.KickoffAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
                             self.kickoff = @intCast(parsed_kickoff);
-                            self.kickoff_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "Kickoff");
@@ -672,12 +672,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_kickoff_more => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.kickoff_more_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Kickoff more", arg);
-                            return ArgumentParsingError.KickoffMoreAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
                             self.kickoff_more = @intCast(parsed_kickoff);
-                            self.kickoff_more_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "Kickoff more");
@@ -687,12 +683,8 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_kickoff_less => {
                     if (cur_arg_type == ArgType.unknown) {
-                        if (self.kickoff_less_already_parsed) {
-                            try globals.printer.errOptionAlreadyParsed("Kickoff less", arg);
-                            return ArgumentParsingError.KickoffLessAlreadyParsed;
-                        } else if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
+                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
                             self.kickoff_less = @intCast(parsed_kickoff);
-                            self.kickoff_less_already_parsed = true;
                             self.current_state = ArgParserState.not_expecting;
                         } else |err| {
                             try displayNumberParsingError(u25, err, "Kickoff less");
@@ -703,9 +695,14 @@ pub const ArgumentParser = struct {
                 ArgParserState.not_expecting => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (!self.payload_already_parsed) {
-                            const idx_last = string_helper.getIdxLastNonSpace(arg);
-                            self.payload = arg[0 .. idx_last + 1];
-                            self.payload_already_parsed = true;
+                            if (string_helper.trimSurroundingSpaces(arg)) |payload| {
+                                self.payload = payload;
+                                self.payload_already_parsed = true;
+                            } else |err| {
+                                switch (err) {
+                                    error.EmptyString => try globals.printer.errOptionEmptyString("payload"),
+                                }
+                            }
                         } else {
                             try self.unexpectedArgument(arg);
                         }
@@ -714,18 +711,10 @@ pub const ArgumentParser = struct {
             }
         }
 
-        // perform some checks on the parsed data
-        if (self.no_tags and self.tags.items.len != 0 and self.excluded_tags.items.len != 0) {
-            try globals.printer.errContradictionAllTagsFlags();
-            self.tags.clearRetainingCapacity();
-            self.excluded_tags.clearRetainingCapacity();
-        } else if (self.no_tags and self.tags.items.len != 0) {
-            try globals.printer.errContradictionNoTagsTags();
-            self.tags.clearRetainingCapacity();
-        } else if (self.no_tags and (self.tags.items.len != 0 or self.excluded_tags.items.len != 0)) {
-            try globals.printer.errContradictionNoTagsExcludedTags();
-            self.excluded_tags.clearRetainingCapacity();
-        }
+        // perform additional checks on the parsed data
+        try self.checkContradictionsTags();
+        try self.checkOnlyOneTypeDurationArg();
+        try self.checkNoStartLessAndMore();
     }
 
     /// Print the parsed content (for debug puproses)
@@ -766,18 +755,33 @@ pub const ArgumentParser = struct {
             std.debug.print(" - Tags: EMPTY\n", .{});
         }
         for (self.tags.items) |t| {
-            std.debug.print(" - Tags: {s}\n", .{t});
+            std.debug.print(" - Tags: <{s}>\n", .{t});
         }
 
         if (self.excluded_tags.items.len == 0) {
             std.debug.print(" - Excluded Tags: EMPTY\n", .{});
         }
         for (self.excluded_tags.items) |t| {
-            std.debug.print(" - Excluded Tags: {s}\n", .{t});
+            std.debug.print(" - Excluded Tags: <{s}>\n", .{t});
         }
 
         std.debug.print(" - Should start: {}\n", .{self.should_start});
         std.debug.print(" - No tags: {}\n", .{self.no_tags});
+    }
+
+    /// Check that the tag related flags do not conflict
+    pub fn checkContradictionsTags(self: *ArgumentParser) !void {
+        if (self.no_tags and self.tags.items.len != 0 and self.excluded_tags.items.len != 0) {
+            try globals.printer.outContradictionAllTagsFlags();
+            self.tags.clearRetainingCapacity();
+            self.excluded_tags.clearRetainingCapacity();
+        } else if (self.no_tags and self.tags.items.len != 0) {
+            try globals.printer.outContradictionNoTagsTags();
+            self.tags.clearRetainingCapacity();
+        } else if (self.no_tags and (self.tags.items.len != 0 or self.excluded_tags.items.len != 0)) {
+            try globals.printer.outContradictionNoTagsExcludedTags();
+            self.excluded_tags.clearRetainingCapacity();
+        }
     }
 
     /// Check that parsed arguments do not contain several types of duration flags
@@ -795,33 +799,15 @@ pub const ArgumentParser = struct {
         }
     }
 
-    /// Check that parsed arguments do not contain simultaneously duration less and more
-    pub fn checkNoDurationLessAndMore(self: *ArgumentParser) !void {
-        if (self.duration_less != null and self.duration_more != null) {
-            try globals.printer.errContradictionAddRemoveDuration();
-            return ArgumentParsingError.DurationLessAndMore;
-        }
-    }
-
     /// Check that parsed arguments do not contain simultaneously start offset less and more
     pub fn checkNoStartLessAndMore(self: *ArgumentParser) !void {
         if (self.start_less != null and self.start_more != null) {
             try globals.printer.errContradictionAddRemoveStartTime();
-            return ArgumentParsingError.StartLessAndMore;
+            return ArgumentParsingError.SeveralStartArgs;
         }
     }
 
-    /// Check there is a duration argument parsed in the command
-    pub fn checkDurationPresence(self: *ArgumentParser) !u12 {
-        if (self.duration) |dur| {
-            return dur;
-        } else {
-            try globals.printer.errDurationMissing();
-            return ArgumentParsingError.NoDuration;
-        }
-    }
-
-    /// Compare this instance with another. True if they hold the same data
+    /// Compare this instance with another. True if they hold the same data (used for debug)
     pub fn compare(self: *ArgumentParser, other: *ArgumentParser) bool {
         if (self.payload == null and other.payload != null) {
             return false;
@@ -928,7 +914,9 @@ fn performTest(td: TestData) !void {
     }
 
     std.testing.expect(arg_parser.compare(td.ex_state)) catch |err| {
+        std.debug.print("ABOUT TO PRINT ACTUAL:\n", .{});
         arg_parser.print();
+        std.debug.print("ABOUT TO PRINT EXPECTED:\n", .{});
         td.ex_state.print();
         return err;
     };
@@ -955,6 +943,17 @@ test "Payload \"#nice weat@@er  \"" {
     try performTest(.{
         .args = &.{"#nice weat@@er  "},
         .ex_state = &ex_state,
+    });
+}
+
+test "Payload empty" {
+    var ex_state = ArgumentParser{};
+
+    try performTest(.{
+        .args = &.{"                "},
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.UnexpectedArgument,
+        .ex_stderr = "There is an empty string for option payload.\n",
     });
 }
 
@@ -1321,11 +1320,109 @@ test "Estimation already parsed" {
 // TEST EXCLUDED-TAGS
 // ---------------------------------------------------------
 
-// ok case
-// TODO trim trailing spaces
-// TODO excluded-tags-flag but no tag after
-// TODO excluded-tags-flag already parsed
-// TODO multiple same tags
+test "Exclude tags OK case" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag2"));
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "tag1", "tag2" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Exclude tags OK case with surrounding spaces" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag2"));
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "   tag1", "tag2  " },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Exclude tags empty tag name" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "  tag1", "    " },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseExcludeTags,
+        .ex_stderr = "There is an empty string for option exclude tags.\n",
+    });
+}
+
+test "Exclude tags duplicate tag name" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag2"));
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "  tag1", "tag1", "tag2" },
+        .ex_state = &ex_state,
+        .ex_stdout = "Warning: the tag \"tag1\" was given multiple times and will be used only once.\n",
+    });
+}
+
+test "Exclude tags but not tags given" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{"--exclude-tags"},
+        .ex_state = &ex_state,
+    });
+}
+
+test "Exclude tags already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.excluded_tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "tag1", "--exclude-tags" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.ExcludeTagsAlreadyParsed,
+    });
+}
+
+test "Exclude tags tag name too long" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "seofijsoeifjoeijfosiejfosijefoisejfoioijeoijweoijwoeijvwoiejvowiejf" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseExcludeTags,
+        .ex_stderr = "The name \"seofijsoeifjoeijfosiejfosijefoisejfoioijeoijweoijwoeijvwoiejvowiejf\" is too long.\n",
+    });
+}
+
+test "Exlude tags tag name invalid character" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{ "--exclude-tags", "inv/alid" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseExcludeTags,
+        .ex_stderr = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n",
+    });
+}
 
 // ---------------------------------------------------------
 // TEST KICKOFF
@@ -1575,16 +1672,65 @@ test "Limit already parsed" {
 // TEST NAME
 // ---------------------------------------------------------
 
-// ok case
-// TODO trim trailing spaces
-// TODO limit already parsed
-// TODO limit-flag already parsed
+test "Name OK case short" {
+    var ex_state = ArgumentParser{};
+    ex_state.name = "super cool name";
+
+    try performTest(.{
+        .args = &.{ "-n", "super cool name" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Name OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.name = "super cool name";
+
+    try performTest(.{
+        .args = &.{ "--name", "super cool name" },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Name OK case with surrounding spaces" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "still cool";
+
+    try performTest(.{
+        .args = &.{"   still cool  "},
+        .ex_state = &ex_state,
+    });
+}
+
+test "Name empty string" {
+    var ex_state = ArgumentParser{};
+
+    try performTest(.{
+        .args = &.{ "-n", "   " },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseName,
+        .ex_stderr = "There is an empty string for option name.\n",
+    });
+}
+
+test "Name already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.name = "nice";
+    ex_state.estimation = 4;
+
+    try performTest(.{
+        .args = &.{ "-n", "nice", "-e", "4", "--name", "cool" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.NameAlreadyParsed,
+        .ex_stderr = "There can be only one \"-n\" or \"--name\" flag.\n",
+    });
+}
 
 // ---------------------------------------------------------
 // TEST NO-TAGS
 // ---------------------------------------------------------
 
-test "No-tags OK case" {
+test "No tags OK case" {
     var ex_state = ArgumentParser{};
     ex_state.payload = "coucou";
     ex_state.no_tags = true;
@@ -1603,14 +1749,44 @@ test "--no-tags has priority on --tags" {
     try performTest(.{
         .args = &.{ "--no-tags", "-t", "test" },
         .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.CannotParseDuration,
-        .ex_stdout = "Warning: you specified the --no-tags flag along the --tags flag.\nSince these are contradictory only the --no-tags flag will be taken into account\n",
+        .ex_stdout = "Warning: you specified the --no-tags flag along the --tags flag.\nSince these are contradictory only the --no-tags flag will be taken into account.\n",
     });
 }
 
-// TODO --no-tags has priority on --exclude-tags
-// TODO --no-tags has priority on --tags and --exclude-tags
-// TODO flag already parsed (is ok)
+test "--no-tags has priority on --exclude-tags" {
+    var ex_state = ArgumentParser{};
+    ex_state.no_tags = true;
+    ex_state.current_state = ArgParserState.expecting_exclude_tags;
+
+    try performTest(.{
+        .args = &.{ "--no-tags", "--exclude-tags", "toexclude" },
+        .ex_state = &ex_state,
+        .ex_stdout = "Warning: you specified the --no-tags flag along the --exclude-tags flag.\nSince these are contradictory only the --no-tags flag will be taken into account.\n",
+    });
+}
+
+test "--no-tags has priority on --tags and --exclude-tags" {
+    var ex_state = ArgumentParser{};
+    ex_state.no_tags = true;
+    ex_state.current_state = ArgParserState.expecting_tags;
+
+    try performTest(.{
+        .args = &.{ "--no-tags", "-t", "toinclude", "--exclude-tags", "toexclude" },
+        .ex_state = &ex_state,
+        .ex_stdout = "Warning: you specified the --no-tags flag along the --tags and --exclude-tags flags.\nSince these are contradictory only the --no-tags flag will be taken into account.\n",
+    });
+}
+
+test "No tags already parsed (valid)" {
+    var ex_state = ArgumentParser{};
+    ex_state.payload = "nice";
+    ex_state.no_tags = true;
+
+    try performTest(.{
+        .args = &.{ "--no-tags", "nice", "--no-tags" },
+        .ex_state = &ex_state,
+    });
+}
 
 // ---------------------------------------------------------
 // TEST PRIORITY
@@ -1652,7 +1828,7 @@ test "Priority invalid option" {
     try performTest(.{
         .args = &.{ "-p", "wrong" },
         .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.InvalidPriority,
+        .ex_err = ArgumentParsingError.CannotParsePriority,
         .ex_stderr = "The specified priority level does not exist.\nValid values are \"someday\" (default), \"soon\" and \"now\".\n",
     });
 }
@@ -1702,8 +1878,6 @@ test "Should start already parsed (valid)" {
         .ex_state = &ex_state,
     });
 }
-
-//
 
 // ---------------------------------------------------------
 // TEST START-LESS
@@ -1834,7 +2008,7 @@ test "Start more already parsed" {
 test "Tags OK case short single tag" {
     var ex_state = ArgumentParser{};
     ex_state.init();
-    ex_state.deinit();
+    defer ex_state.deinit();
     try ex_state.tags.append(try globals.allocator.dupeZ(u8, "test"));
 
     try performTest(.{
@@ -1856,27 +2030,159 @@ test "Tags OK case long multiple tag" {
     });
 }
 
-// TODO check tag name size
-// TODO trim trailing spaces
-// TODO check tag name invalid characters
-// TODO tags already parsed
+test "Tags OK case with surrounding spaces" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag2"));
+
+    try performTest(.{
+        .args = &.{ "--tags", "   tag1", "tag2  " },
+        .ex_state = &ex_state,
+    });
+}
+
+test "Tags tag name too long" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{ "-t", "seofijsoeifjoeijfosiejfosijefoisejfoioijeoijweoijwoeijvwoiejvowiejf" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseTags,
+        .ex_stderr = "The name \"seofijsoeifjoeijfosiejfosijefoisejfoioijeoijweoijwoeijvwoiejvowiejf\" is too long.\n",
+    });
+}
+
+test "Tags tag name invalid character" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{ "-t", "inv alid" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseTags,
+        .ex_stderr = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n",
+    });
+}
+
+test "Tags empty tag name" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+
+    try performTest(.{
+        .args = &.{ "-t", "  tag1", "    " },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseTags,
+        .ex_stderr = "There is an empty string for option tags.\n",
+    });
+}
+
+test "Tags duplicate tag name" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag2"));
+
+    try performTest(.{
+        .args = &.{ "-t", "  tag1", "tag1", "tag2" },
+        .ex_state = &ex_state,
+        .ex_stdout = "Warning: the tag \"tag1\" was given multiple times and will be used only once.\n",
+    });
+}
+
+test "Tags but not tags given" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+
+    try performTest(.{
+        .args = &.{"--tags"},
+        .ex_state = &ex_state,
+    });
+}
+
+test "Tags already parsed" {
+    var ex_state = ArgumentParser{};
+    ex_state.init();
+    defer ex_state.deinit();
+    try ex_state.tags.append(try globals.allocator.dupeZ(u8, "tag1"));
+
+    try performTest(.{
+        .args = &.{ "--tags", "tag1", "-t" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.TagsAlreadyParsed,
+    });
+}
 
 // ---------------------------------------------------------
 // TEST GENERIC
 // ---------------------------------------------------------
 
-// TODO unknown flag
+test "Unknown flag" {
+    var ex_state = ArgumentParser{};
 
-// test "Multiple payload" {
-// TODO
-// var ex_state = ArgumentParser{};
-// ex_state.current_state = ArgParserState.not_expecting;
-// ex_state.divisions = 10;
-//
-// try performTest(.{
-//     .args = &.{ "payload", "--divisions", "10", "5" },
-//     .ex_state = &ex_state,
-//     .ex_err = ArgumentParsingError.DivisionsAlreadyParsed,
-//     .ex_stderr = "Divisions already parsed. Please remove: \"5\".\n",
-// });
-// }
+    try performTest(.{
+        .args = &.{"--unknown"},
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.UnknownFlag,
+    });
+}
+
+test "Conflict duration and duration-less flags" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration = 4;
+    ex_state.duration_less = 7;
+
+    try performTest(.{
+        .args = &.{ "-d", "4", "-dl", "7" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.SeveralDurationArgs,
+        .ex_stderr = "You cannot give a specific duration and a duration offset at the same time\n",
+    });
+}
+
+test "Conflict duration and duration-more flags" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration = 4;
+    ex_state.duration_more = 7;
+
+    try performTest(.{
+        .args = &.{ "-d", "4", "-dm", "7" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.SeveralDurationArgs,
+        .ex_stderr = "You cannot give a specific duration and a duration offset at the same time\n",
+    });
+}
+
+test "Conflict duration-less and duration-more flags" {
+    var ex_state = ArgumentParser{};
+    ex_state.duration_less = 4;
+    ex_state.duration_more = 7;
+
+    try performTest(.{
+        .args = &.{ "-dl", "4", "-dm", "7" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.SeveralDurationArgs,
+        .ex_stderr = "You cannot add and remove duration at the same time\n",
+    });
+}
+
+test "Conflict start-less and start-more flags" {
+    var ex_state = ArgumentParser{};
+    ex_state.start_less = 4;
+    ex_state.start_more = 7;
+
+    try performTest(.{
+        .args = &.{ "-sl", "4", "-sm", "7" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.SeveralStartArgs,
+        .ex_stderr = "You cannot push the start time backward and forward at the same time\n",
+    });
+}

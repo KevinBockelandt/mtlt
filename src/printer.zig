@@ -206,8 +206,8 @@ pub const Printer = struct {
         try self.writeErr("{s} number contains invalid characters.\n", .{opt});
     }
 
-    pub fn errOptionAlreadyParsed(self: *Printer, option: []const u8, arg: []const u8) !void {
-        try self.writeErr("{s} already parsed. Please remove: \"{s}\"\n", .{ option, arg });
+    pub fn errOptionEmptyString(self: *Printer, option: []const u8) !void {
+        try self.writeErr("There is an empty string for option {s}.\n", .{option});
     }
 
     pub fn errInvalidPriority(self: *Printer) !void {
@@ -215,19 +215,23 @@ pub const Printer = struct {
         try self.writeErr("Valid values are \"someday\" (default), \"soon\" and \"now\".\n", .{});
     }
 
-    pub fn errContradictionAllTagsFlags(self: *Printer) !void {
-        try self.writeOut("Warning: you specified the --no-tags flag along the --tags and --excluded-tags flags.\n", .{});
-        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account\n", .{});
+    pub fn outContradictionAllTagsFlags(self: *Printer) !void {
+        try self.writeOut("Warning: you specified the --no-tags flag along the --tags and --exclude-tags flags.\n", .{});
+        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account.\n", .{});
     }
 
-    pub fn errContradictionNoTagsTags(self: *Printer) !void {
+    pub fn outContradictionNoTagsTags(self: *Printer) !void {
         try self.writeOut("Warning: you specified the --no-tags flag along the --tags flag.\n", .{});
-        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account\n", .{});
+        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account.\n", .{});
     }
 
-    pub fn errContradictionNoTagsExcludedTags(self: *Printer) !void {
-        try self.writeOut("Warning: you specified the --no-tags flag along the --excluded-tags flag.\n", .{});
-        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account\n", .{});
+    pub fn outContradictionNoTagsExcludedTags(self: *Printer) !void {
+        try self.writeOut("Warning: you specified the --no-tags flag along the --exclude-tags flag.\n", .{});
+        try self.writeOut("Since these are contradictory only the --no-tags flag will be taken into account.\n", .{});
+    }
+
+    pub fn outDuplicateTag(self: *Printer, tag: []const u8) !void {
+        try self.writeOut("Warning: the tag \"{s}\" was given multiple times and will be used only once.\n", .{tag});
     }
 
     pub fn errContradictionDurationDurationOffset(self: *Printer) !void {
@@ -286,11 +290,11 @@ pub const Printer = struct {
     }
 
     pub fn errNameTagInvalidChara(self: *Printer) !void {
-        try self.writeErr("The tag name can only contain ascii letters, numbers or the '-' or '_' character\n", .{});
+        try self.writeErr("The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n", .{});
     }
 
     pub fn errNameTagTooLong(self: *Printer, tag_name: []const u8) !void {
-        try self.writeErr("The name {s}\"{s}\"{s} is too long\n", .{ ansi.colemp, tag_name, ansi.colres });
+        try self.writeErr("The name \"{s}\" is too long.\n", .{tag_name});
     }
 
     pub fn errNameTagAlreadyExisting(self: *Printer, tag_name: []const u8) !void {

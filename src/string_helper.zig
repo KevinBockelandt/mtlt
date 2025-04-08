@@ -14,9 +14,10 @@ const CutString = struct {
     lines: [max_num_lines_cut_string][]const u8 = undefined,
 };
 
-const StringError = error{
+pub const StringError = error{
     MalformedUTF8Data,
     StringTooLong,
+    EmptyString,
 };
 
 /// Fill a given string with the specified character
@@ -27,10 +28,21 @@ pub fn fillStr(str: []u8, char: u8) void {
     }
 }
 
-/// Very basic check to know if a character is a letter or number
+/// Very basic check to know if all characters are letters or numbers
 /// TODO should be able to handle more than ascii chara
-pub fn isValidTagNameChar(c: u8) bool {
-    return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or (c == '_') or (c == '-');
+pub fn isValidTagName(name: []const u8) bool {
+    if (name.len < 1) return false;
+
+    for (name) |c| {
+        if ((c < 'a' or c > 'z') and
+            (c < 'A' or c > 'Z') and
+            (c < '0' or c > '9') and
+            (c != '_') and (c != '-'))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 /// Cut a string according to a given length so that it's split into
@@ -144,19 +156,33 @@ pub fn getNumBytesUTF8(first_byte: u8) !u8 {
     return StringError.MalformedUTF8Data;
 }
 
-/// Return the index number of the last character in the string that is not a space
-pub fn getIdxLastNonSpace(str: []const u8) usize {
-    var i: usize = str.len - 1;
+/// Return a version of the given slice with trimmed surrounding spaces
+pub fn trimSurroundingSpaces(str: []const u8) error{EmptyString}![]const u8 {
+    var beg: usize = 0;
 
     while (true) {
-        if (i < 0) {
-            return 0;
-        } else if (str[i] != ' ') {
-            return i;
+        if (beg >= str.len) {
+            return StringError.EmptyString;
+        } else if (str[beg] != ' ') {
+            break;
         } else {
-            i -= 1;
+            beg += 1;
         }
     }
+
+    var end: usize = str.len - 1;
+
+    while (true) {
+        if (end < 0) {
+            return StringError.EmptyString;
+        } else if (str[end] != ' ') {
+            break;
+        } else {
+            end -= 1;
+        }
+    }
+
+    return str[beg .. end + 1];
 }
 
 /// Return true if the specified unicode code point corresponds to a character
@@ -322,3 +348,71 @@ test "cutString - test 5" {
     try std.testing.expect(std.mem.eql(u8, cs.lines[0], "ab"));
     try std.testing.expect(std.mem.eql(u8, cs.lines[1], "Ｂc"));
 }
+
+test "trimSurroundingSpaces - empty string" {
+    if (trimSurroundingSpaces("       ")) |_| {
+        unreachable;
+    } else |err| {
+        try std.testing.expect(err == error.EmptyString);
+    }
+}
+
+test "trimSurroundingSpaces - only first chara" {
+    const ts = try trimSurroundingSpaces("a      ");
+    try std.testing.expect(std.mem.eql(u8, ts, "a"));
+}
+
+test "trimSurroundingSpaces - only last chara" {
+    const ts = try trimSurroundingSpaces("      z");
+    try std.testing.expect(std.mem.eql(u8, ts, "z"));
+}
+
+test "trimSurroundingSpaces - spaces inside" {
+    const ts = try trimSurroundingSpaces("a     z");
+    try std.testing.expect(std.mem.eql(u8, ts, "a     z"));
+}
+
+test "trimSurroundingSpaces - no surrounding spaces" {
+    const ts = try trimSurroundingSpaces("abcdefg");
+    try std.testing.expect(std.mem.eql(u8, ts, "abcdefg"));
+}
+
+test "trimSurroundingSpaces - trim start" {
+    const ts = try trimSurroundingSpaces("   abcdefg");
+    try std.testing.expect(std.mem.eql(u8, ts, "abcdefg"));
+}
+
+test "trimSurroundingSpaces - trim end" {
+    const ts = try trimSurroundingSpaces("abcdefg   ");
+    try std.testing.expect(std.mem.eql(u8, ts, "abcdefg"));
+}
+
+test "isValidTagName - empty string" {
+    try std.testing.expect(!isValidTagName(""));
+}
+
+test "isValidTagName - string with only spaces" {
+    try std.testing.expect(!isValidTagName("  "));
+}
+
+test "isValidTagName - valid name 1" {
+    try std.testing.expect(isValidTagName("valid"));
+}
+
+test "isValidTagName - valid name 2" {
+    try std.testing.expect(isValidTagName("va-li_d"));
+}
+
+test "isValidTagName - valid name 3" {
+    try std.testing.expect(isValidTagName("_valid-"));
+}
+
+test "isValidTagName - invalid because space" {
+    try std.testing.expect(!isValidTagName("val id"));
+}
+
+test "isValidTagName - invalid because @" {
+    try std.testing.expect(!isValidTagName("@id"));
+}
+
+// TODO test fillStr

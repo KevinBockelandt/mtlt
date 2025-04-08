@@ -181,7 +181,7 @@ pub const ThingToSort = struct {
 /// What needs to be displayed to the user regarding a thing creation operation
 pub const ThingCreated = struct {
     id: u19 = 0,
-    created_tags: std.ArrayList([]u8) = undefined,
+    created_tags: std.ArrayList([]const u8) = undefined,
 };
 
 /// What needs to be updated in a thing
@@ -190,7 +190,7 @@ pub const ThingToUpdate = struct {
     kickoff: ?u25 = null,
     estimation: ?u16 = null,
     name: ?[]const u8 = null,
-    tags: std.ArrayList([]u8) = undefined,
+    tags: std.ArrayList([]const u8) = undefined,
 };
 
 /// What needs to be updated in a timer

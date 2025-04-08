@@ -224,3 +224,44 @@ test "add tag but missing payload" {
     const expected = "Missing the name of the tag to create\n";
     try std.testing.expect(std.mem.eql(u8, actual, expected));
 }
+
+test "add tag with a name too long" {
+    try it_helper.initTest();
+    defer it_helper.deinitTest();
+
+    // create the expected file
+    var test_file = try it_helper.getStarterFile();
+    defer test_file.tags.deinit();
+    defer test_file.things.deinit();
+
+    try dfw.writeFullData(test_file, globals.data_file_path);
+
+    const tag_name = "oeifjsoehusiehfweiopiouhsevioujseoijfosiefoijseovijseoifjoseijesff";
+    var args: ArgumentParser = .{ .payload = tag_name, .priority = null };
+    try cmd(&args);
+
+    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
+    var buf_expected: [512]u8 = undefined;
+    const expected = try std.fmt.bufPrint(&buf_expected, "The name \"{s}\" is too long.\n", .{tag_name});
+
+    try std.testing.expect(std.mem.eql(u8, actual, expected));
+}
+
+test "add tag with an invalid name" {
+    try it_helper.initTest();
+    defer it_helper.deinitTest();
+
+    // create the expected file
+    var test_file = try it_helper.getStarterFile();
+    defer test_file.tags.deinit();
+    defer test_file.things.deinit();
+
+    try dfw.writeFullData(test_file, globals.data_file_path);
+
+    var args: ArgumentParser = .{ .payload = "invalid tag" };
+    try cmd(&args);
+
+    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
+    const expected = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n";
+    try std.testing.expect(std.mem.eql(u8, actual, expected));
+}

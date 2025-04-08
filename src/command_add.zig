@@ -23,7 +23,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     const estimation = if (args.*.estimation) |e| e else 0;
 
     var infos_creation = dt.ThingCreated{};
-    infos_creation.created_tags = std.ArrayList([]u8).init(globals.allocator);
+    infos_creation.created_tags = std.ArrayList([]const u8).init(globals.allocator);
     defer infos_creation.created_tags.deinit();
 
     try globals.dfw.addThingToFile(args.*.payload.?, kickoff, estimation, args.*.tags.items, &infos_creation);
