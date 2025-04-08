@@ -177,7 +177,7 @@ fn printNullableInt(T: type, to_print: T, text: []const u8) void {
 fn addTagIfApplicable(al: *std.ArrayList([]const u8), to_add: []const u8) !void {
     // check for the size of the name
     if (to_add.len > std.math.maxInt(u6)) {
-        try globals.printer.errNameTagTooLong(to_add);
+        try globals.printer.errNameTooLong(to_add);
         return ArgumentParsingError.TagNameTooLong;
     }
 

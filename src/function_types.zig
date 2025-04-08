@@ -1,6 +1,7 @@
 const std = @import("std");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 const AddTagToArrayList = fn (dt.Tag, *std.ArrayList(dt.Tag)) void;
 const AddTagToSortToArrayList = fn (dt.Tag, *std.ArrayList(dt.TagToSort)) void;
@@ -35,4 +36,10 @@ pub const ThingParsingCallbacks = union(enum) {
         num_open: *u24,
         num_closed: *u24,
     },
+};
+
+const FnCommandAddTag = fn (*ArgumentParser) anyerror!void;
+
+pub const CommandsToTest = union(enum) {
+    CommandAddTag: *const FnCommandAddTag,
 };

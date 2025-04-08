@@ -13,12 +13,26 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
 
+    // make sure there is a name for the thing
     if (args.*.payload == null) {
         try globals.printer.errNameThingMissing();
         return;
     }
 
-    // format the arguments properly
+    const name = args.*.payload.?;
+
+    // make sure the name is not too long
+    if (name.len > std.math.maxInt(u8)) {
+        globals.printer.errNameTooLong(name);
+        return;
+    }
+
+    // make sure there are not too many tags
+    if (args.*.tags.items.len > std.math.maxInt(u6)) {
+        globals.printer.errThingTooManyTags();
+        return;
+    }
+
     const kickoff = if (args.*.kickoff) |t| t + time_helper.curTimestamp() else 0;
     const estimation = if (args.*.estimation) |e| e else 0;
 
@@ -26,11 +40,12 @@ pub fn cmd(args: *ArgumentParser) !void {
     infos_creation.created_tags = std.ArrayList([]const u8).init(globals.allocator);
     defer infos_creation.created_tags.deinit();
 
-    try globals.dfw.addThingToFile(args.*.payload.?, kickoff, estimation, args.*.tags.items, &infos_creation);
+    // actually execute the command
+    try globals.dfw.addThingToFile(name, kickoff, estimation, args.*.tags.items, &infos_creation);
 
     // display infos about the creation of the thing
     const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
-    try globals.printer.createdThing(args.*.payload.?, str_id);
+    try globals.printer.createdThing(name, str_id);
 
     if (args.*.kickoff != null) {
         try globals.printer.reportKickoff(args.*.kickoff.?, &ansi.colposdur);
@@ -42,7 +57,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // if wanted, start the current timer on the created thing right away
     if (args.*.should_start) {
-        try command_start.start_id(infos_creation.id, args.*.payload.?);
+        try command_start.start_id(infos_creation.id, name);
     }
 }
 
@@ -87,3 +102,11 @@ pub fn help() !void {
         ansi.colemp, ansi.colres,
     });
 }
+
+// TODO test no name
+// TODO test name too long
+// TODO test too many tags
+// TODO test too many things
+// TODO test OK case with just the name
+// TODO test OK case with name + tags + kickoff
+// TODO test OK case with name + tags + kickoff + estimation + start

@@ -12,30 +12,35 @@ const string_helper = @import("string_helper.zig");
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataOperationError = @import("data_file_writer.zig").DataOperationError;
 
-pub const CommandError = error{
-    NoDuration,
-    SeveralDurationArgs,
-    StartLessAndMore,
-};
-
 /// Add a new tag to the data file
 pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         try globals.printer.errMissingTagNameToAdd();
         return;
     }
+    const name = args.*.payload.?;
+
+    // check name length
+    if (name.len > std.math.maxInt(u6)) {
+        try globals.printer.errNameTooLong(name);
+        return;
+    }
+
+    // check for invalid characters in the tag name
+    if (!string_helper.isValidTagName(name)) {
+        try globals.printer.errNameTagInvalidChara();
+        return;
+    }
 
     const priority = if (args.*.priority) |p| p else dt.StatusTag.someday;
 
-    if (globals.dfw.addTagToFile(args.*.payload.?, priority)) |new_tag_id| {
+    if (globals.dfw.addTagToFile(name, priority)) |new_tag_id| {
         _ = new_tag_id;
-        try globals.printer.createdTag(args.*.payload.?);
+        try globals.printer.createdTag(name);
     } else |err| {
         switch (err) {
-            DataOperationError.NameTooLong => try globals.printer.errNameTagTooLong(args.*.payload.?),
             DataOperationError.TooManyTags => try globals.printer.errTooManyTags(),
-            DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(args.*.payload.?),
-            DataOperationError.NameContainingInvalidCharacters => try globals.printer.errNameTagInvalidChara(),
+            DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(name),
             else => return err,
         }
     }
@@ -75,193 +80,115 @@ pub fn help() !void {
 }
 
 test "add tag in starter file without specifying priority" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
     var ex_file = try it_helper.getStarterFile();
-    defer ex_file.tags.deinit();
-    defer ex_file.things.deinit();
-
     try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.someday, .name = "testtag" });
-    try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
-
-    // create the base for the actual file and perform command on it
-    const actual_file = try it_helper.getStarterFile();
-    try dfw.writeFullData(actual_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "testtag", .priority = null };
-    try cmd(&args);
 
-    // check the files match properly
-    try it_helper.compareFiles(ex_file);
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
 }
 
 test "add tag in starter file with priority someday" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
     var ex_file = try it_helper.getStarterFile();
-    defer ex_file.tags.deinit();
-    defer ex_file.things.deinit();
-
     try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.someday, .name = "testtag" });
-    try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
-
-    // create the base for the actual file and perform command on it
-    const actual_file = try it_helper.getStarterFile();
-    try dfw.writeFullData(actual_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "testtag", .priority = dt.StatusTag.someday };
-    try cmd(&args);
 
-    // check the files match properly
-    try it_helper.compareFiles(ex_file);
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
 }
 
 test "add tag in starter file with priority soon" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
     var ex_file = try it_helper.getStarterFile();
-    defer ex_file.tags.deinit();
-    defer ex_file.things.deinit();
-
     try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.soon, .name = "testsoon" });
-    try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
-
-    // create the base for the actual file and perform command on it
-    const actual_file = try it_helper.getStarterFile();
-    try dfw.writeFullData(actual_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "testsoon", .priority = dt.StatusTag.soon };
-    try cmd(&args);
 
-    // check the files match properly
-    try it_helper.compareFiles(ex_file);
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
 }
 
 test "add tag in starter file with priority now" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
     var ex_file = try it_helper.getStarterFile();
-    defer ex_file.tags.deinit();
-    defer ex_file.things.deinit();
-
     try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.now, .name = "testnow" });
-    try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
-
-    // create the base for the actual file and perform command on it
-    const actual_file = try it_helper.getStarterFile();
-    try dfw.writeFullData(actual_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "testnow", .priority = dt.StatusTag.now };
-    try cmd(&args);
 
-    // check the files match properly
-    try it_helper.compareFiles(ex_file);
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
 }
 
 test "add tag in a file where the max tag ID is reached" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
+    var ac_file = try it_helper.getStarterFile();
+    try ac_file.tags.insert(0, .{ .id = 65535, .status = dt.StatusTag.now, .name = "maxIdTag" });
+    var args: ArgumentParser = .{ .payload = "overboardIdTag", .priority = null };
 
-    // create the expected file
-    var test_file = try it_helper.getStarterFile();
-    try test_file.tags.insert(0, .{ .id = 65535, .status = dt.StatusTag.now, .name = "maxIdTag" });
-    defer test_file.tags.deinit();
-    defer test_file.things.deinit();
-
-    try dfw.writeFullData(test_file, globals.data_file_path);
-
-    var args: ArgumentParser = .{ .payload = "overboardIdTag", .priority = dt.StatusTag.now };
-    try cmd(&args);
-
-    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
-    const expected = "The maximum number of tags in the data file is reached.\nDeleting existing tags will not help. If you need more tags, you will need to start a new data file.\n";
-    try std.testing.expect(std.mem.eql(u8, actual, expected));
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_stderr = "The maximum number of tags in the data file is reached.\nDeleting existing tags will not help. You will need to start a new data file.\n",
+    });
 }
 
 test "add already existing tag" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
-    var test_file = try it_helper.getStarterFile();
-    defer test_file.tags.deinit();
-    defer test_file.things.deinit();
-
-    try dfw.writeFullData(test_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "soon" };
-    try cmd(&args);
+    var buf_ex_stderr: [512]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "A tag with the name {s}soon{s} already exists\n", .{ ansi.colemp, ansi.colres });
 
-    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
-    var buf_expected: [512]u8 = undefined;
-    const expected = try std.fmt.bufPrint(&buf_expected, "A tag with the name {s}{s}{s} already exists\n", .{ ansi.colemp, "soon", ansi.colres });
-    try std.testing.expect(std.mem.eql(u8, actual, expected));
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = ex_stderr,
+    });
 }
 
 test "add tag but missing payload" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
-    var test_file = try it_helper.getStarterFile();
-    defer test_file.tags.deinit();
-    defer test_file.things.deinit();
-
-    try dfw.writeFullData(test_file, globals.data_file_path);
-
     var args: ArgumentParser = .{};
-    try cmd(&args);
 
-    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
-    const expected = "Missing the name of the tag to create\n";
-    try std.testing.expect(std.mem.eql(u8, actual, expected));
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = "Missing the name of the tag to create\n",
+    });
 }
 
 test "add tag with a name too long" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
-    var test_file = try it_helper.getStarterFile();
-    defer test_file.tags.deinit();
-    defer test_file.things.deinit();
-
-    try dfw.writeFullData(test_file, globals.data_file_path);
-
     const tag_name = "oeifjsoehusiehfweiopiouhsevioujseoijfosiefoijseovijseoifjoseijesff";
     var args: ArgumentParser = .{ .payload = tag_name, .priority = null };
-    try cmd(&args);
+    var buf_ex_stderr: [512]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The name \"{s}\" is too long.\n", .{tag_name});
 
-    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
-    var buf_expected: [512]u8 = undefined;
-    const expected = try std.fmt.bufPrint(&buf_expected, "The name \"{s}\" is too long.\n", .{tag_name});
-
-    try std.testing.expect(std.mem.eql(u8, actual, expected));
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = ex_stderr,
+    });
 }
 
 test "add tag with an invalid name" {
-    try it_helper.initTest();
-    defer it_helper.deinitTest();
-
-    // create the expected file
-    var test_file = try it_helper.getStarterFile();
-    defer test_file.tags.deinit();
-    defer test_file.things.deinit();
-
-    try dfw.writeFullData(test_file, globals.data_file_path);
-
     var args: ArgumentParser = .{ .payload = "invalid tag" };
-    try cmd(&args);
 
-    const actual = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
-    const expected = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n";
-    try std.testing.expect(std.mem.eql(u8, actual, expected));
+    try it_helper.performTest(.{
+        .cmd = .{ .CommandAddTag = cmd },
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n",
+    });
 }

@@ -1,7 +1,11 @@
 const data_file_printer = @import("data_file_printer.zig");
 const dt = @import("data_types.zig");
+const ft = @import("function_types.zig");
+const dfw = @import("data_file_writer.zig");
 const globals = @import("globals.zig");
 const std = @import("std");
+const dfp = @import("data_file_printer.zig");
+const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 pub const integration_test_file_path = "test/integration_test_data_file.mtlt";
 
@@ -78,4 +82,66 @@ pub fn deinitTest() void {
     globals.closeDataFiles();
     globals.deinitDataFileNames();
     globals.printer.deinit();
+}
+//
+const TestData = struct {
+    cmd: ft.CommandsToTest,
+    args: *ArgumentParser,
+    ex_stdout: ?[]const u8 = null,
+    ex_stderr: ?[]const u8 = null,
+    ac_file: dt.FullData,
+    ex_file: ?dt.FullData = null,
+};
+
+pub fn performTest(td: TestData) !void {
+    try globals.printer.init();
+    defer globals.printer.deinit();
+
+    try globals.initDataFileNames();
+    defer globals.deinitDataFileNames();
+
+    // delete the potentially existing test file
+    std.fs.cwd().deleteFile(globals.data_file_path) catch |err| {
+        if (err == std.posix.UnlinkError.FileNotFound) {} else {
+            unreachable;
+        }
+    };
+
+    try globals.openDataFiles();
+    defer globals.closeDataFiles();
+
+    try dfw.writeFullData(td.ac_file, globals.data_file_path);
+
+    // actually execute the command to test
+    switch (td.cmd) {
+        .CommandAddTag => |cmd| {
+            try cmd(td.args);
+        },
+    }
+
+    // if there should be something on the stdout
+    if (td.ex_stdout) |ex_stdout| {
+        const ac_stdout = globals.printer.out_buff[0..globals.printer.cur_pos_out_buff];
+        std.testing.expect(std.mem.eql(u8, ac_stdout, ex_stdout)) catch |err| {
+            std.debug.print("ac_stdout: {s}\n", .{ac_stdout});
+            std.debug.print("ex_stdout: {s}\n", .{ex_stdout});
+            return err;
+        };
+    }
+
+    // if there should be something on the stderr
+    if (td.ex_stderr) |ex_stderr| {
+        const ac_stderr = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
+        std.testing.expect(std.mem.eql(u8, ac_stderr, ex_stderr)) catch |err| {
+            std.debug.print("ac_stderr: {s}\n", .{ac_stderr});
+            std.debug.print("ex_stderr: {s}\n", .{ex_stderr});
+            return err;
+        };
+    }
+
+    // if we should compare the 2 files
+    if (td.ex_file) |ex_file| {
+        try dfw.writeFullData(ex_file, integration_test_file_path);
+        try compareFiles(ex_file);
+    }
 }

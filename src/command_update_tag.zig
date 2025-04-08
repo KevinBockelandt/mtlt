@@ -30,7 +30,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         } else |err| {
             switch (err) {
                 DataParsingError.TagNotFound => try globals.printer.errTagNotFoundName(args.*.payload.?),
-                DataOperationError.NameTooLong => try globals.printer.errNameTagTooLong(args.*.name.?),
+                DataOperationError.NameTooLong => try globals.printer.errNameTagLong(args.*.name.?),
                 DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(args.*.name.?),
                 else => return err,
             }

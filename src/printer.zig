@@ -267,6 +267,10 @@ pub const Printer = struct {
         try self.writeErr("Could not parse the name of the thing.\n", .{});
     }
 
+    pub fn errThingTooManyTags(self: *Printer) !void {
+        try self.writeErr("There are too many tags associated to the thing. The maximum is {d}.\n", .{std.math.maxInt(u6)});
+    }
+
     pub fn errIdThingMissing(self: *Printer) !void {
         try self.writeErr("Missing the ID of the thing to operate on.\n", .{});
     }
@@ -293,8 +297,8 @@ pub const Printer = struct {
         try self.writeErr("The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n", .{});
     }
 
-    pub fn errNameTagTooLong(self: *Printer, tag_name: []const u8) !void {
-        try self.writeErr("The name \"{s}\" is too long.\n", .{tag_name});
+    pub fn errNameTooLong(self: *Printer, name: []const u8) !void {
+        try self.writeErr("The name \"{s}\" is too long.\n", .{name});
     }
 
     pub fn errNameTagAlreadyExisting(self: *Printer, tag_name: []const u8) !void {
@@ -303,7 +307,7 @@ pub const Printer = struct {
 
     pub fn errTooManyTags(self: *Printer) !void {
         try self.writeErr("The maximum number of tags in the data file is reached.\n", .{});
-        try self.writeErr("Deleting existing tags will not help. If you need more tags, you will need to start a new data file.\n", .{});
+        try self.writeErr("Deleting existing tags will not help. You will need to start a new data file.\n", .{});
     }
 
     pub fn errUpdateTagMissingOldName(self: *Printer) !void {

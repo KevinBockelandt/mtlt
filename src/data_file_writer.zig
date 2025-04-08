@@ -217,17 +217,6 @@ pub const DataFileWriter = struct {
 
     /// Add a tag at the start of the tag section of the data file
     pub fn addTagToFile(self: *DataFileWriter, name: []const u8, status: dt.StatusTag) !u16 {
-        // TODO this should be checked upstream. Remove it here
-        if (name.len > std.math.maxInt(u6)) {
-            return DataOperationError.NameTooLong;
-        }
-
-        // TODO this should be checked upstream. Remove it here
-        // check for invalid characters in the tag name
-        if (!string_helper.isValidTagName(name)) {
-            return DataOperationError.NameContainingInvalidCharacters;
-        }
-
         const r = globals.data_file.reader();
         try globals.data_file.seekTo(0);
 
@@ -279,18 +268,6 @@ pub const DataFileWriter = struct {
 
     /// Add a thing at the start of the thing section of the data file
     pub fn addThingToFile(self: *DataFileWriter, name: []const u8, kickoff: u25, estimation: u16, tags: [][]const u8, res: *dt.ThingCreated) !void {
-        // make sure there is not too many tags
-        // TODO need to make sure that the tag names are not too long
-        // TODO make sure that there are no duplicates in the tag list
-        if (tags.len > std.math.maxInt(u6)) {
-            return DataOperationError.TooManyTags;
-        }
-
-        // make sure the name is not too long
-        if (name.len > std.math.maxInt(u8)) {
-            return DataOperationError.NameTooLong;
-        }
-
         var r = globals.data_file.reader();
 
         // make sure a tag already exists for all the tag names received
