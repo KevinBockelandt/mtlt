@@ -85,7 +85,7 @@ test "add tag in starter file without specifying priority" {
     var args: ArgumentParser = .{ .payload = "testtag", .priority = null };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_file = ex_file,
@@ -98,7 +98,7 @@ test "add tag in starter file with priority someday" {
     var args: ArgumentParser = .{ .payload = "testtag", .priority = dt.StatusTag.someday };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_file = ex_file,
@@ -111,7 +111,7 @@ test "add tag in starter file with priority soon" {
     var args: ArgumentParser = .{ .payload = "testsoon", .priority = dt.StatusTag.soon };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_file = ex_file,
@@ -124,7 +124,7 @@ test "add tag in starter file with priority now" {
     var args: ArgumentParser = .{ .payload = "testnow", .priority = dt.StatusTag.now };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_file = ex_file,
@@ -137,7 +137,7 @@ test "add tag in a file where the max tag ID is reached" {
     var args: ArgumentParser = .{ .payload = "overboardIdTag", .priority = null };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = ac_file,
         .ex_stderr = "The maximum number of tags in the data file is reached.\nDeleting existing tags will not help. You will need to start a new data file.\n",
@@ -150,7 +150,7 @@ test "add already existing tag" {
     const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "A tag with the name {s}soon{s} already exists\n", .{ ansi.colemp, ansi.colres });
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_stderr = ex_stderr,
@@ -161,7 +161,7 @@ test "add tag but missing payload" {
     var args: ArgumentParser = .{};
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_stderr = "Missing the name of the tag to create\n",
@@ -175,7 +175,7 @@ test "add tag with a name too long" {
     const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The name \"{s}\" is too long.\n", .{tag_name});
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_stderr = ex_stderr,
@@ -186,7 +186,7 @@ test "add tag with an invalid name" {
     var args: ArgumentParser = .{ .payload = "invalid tag" };
 
     try it_helper.performTest(.{
-        .cmd = .{ .CommandAddTag = cmd },
+        .cmd = cmd,
         .args = &args,
         .ac_file = try it_helper.getStarterFile(),
         .ex_stderr = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n",

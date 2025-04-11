@@ -271,6 +271,11 @@ pub const Printer = struct {
         try self.writeErr("There are too many tags associated to the thing. The maximum is {d}.\n", .{std.math.maxInt(u6)});
     }
 
+    pub fn errTooManyThings(self: *Printer) !void {
+        try self.writeErr("The maximum number of things in the data file is reached.\n", .{});
+        try self.writeErr("Deleting existing things will not help. You will need to start a new data file.\n", .{});
+    }
+
     pub fn errIdThingMissing(self: *Printer) !void {
         try self.writeErr("Missing the ID of the thing to operate on.\n", .{});
     }
@@ -327,6 +332,10 @@ pub const Printer = struct {
 
     pub fn errDurationMissing(self: *Printer) !void {
         try self.writeErr("You need to specify a duration (with the -d flag)\n", .{});
+    }
+
+    pub fn errKickoffTooBig(self: *Printer) !void {
+        try self.writeErr("The kickoff value is too big. Please try with a smaller one.\n", .{});
     }
 
     // ALL OTHER ERRORS

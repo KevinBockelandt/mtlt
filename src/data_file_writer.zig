@@ -99,6 +99,7 @@ pub fn writeFullData(full_data: dt.FullData, file_path: []const u8) !void {
             .num_timers = @intCast(thing.timers.len),
             .num_tags = @intCast(thing.tags.len),
             .status = @intFromEnum(thing.status),
+            .creation = thing.creation,
             .kickoff = thing.kickoff,
             .estimation = thing.estimation,
             .closure = thing.closure,

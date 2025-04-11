@@ -37,9 +37,3 @@ pub const ThingParsingCallbacks = union(enum) {
         num_closed: *u24,
     },
 };
-
-const FnCommandAddTag = fn (*ArgumentParser) anyerror!void;
-
-pub const CommandsToTest = union(enum) {
-    CommandAddTag: *const FnCommandAddTag,
-};

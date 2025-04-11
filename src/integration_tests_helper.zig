@@ -48,7 +48,11 @@ pub fn compareFiles(ex_file_data: dt.FullData) !void {
         }
 
         if (!std.mem.eql(u8, buf_ex_f[0..read_ex_f], buf_ac_f[0..read_ac_f])) {
-            std.debug.print("Comparison gives inequal results\n", .{});
+            std.debug.print("Comparison gives inequal results:\n", .{});
+            std.debug.print("Expected: {x}\n", .{buf_ex_f[0..read_ex_f]});
+            std.debug.print("Actual: {x}\n", .{buf_ac_f[0..read_ac_f]});
+            std.debug.print("Content of files written in HTML files.\n", .{});
+
             try printFiles(ex_file_data);
             return IntegrationTestingError.FilesNotIdentical;
         }
@@ -85,7 +89,7 @@ pub fn deinitTest() void {
 }
 //
 const TestData = struct {
-    cmd: ft.CommandsToTest,
+    cmd: *const fn (*ArgumentParser) anyerror!void,
     args: *ArgumentParser,
     ex_stdout: ?[]const u8 = null,
     ex_stderr: ?[]const u8 = null,
@@ -112,12 +116,8 @@ pub fn performTest(td: TestData) !void {
 
     try dfw.writeFullData(td.ac_file, globals.data_file_path);
 
-    // actually execute the command to test
-    switch (td.cmd) {
-        .CommandAddTag => |cmd| {
-            try cmd(td.args);
-        },
-    }
+    // actually execute the command
+    try td.cmd(td.args);
 
     // if there should be something on the stdout
     if (td.ex_stdout) |ex_stdout| {

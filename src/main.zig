@@ -49,7 +49,10 @@ pub fn main() !void {
     try globals.initDataFileNames();
     try globals.openDataFiles();
 
-    try parseArgs();
+    parseArgs() catch |err| {
+        std.debug.print("An unexpected error happened!\n", .{});
+        std.debug.print("{}\n", .{err});
+    };
 
     globals.closeDataFiles();
     globals.deinitDataFileNames();
@@ -115,8 +118,7 @@ fn parseArgs() !void {
                 argument_parser.ArgumentParsingError.SeveralDurationArgs => return,
                 argument_parser.ArgumentParsingError.SeveralStartArgs => return,
                 else => {
-                    std.debug.print("An unexpected error happened!\n{}\n", .{err});
-                    return;
+                    return err;
                 },
             }
         };

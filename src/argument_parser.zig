@@ -26,8 +26,6 @@ pub const ArgumentParsingError = error{
     CannotParseEstimation,
     CannotParseExcludeTags,
     CannotParseKickoff,
-    CannotParseKickoffLess,
-    CannotParseKickoffMore,
     CannotParseLimit,
     CannotParseName,
     CannotParsePriority,
@@ -46,8 +44,6 @@ pub const ArgumentParsingError = error{
     EstimationAlreadyParsed,
     ExcludeTagsAlreadyParsed,
     KickoffAlreadyParsed,
-    KickoffLessAlreadyParsed,
-    KickoffMoreAlreadyParsed,
     LimitAlreadyParsed,
     NameAlreadyParsed,
     PriorityAlreadyParsed,
@@ -72,8 +68,6 @@ const ArgType = enum(u8) {
     estimation,
     exclude_tags,
     kickoff,
-    kickoff_less,
-    kickoff_more,
     limit,
     name,
     no_tags,
@@ -96,8 +90,6 @@ const ArgParserState = enum(u8) {
     expecting_estimation,
     expecting_exclude_tags,
     expecting_kickoff,
-    expecting_kickoff_less,
-    expecting_kickoff_more,
     expecting_limit,
     expecting_name,
     expecting_priority,
@@ -139,10 +131,6 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.estimation;
     } else if (std.mem.eql(u8, arg, "-k") or std.mem.eql(u8, arg, "--kickoff")) {
         return ArgType.kickoff;
-    } else if (std.mem.eql(u8, arg, "-km") or std.mem.eql(u8, arg, "--kickoff-more")) {
-        return ArgType.kickoff_more;
-    } else if (std.mem.eql(u8, arg, "-kl") or std.mem.eql(u8, arg, "--kickoff-less")) {
-        return ArgType.kickoff_less;
     } else if (std.mem.eql(u8, arg, "-l") or std.mem.eql(u8, arg, "--limit")) {
         return ArgType.limit;
     } else if (std.mem.eql(u8, arg, "-n") or std.mem.eql(u8, arg, "--name")) {
@@ -201,24 +189,22 @@ fn addTagIfApplicable(al: *std.ArrayList([]const u8), to_add: []const u8) !void 
 pub const ArgumentParser = struct {
     /// the main thing regarding the command (an id to work on, the name of a thing to add, etc.)
     payload: ?[]const u8 = null,
-    divisions: ?u4 = null, // --divisions
-    duration: ?u12 = null, // --duration
-    duration_less: ?u12 = null, // --duration-less
-    duration_more: ?u12 = null, // --duration-more
-    end_less: ?u25 = null, // --end-less
-    estimation: ?u16 = null, // --estimation
-    excluded_tags: std.ArrayList([]const u8) = undefined, // --exclude-tags
-    kickoff: ?u25 = null, // --kickoff
-    kickoff_less: ?u25 = null, // --kickoff-less
-    kickoff_more: ?u25 = null, // --kickoff-more
-    limit: ?u32 = null, // --limit
-    name: ?[]const u8 = null, // --name
-    no_tags: bool = false, // --no-tags
-    priority: ?dt.StatusTag = null, // --priority
-    should_start: bool = false, // --start
-    start_less: ?u25 = null, // --start-less
-    start_more: ?u25 = null, // --start-more
-    tags: std.ArrayList([]const u8) = undefined, // --tags
+    divisions: ?u4 = null, // flag --divisions
+    duration: ?u12 = null, // flag --duration
+    duration_less: ?u12 = null, // flag --duration-less
+    duration_more: ?u12 = null, // flag --duration-more
+    end_less: ?u25 = null, // flag --end-less
+    estimation: ?u16 = null, // flag --estimation
+    excluded_tags: std.ArrayList([]const u8) = undefined, // flag --exclude-tags
+    kickoff: ?u25 = null, // flag --kickoff
+    limit: ?u32 = null, // flag --limit
+    name: ?[]const u8 = null, // flag --name
+    no_tags: bool = false, // flag --no-tags
+    priority: ?dt.StatusTag = null, // flag --priority
+    should_start: bool = false, // flag --start
+    start_less: ?u25 = null, // flag --start-less
+    start_more: ?u25 = null, // flag --start-more
+    tags: std.ArrayList([]const u8) = undefined, // flag --tags
 
     current_state: ArgParserState = ArgParserState.not_expecting,
 
@@ -231,8 +217,6 @@ pub const ArgumentParser = struct {
     estimation_flag_already_parsed: bool = false,
     excluded_tags_flag_already_parsed: bool = false,
     kickoff_flag_already_parsed: bool = false,
-    kickoff_less_flag_already_parsed: bool = false,
-    kickoff_more_flag_already_parsed: bool = false,
     limit_flag_already_parsed: bool = false,
     name_flag_already_parsed: bool = false,
     priority_flag_already_parsed: bool = false,
@@ -295,28 +279,6 @@ pub const ArgumentParser = struct {
         } else {
             try globals.printer.errMultipleFlagsShortLong("-k", "--kickoff");
             return ArgumentParsingError.KickoffAlreadyParsed;
-        }
-    }
-
-    /// Switch the parser to the expecting_kickoff_more state
-    fn switchExpectingKickoffMore(self: *ArgumentParser) !void {
-        if (!self.kickoff_more_flag_already_parsed) {
-            self.current_state = ArgParserState.expecting_kickoff_more;
-            self.kickoff_more_flag_already_parsed = true;
-        } else {
-            try globals.printer.errMultipleFlagsShortLong("-km", "--kickoff-more");
-            return ArgumentParsingError.KickoffMoreAlreadyParsed;
-        }
-    }
-
-    /// Switch the parser to the expecting_kickoff_less state
-    fn switchExpectingKickoffLess(self: *ArgumentParser) !void {
-        if (!self.kickoff_less_flag_already_parsed) {
-            self.current_state = ArgParserState.expecting_kickoff_less;
-            self.kickoff_less_flag_already_parsed = true;
-        } else {
-            try globals.printer.errMultipleFlagsShortLong("-kl", "--kickoff-less");
-            return ArgumentParsingError.KickoffLessAlreadyParsed;
         }
     }
 
@@ -438,8 +400,6 @@ pub const ArgumentParser = struct {
             ArgType.estimation => try self.switchExpectingEstimation(),
             ArgType.exclude_tags => try self.switchExpectingExcludeTags(),
             ArgType.kickoff => try self.switchExpectingKickoff(),
-            ArgType.kickoff_less => try self.switchExpectingKickoffLess(),
-            ArgType.kickoff_more => try self.switchExpectingKickoffMore(),
             ArgType.limit => try self.switchExpectingLimit(),
             ArgType.name => try self.switchExpectingName(),
             ArgType.priority => try self.switchExpectingPriority(),
@@ -670,28 +630,6 @@ pub const ArgumentParser = struct {
                         }
                     }
                 },
-                ArgParserState.expecting_kickoff_more => {
-                    if (cur_arg_type == ArgType.unknown) {
-                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
-                            self.kickoff_more = @intCast(parsed_kickoff);
-                            self.current_state = ArgParserState.not_expecting;
-                        } else |err| {
-                            try displayNumberParsingError(u25, err, "Kickoff more");
-                            return ArgumentParsingError.CannotParseKickoffMore;
-                        }
-                    }
-                },
-                ArgParserState.expecting_kickoff_less => {
-                    if (cur_arg_type == ArgType.unknown) {
-                        if (std.fmt.parseInt(u25, arg, 10)) |parsed_kickoff| {
-                            self.kickoff_less = @intCast(parsed_kickoff);
-                            self.current_state = ArgParserState.not_expecting;
-                        } else |err| {
-                            try displayNumberParsingError(u25, err, "Kickoff less");
-                            return ArgumentParsingError.CannotParseKickoffLess;
-                        }
-                    }
-                },
                 ArgParserState.not_expecting => {
                     if (cur_arg_type == ArgType.unknown) {
                         if (!self.payload_already_parsed) {
@@ -746,8 +684,6 @@ pub const ArgumentParser = struct {
         printNullableInt(?u25, self.end_less, "End Less");
         printNullableInt(?u16, self.estimation, "Estimation");
         printNullableInt(?u25, self.kickoff, "Kickoff");
-        printNullableInt(?u25, self.kickoff_less, "Kickoff Less");
-        printNullableInt(?u25, self.kickoff_more, "Kickoff More");
         printNullableInt(?u25, self.start_less, "Start Less");
         printNullableInt(?u25, self.start_more, "Start More");
 
@@ -824,8 +760,6 @@ pub const ArgumentParser = struct {
         if (self.end_less != other.end_less) return false;
         if (self.estimation != other.estimation) return false;
         if (self.kickoff != other.kickoff) return false;
-        if (self.kickoff_less != other.kickoff_less) return false;
-        if (self.kickoff_more != other.kickoff_more) return false;
         if (self.limit != other.limit) return false;
 
         if (self.name == null and other.name != null) {
@@ -1486,128 +1420,6 @@ test "Kickoff already parsed" {
 }
 
 // ---------------------------------------------------------
-// TEST KICKOFF-LESS
-// ---------------------------------------------------------
-
-test "Kickoff less OK case short" {
-    var ex_state = ArgumentParser{};
-    ex_state.kickoff_less = 34;
-
-    try performTest(.{
-        .args = &.{ "-kl", "34" },
-        .ex_state = &ex_state,
-    });
-}
-
-test "Kickoff less OK case long" {
-    var ex_state = ArgumentParser{};
-    ex_state.kickoff_less = 60000;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-less", "60000" },
-        .ex_state = &ex_state,
-    });
-}
-
-test "Kickoff less invalid characters" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.expecting_kickoff_less;
-
-    try performTest(.{
-        .args = &.{ "-kl", "3.7" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.CannotParseKickoffLess,
-        .ex_stderr = "Kickoff less number contains invalid characters.\n",
-    });
-}
-
-test "Kickoff less number too big" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.expecting_kickoff_less;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-less", "34000000" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.CannotParseKickoffLess,
-        .ex_stderr = "Kickoff less number too big. Maximum is: 33554431.\n",
-    });
-}
-
-test "Kickoff less already parsed" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.not_expecting;
-    ex_state.kickoff_less = 38;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-less", "38", "-kl", "5" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.KickoffLessAlreadyParsed,
-        .ex_stderr = "There can be only one \"-kl\" or \"--kickoff-less\" flag.\n",
-    });
-}
-
-// ---------------------------------------------------------
-// TEST KICKOFF-MORE
-// ---------------------------------------------------------
-
-test "Kickoff more OK case short" {
-    var ex_state = ArgumentParser{};
-    ex_state.kickoff_more = 34;
-
-    try performTest(.{
-        .args = &.{ "-km", "34" },
-        .ex_state = &ex_state,
-    });
-}
-
-test "Kickoff more OK case long" {
-    var ex_state = ArgumentParser{};
-    ex_state.kickoff_more = 60000;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-more", "60000" },
-        .ex_state = &ex_state,
-    });
-}
-
-test "Kickoff more invalid characters" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.expecting_kickoff_more;
-
-    try performTest(.{
-        .args = &.{ "-km", "3.7" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.CannotParseKickoffMore,
-        .ex_stderr = "Kickoff more number contains invalid characters.\n",
-    });
-}
-
-test "Kickoff more number too big" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.expecting_kickoff_more;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-more", "34000000" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.CannotParseKickoffMore,
-        .ex_stderr = "Kickoff more number too big. Maximum is: 33554431.\n",
-    });
-}
-
-test "Kickoff more already parsed" {
-    var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.not_expecting;
-    ex_state.kickoff_more = 38;
-
-    try performTest(.{
-        .args = &.{ "--kickoff-more", "38", "-km", "5" },
-        .ex_state = &ex_state,
-        .ex_err = ArgumentParsingError.KickoffMoreAlreadyParsed,
-        .ex_stderr = "There can be only one \"-km\" or \"--kickoff-more\" flag.\n",
-    });
-}
-
-// ---------------------------------------------------------
 // TEST LIMIT
 // ---------------------------------------------------------
 
@@ -1633,7 +1445,6 @@ test "Limit OK case long" {
 
 test "Limit invalid characters" {
     var ex_state = ArgumentParser{};
-    ex_state.current_state = ArgParserState.expecting_kickoff_more;
 
     try performTest(.{
         .args = &.{ "-l", "3.7" },

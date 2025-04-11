@@ -5,7 +5,9 @@ const base62_helper = @import("base62_helper.zig");
 const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
-const time_helper = @import("time_helper.zig");
+const th = @import("time_helper.zig");
+const it_helper = @import("integration_tests_helper.zig");
+const dfw = @import("data_file_writer.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -23,17 +25,38 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // make sure the name is not too long
     if (name.len > std.math.maxInt(u8)) {
-        globals.printer.errNameTooLong(name);
+        try globals.printer.errNameTooLong(name);
         return;
     }
 
     // make sure there are not too many tags
     if (args.*.tags.items.len > std.math.maxInt(u6)) {
-        globals.printer.errThingTooManyTags();
+        try globals.printer.errThingTooManyTags();
         return;
     }
 
-    const kickoff = if (args.*.kickoff) |t| t + time_helper.curTimestamp() else 0;
+    // get the kickoff timestamp in minutes and make sure it does not overflow
+    var kickoff: u25 = undefined;
+
+    if (args.*.kickoff) |k| {
+        if (th.getMinutesFromSteps(u25, k)) |min| {
+            const cur_time: u25 = th.curTimestamp();
+            if (std.math.add(u25, min, cur_time)) |total_min| {
+                kickoff = total_min;
+            } else |_| {
+                try globals.printer.errKickoffTooBig();
+            }
+        } else |err| {
+            switch (err) {
+                th.TimeError.ReturnVarTypeTooSmall => try globals.printer.errKickoffTooBig(),
+                else => return err,
+            }
+        }
+    } else {
+        kickoff = 0;
+    }
+
+    // estimation is directly in steps
     const estimation = if (args.*.estimation) |e| e else 0;
 
     var infos_creation = dt.ThingCreated{};
@@ -41,7 +64,12 @@ pub fn cmd(args: *ArgumentParser) !void {
     defer infos_creation.created_tags.deinit();
 
     // actually execute the command
-    try globals.dfw.addThingToFile(name, kickoff, estimation, args.*.tags.items, &infos_creation);
+    globals.dfw.addThingToFile(name, kickoff, estimation, args.*.tags.items, &infos_creation) catch |err| {
+        switch (err) {
+            dfw.DataOperationError.TooManyThings => try globals.printer.errTooManyThings(),
+            else => return err,
+        }
+    };
 
     // display infos about the creation of the thing
     const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
@@ -103,10 +131,188 @@ pub fn help() !void {
     });
 }
 
-// TODO test no name
-// TODO test name too long
-// TODO test too many tags
-// TODO test too many things
-// TODO test OK case with just the name
-// TODO test OK case with name + tags + kickoff
-// TODO test OK case with name + tags + kickoff + estimation + start
+test "add thing with only a name" {
+    var ex_file = try it_helper.getStarterFile();
+    const thing_to_add: dt.Thing = .{
+        .id = 1,
+        .name = "testthing",
+        .tags = &[_]u16{},
+        .timers = &[_]dt.Timer{},
+        .creation = th.curTimestamp(),
+    };
+    try ex_file.things.insert(0, thing_to_add);
+    var args: ArgumentParser = .{ .payload = "testthing" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
+}
+
+test "add thing with name + tags + kickoff" {
+    var ex_file = try it_helper.getStarterFile();
+    var expected_tags: [1]u16 = .{1};
+    const thing_to_add: dt.Thing = .{
+        .id = 1,
+        .name = "testthing",
+        .tags = expected_tags[0..],
+        .timers = &[_]dt.Timer{},
+        .creation = th.curTimestamp(),
+    };
+    try ex_file.things.insert(0, thing_to_add);
+
+    var tags = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags.deinit();
+    try tags.append("someday");
+    var args: ArgumentParser = .{ .payload = "testthing", .tags = tags };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
+}
+
+test "add thing with name + tag creation + kickoff + estimation + start" {
+    var ex_file = try it_helper.getStarterFile();
+    var expected_tags: [1]u16 = .{4};
+    const thing_to_add: dt.Thing = .{
+        .id = 1,
+        .name = "testthing",
+        .tags = expected_tags[0..],
+        .timers = &[_]dt.Timer{},
+        .kickoff = th.curTimestamp() + try th.getMinutesFromSteps(u25, 34),
+        .estimation = 5432,
+        .creation = th.curTimestamp(),
+    };
+    try ex_file.things.insert(0, thing_to_add);
+    try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.someday, .name = "newtag" });
+    ex_file.cur_timer = .{
+        .id_thing = 1,
+        .id_last_timer = 0,
+        .start = th.curTimestamp(),
+    };
+
+    var tags = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags.deinit();
+    try tags.append("newtag");
+    var args: ArgumentParser = .{
+        .payload = "testthing",
+        .tags = tags,
+        .kickoff = 34,
+        .estimation = 5432,
+        .should_start = true,
+    };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = ex_file,
+    });
+}
+
+test "add thing with no name" {
+    var args: ArgumentParser = .{};
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = "Could not parse the name of the thing.\n",
+    });
+}
+
+test "add thing with name too long" {
+    const thing_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    var args: ArgumentParser = .{ .payload = thing_name };
+    var buf_ex_stderr: [300]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The name \"{s}\" is too long.\n", .{thing_name});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "add thing with too many tags" {
+    var tags = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags.deinit();
+
+    var buf_tag_name: [10]u8 = undefined;
+
+    for (0..64) |i| {
+        const tag_name = try std.fmt.bufPrint(&buf_tag_name, "tag{d}", .{i});
+        try tags.append(try globals.allocator.dupe(u8, tag_name));
+    }
+    defer {
+        for (0..64) |i| {
+            globals.allocator.free(tags.items[i]);
+        }
+    }
+
+    var args: ArgumentParser = .{ .payload = "testthing", .tags = tags };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_stderr = "There are too many tags associated to the thing. The maximum is 63.\n",
+    });
+}
+
+test "add thing with maximum number of ids reached on data file" {
+    var ac_file = try it_helper.getStarterFile();
+    const thing_to_add: dt.Thing = .{
+        .id = 524287,
+        .name = "testthing",
+        .tags = &[_]u16{},
+        .timers = &[_]dt.Timer{},
+        .creation = th.curTimestamp(),
+    };
+    try ac_file.things.insert(0, thing_to_add);
+
+    var args: ArgumentParser = .{ .payload = "thingoverflow" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_stderr = "The maximum number of things in the data file is reached.\nDeleting existing things will not help. You will need to start a new data file.\n",
+    });
+}
+
+test "add thing with kickoff overflowing right away" {
+    const ac_file = try it_helper.getStarterFile();
+    var args: ArgumentParser = .{ .payload = "kickoffoverflow", .kickoff = 30000000 };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_stderr = "The kickoff value is too big. Please try with a smaller one.\n",
+    });
+}
+
+test "add thing with kickoff overflowing with cur timestamp" {
+    const ac_file = try it_helper.getStarterFile();
+
+    const cur_time = th.curTimestamp();
+    const max_value = std.math.maxInt(u25);
+    const min_to_test = (max_value - cur_time) + 10;
+    const steps_to_test = try th.getStepsFromMinutes(u25, min_to_test);
+
+    var args = ArgumentParser{ .payload = "kickoffoverflow", .kickoff = steps_to_test };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_stderr = "The kickoff value is too big. Please try with a smaller one.\n",
+    });
+}
