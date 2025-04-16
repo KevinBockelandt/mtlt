@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");

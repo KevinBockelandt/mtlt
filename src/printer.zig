@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 
@@ -259,7 +259,8 @@ pub const Printer = struct {
 
     pub fn errThingNotFoundNum(self: *Printer, thing_id: u19) !void {
         var buf_str_id: [4]u8 = undefined;
-        const str_id = base62_helper.b10ToB62(&buf_str_id, thing_id);
+        // TODO pass directly the correct id and remove header id_helper
+        const str_id = id_helper.b10ToB62(&buf_str_id, thing_id);
         try self.errThingNotFoundStr(str_id);
     }
 

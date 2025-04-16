@@ -7,6 +7,29 @@ pub const Base62Error = error{
     InputStringTooBig,
 };
 
+pub const IdError = error{
+    InvalidId,
+};
+
+/// ID for a tag, thing or timer
+pub const Id = union(enum) {
+    tag: []const u8,
+    thing: u19,
+    timer: struct {
+        timer_part: u11,
+        thing_part: u19,
+    },
+};
+
+/// Parse an ID of undefined type
+pub fn parseId(to_parse: []const u8) !Id {
+    // if start with # then it's a tag
+    // // check for invalid characters in the tag name
+    // // check for size of tag name
+    // else if contains @ then it's a timer
+    // else it's a thing
+}
+
 /// Converts a decimal number into a base62 string
 pub fn b10ToB62(buf: *[4]u8, input: u19) []const u8 {
     if (input == 0) {

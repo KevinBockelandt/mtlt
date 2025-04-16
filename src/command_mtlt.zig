@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
@@ -55,7 +55,7 @@ pub fn cmd() !void {
         const cur_thing = try globals.dfr.getThing(cur_timer.id_thing);
         defer cur_thing.deinit();
 
-        const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_thing.id);
+        const str_id_thing = id_helper.b10ToB62(&buf_str_id, cur_thing.id);
 
         try globals.printer.reportThingIdName(str_id_thing, cur_thing.name);
         try globals.printer.reportStatus(@tagName(cur_thing.status));

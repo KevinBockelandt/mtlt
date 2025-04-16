@@ -5,6 +5,7 @@ const dfw = @import("data_file_writer.zig");
 const globals = @import("globals.zig");
 const std = @import("std");
 const dfp = @import("data_file_printer.zig");
+const th = @import("time_helper.zig");
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 pub const integration_test_file_path = "test/integration_test_data_file.mtlt";
@@ -15,8 +16,8 @@ pub const IntegrationTestingError = error{
 };
 
 fn printFiles(ex_file_data: dt.FullData) !void {
-    try data_file_printer.printFileData(ex_file_data, "test/expected_file.html");
-    try data_file_printer.printFileData(try globals.dfr.getFullData(), "test/actual_file.html");
+    try data_file_printer.printFileDataHtml(ex_file_data, "test/expected_file.html");
+    try data_file_printer.printFileDataHtml(try globals.dfr.getFullData(), "test/actual_file.html");
 }
 
 /// Compare the 2 test files and expect them to be identical
@@ -49,8 +50,12 @@ pub fn compareFiles(ex_file_data: dt.FullData) !void {
 
         if (!std.mem.eql(u8, buf_ex_f[0..read_ex_f], buf_ac_f[0..read_ac_f])) {
             std.debug.print("Comparison gives inequal results:\n", .{});
-            std.debug.print("Expected: {x}\n", .{buf_ex_f[0..read_ex_f]});
-            std.debug.print("Actual: {x}\n", .{buf_ac_f[0..read_ac_f]});
+
+            std.debug.print("\nPRINTING OUT ACTUAL FILE DATA:\n\n", .{});
+            try data_file_printer.printFileDataHex(ac_f);
+
+            std.debug.print("\nPRINTING OUT EXPECTED FILE DATA:\n\n", .{});
+            try data_file_printer.printFileDataHex(ex_f);
             std.debug.print("Content of files written in HTML files.\n", .{});
 
             try printFiles(ex_file_data);
@@ -79,6 +84,65 @@ pub fn getStarterFile() !dt.FullData {
     try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
     try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
     try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
+    return to_ret;
+}
+
+pub fn getSmallFile(cur_time: u25) !dt.FullData {
+    var to_ret: dt.FullData = .{};
+    to_ret.init();
+
+    var tags_thing_3 = try globals.allocator.alloc(u16, 1);
+    tags_thing_3[0] = 2;
+    try to_ret.things.append(.{
+        .id = 3,
+        .creation = cur_time - 800,
+        .kickoff = 0,
+        .estimation = 36,
+        .closure = cur_time - 100,
+        .status = dt.StatusThing.closed,
+        .name = "Name thing 3",
+        .tags = tags_thing_3[0..],
+        .timers = &[_]dt.Timer{},
+    });
+
+    var tags_thing_2 = try globals.allocator.alloc(u16, 1);
+    tags_thing_2[0] = 3;
+    var timers_thing_2 = try globals.allocator.alloc(dt.Timer, 2);
+    timers_thing_2[0] = .{ .id = 1, .duration = 20, .start = cur_time - 190 };
+    timers_thing_2[1] = .{ .id = 2, .duration = 50, .start = cur_time - 60 };
+    try to_ret.things.append(.{
+        .id = 2,
+        .creation = cur_time - 200,
+        .kickoff = cur_time + 400,
+        .estimation = 6,
+        .closure = 0,
+        .status = dt.StatusThing.open,
+        .name = "Name thing 2",
+        .tags = tags_thing_2[0..],
+        .timers = timers_thing_2[0..],
+    });
+
+    try to_ret.things.append(.{
+        .id = 1,
+        .creation = cur_time,
+        .kickoff = 0,
+        .estimation = 0,
+        .closure = 0,
+        .status = dt.StatusThing.open,
+        .name = "Name thing 1",
+        .tags = &[_]u16{},
+        .timers = &[_]dt.Timer{},
+    });
+
+    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
+    try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
+    try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
+
+    to_ret.cur_timer = .{
+        .id_thing = 1,
+        .id_last_timer = 0,
+        .start = 0,
+    };
     return to_ret;
 }
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const globals = @import("globals.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
@@ -16,7 +16,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         // and there is a previous timer to delete
         if (cur_timer.id_thing != 0 and cur_timer.id_last_timer != 0) {
             if (globals.dfw.deleteTimerFromFile(cur_timer.id_thing, cur_timer.id_last_timer)) |_| {
-                const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
+                const str_id_thing = id_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
                 try globals.printer.deletedTimer(str_id_thing, cur_timer.id_last_timer);
                 try globals.dfw.resetIdLastCurrentTimer(cur_timer.id_thing, cur_timer.start);
                 return;
@@ -36,7 +36,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     const str_id_thing = arg_it.first();
     const str_id_timer = arg_it.rest();
 
-    const id_thing = base62_helper.b62ToB10(str_id_thing) catch |err| {
+    const id_thing = id_helper.b62ToB10(str_id_thing) catch |err| {
         try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
@@ -112,7 +112,7 @@ fn displayTableReport(things: []dt.Thing) !void {
         const line_back_col: ?table_printer.CellBackCol = if (i % 2 != 0) null else .gray;
 
         // ID column
-        const base62_id = base62_helper.b10ToB62(&buf_id_base62, thing.id);
+        const base62_id = id_helper.b10ToB62(&buf_id_base62, thing.id);
         to_display[i][0] = .{
             .content = try globals.allocator.dupe(u8, base62_id),
             .alignment = .right,

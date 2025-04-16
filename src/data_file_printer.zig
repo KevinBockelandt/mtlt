@@ -173,7 +173,8 @@ fn printThingsSection(w: std.fs.File.Writer, things: std.ArrayList(dt.Thing)) !v
     , .{});
 }
 
-pub fn printFileData(file_data: dt.FullData, path_out_file: []const u8) !void {
+/// Print the content of the given data file into an HTML page (for debug purposes)
+pub fn printFileDataHtml(file_data: dt.FullData, path_out_file: []const u8) !void {
     // create the file that will contain the printout
     const f = try std.fs.cwd().createFile(path_out_file, .{});
     defer f.close();
@@ -186,6 +187,59 @@ pub fn printFileData(file_data: dt.FullData, path_out_file: []const u8) !void {
     try printHtmlEnd(w);
 }
 
+/// Print the content of the given data file onto stdout in hexadecimal (for debug purposes)
+pub fn printFileDataHex(f: std.fs.File) !void {
+    const r = f.reader();
+    try f.seekTo(0);
+
+    const total_bytes_tag_section = try r.readInt(u64, little_end);
+    std.debug.print("{x}    - total bytes tag section\n", .{total_bytes_tag_section});
+
+    const num_tags_in_file = try r.readInt(u16, little_end);
+    std.debug.print("{x}      - num tags in file\n", .{num_tags_in_file});
+
+    std.debug.print("--------- TAGS ---------\n", .{});
+
+    for (0..num_tags_in_file) |_| {
+        const int_fpt = try r.readInt(u24, little_end);
+        const parsed_fpt = dt.getTagFixedPartFromInt(int_fpt);
+        const buf_tag_name = try globals.allocator.alloc(u8, parsed_fpt.lgt_name);
+        _ = try r.read(buf_tag_name);
+        std.debug.print("{x}  - {s}\n", .{ int_fpt, buf_tag_name });
+        globals.allocator.free(buf_tag_name);
+    }
+
+    const num_things_in_file = try r.readInt(u24, little_end);
+    std.debug.print("{x}    - num things in file\n", .{num_things_in_file});
+
+    for (0..num_things_in_file) |_| {
+        std.debug.print("---------- THING --------\n", .{});
+
+        const int_fpt = try r.readInt(u136, little_end);
+        const parsed_fpt = dt.getThingFixedPartFromInt(int_fpt);
+        std.debug.print("{x}\n", .{int_fpt});
+
+        const buf_thing_name = try globals.allocator.alloc(u8, parsed_fpt.lgt_name);
+        _ = try r.read(buf_thing_name);
+        std.debug.print("{x} - {s}\n", .{ buf_thing_name, buf_thing_name });
+
+        for (0..parsed_fpt.num_tags) |_| {
+            const tag_id = try r.readInt(u16, little_end);
+            std.debug.print("{x:0>4}, ", .{tag_id});
+        }
+
+        std.debug.print("\n", .{});
+        for (0..parsed_fpt.num_timers) |_| {
+            const int_timer = try r.readInt(u48, little_end);
+            std.debug.print("{x:0>12}\n", .{int_timer});
+        }
+    }
+
+    std.debug.print("----- CURRENT TIMER -----\n", .{});
+    const int_cur_timer = try r.readInt(u56, little_end);
+    std.debug.print("{x}\n", .{int_cur_timer});
+}
+
 pub fn main() !void {
     try globals.initDataFileNames(null);
     try globals.openDataFiles();
@@ -193,7 +247,7 @@ pub fn main() !void {
     var parser = dfr.DataFileReader{};
     var file_data = try parser.getFullData();
 
-    try printFileData(file_data, "printout_data_file.html");
+    try printFileDataHtml(file_data, "printout_data_file.html");
 
     file_data.deinit();
     globals.closeDataFiles();

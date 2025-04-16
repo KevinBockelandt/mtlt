@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const globals = @import("globals.zig");
 const time_helper = @import("time_helper.zig");
 
@@ -18,7 +18,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         return;
     }
     const id_thing_str = args.*.payload.?;
-    const id_thing_num = try base62_helper.b62ToB10(id_thing_str);
+    const id_thing_num = try id_helper.b62ToB10(id_thing_str);
 
     //  get the duration of the timer to add
     if (args.*.duration == null) {

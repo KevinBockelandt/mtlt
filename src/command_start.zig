@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const command_stop = @import("command_stop.zig");
@@ -30,7 +30,7 @@ pub fn cmd(args: *ArgumentParser) !void {
             try start_id(cur_timer.id_thing, cur_thing_name);
         }
     } else {
-        const arg_id: u19 = if (args.*.payload == null) 0 else try base62_helper.b62ToB10(args.*.payload.?);
+        const arg_id: u19 = if (args.*.payload == null) 0 else try id_helper.b62ToB10(args.*.payload.?);
         const arg_fpt = try globals.dfr.getFixedPartThing(arg_id);
         const arg_thing_name = try globals.allocator.alloc(u8, arg_fpt.lgt_name);
         defer globals.allocator.free(arg_thing_name);
@@ -42,7 +42,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 /// Start a timer on a thing with the specified ID
 pub fn start_id(id: u19, thing_name: []const u8) !void {
     const cur_timer = try globals.dfr.getCurrentTimer();
-    const str_id = base62_helper.b10ToB62(&buf_str_id, id);
+    const str_id = id_helper.b10ToB62(&buf_str_id, id);
 
     // If there is no previous current timer and we have an ID to start on
     if (cur_timer.id_thing == 0 and id != 0) {
