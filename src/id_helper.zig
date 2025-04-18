@@ -12,6 +12,7 @@ pub const Base62Error = error{
 pub const IdError = error{
     InvalidTagName,
     InvalidTimerId,
+    InvalidThingId,
     EmptyId,
 };
 
@@ -87,7 +88,11 @@ pub fn parseId(to_parse: []const u8) !Id {
     }
 
     // if we are parsing a thing ID
-    return .{ .thing = try b62ToB10(to_parse) };
+    if (b62ToB10(to_parse)) |id_thing| {
+        return .{ .thing = id_thing };
+    } else |_| {
+        return IdError.InvalidThingId;
+    }
 }
 
 /// Converts a decimal number into a base62 string

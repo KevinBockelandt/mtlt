@@ -412,6 +412,18 @@ pub const Printer = struct {
         try self.writeErr("The time offset between now and the start of the timer is too big. Maximum is: {d}\n", .{cur_time});
     }
 
+    pub fn errInvalidTimerId(self: *Printer) !void {
+        try self.writeErr("The provided ID for a timer is invalid.\n", .{});
+    }
+
+    pub fn errInvalidThingId(self: *Printer) !void {
+        try self.writeErr("The provided ID for a thing is invalid.\n", .{});
+    }
+
+    pub fn errInvalidTagId(self: *Printer) !void {
+        try self.writeErr("The provided ID for a tag is invalid.\n", .{});
+    }
+
     pub fn errInvalidEnvVar(self: *Printer, env_var: []const u8) !void {
         try self.writeErr("The {s} environment variable is not valid WTF-8.\n", .{env_var});
     }

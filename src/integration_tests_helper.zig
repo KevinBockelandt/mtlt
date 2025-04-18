@@ -151,7 +151,7 @@ pub fn deinitTest() void {
     globals.deinitDataFileNames();
     globals.printer.deinit();
 }
-//
+
 const TestData = struct {
     cmd: *const fn (*ArgumentParser) anyerror!void,
     args: *ArgumentParser,

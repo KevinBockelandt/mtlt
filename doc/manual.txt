@@ -26,6 +26,7 @@ Short | Long               | Description                                 | Used 
       | --include-closed   | include closed elements in result           | tags
       | --no-color         | no colors on the output text                | everywhere
       | --no-tags          | filter out things that have associated tags | timers, closed, ongoing, stats
+-c    | --auto-confirm     | automatically confirm if necessary          | delete, update
 -d    | --duration         | duration for a timer                        | add-timer
 -dl   | --duration-less    | remove from duration                        | toggle, update-timer, stop
 -dm   | --duration-more    | add to duration                             | toggle, update-timer, stop

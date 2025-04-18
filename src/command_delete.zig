@@ -5,6 +5,7 @@ const globals = @import("globals.zig");
 const it_helper = @import("integration_tests_helper.zig");
 const std = @import("std");
 const th = @import("time_helper.zig");
+const cli_helper = @import("cli_helper.zig");
 
 // todo remove
 const dfw = @import("data_file_writer.zig");
@@ -17,28 +18,64 @@ const little_end = std.builtin.Endian.little;
 
 /// Delete a thing from the data file
 pub fn cmd(args: *ArgumentParser) !void {
-    var id_thing_to_delete: u19 = 0;
-
-    // if there is no argument with the command
-    if (args.*.payload == null) {
-        const cur_timer = try globals.dfr.getCurrentTimer();
-
-        // and there is a previous thing to delete
-        if (cur_timer.id_thing != 0) {
-            id_thing_to_delete = cur_timer.id_thing;
-        } else {
-            // TODO change the error message
-            try globals.printer.errIdThingMissing();
+    const id_to_delete: id_helper.Id = getIdToDelete(args.*.payload) catch |err| {
+        switch (err) {
+            id_helper.IdError.EmptyId => @panic("Trying to parse empty ID in command delete"),
+            id_helper.IdError.InvalidTagName => globals.printer.errInvalidTagId(),
+            id_helper.IdError.InvalidTimerId => globals.printer.errInvalidTimerId(),
+            id_helper.IdError.InvalidThingId => globals.printer.errInvalidThingId(),
         }
-    } else {
-        // TODO get the ID according to it's type
-        // Have a taged union with -type -id_value
-        id_thing_to_delete = try id_helper.b62ToB10(args.*.payload.?);
+        return;
+    };
+
+    switch (id_to_delete) {
+        .tag => deleteTag(id_to_delete.tag, args.auto_confirm),
+        .thing => deleteThing(id_to_delete.tag, args.*.payload, args.auto_confirm),
+        .timer => deleteTimer(id_to_delete, args.*.payload, args.auto_confirm),
     }
 }
 
+/// Get the ID of the whatever we are trying to delete
+fn getIdToDelete(arg: ?[]const u8) !id_helper.Id {
+    if (arg == null) {
+        const cur_timer = try globals.dfr.getCurrentTimer();
+
+        if (cur_timer.id_thing != 0) {
+            return .{ .thing = cur_timer.id_thing };
+        } else {
+            // at this point there is simply nothing to work on
+
+            // TODO change the error message
+            try globals.printer.errIdThingMissing();
+            return error.NoId;
+        }
+    }
+}
+
+/// Delete a tag from the data file if confirmed
+fn deleteTag(tag_name: []const u8, bypass_confirm: bool) !void {
+    const w = std.io.getStdOut().writer();
+    w.print("About to delete the tag \"{s}{s}{s}\".\n", .{ ansi.colemp, tag_name, ansi.colres });
+
+    if (try cli_helper.confirm(bypass_confirm)) {
+        if (globals.dfw.deleteTagFromFile(tag_name)) |_| {
+            try globals.printer.deletedTag(tag_name);
+        } else |err| {
+            switch (err) {
+                DataParsingError.TagNotFound => try globals.printer.errTagNotFoundName(tag_name),
+                else => return err,
+            }
+        }
+    }
+}
+///
 /// Delete a thing from the data file
-fn delete_thing(id_thing: u19, str_id_thing: []const u8) !void {
+fn deleteTimer(id: id_helper.Id, str_id_thing: []const u8, bypass_confirm: bool) !void {
+    // TODO
+}
+
+/// Delete a thing from the data file
+fn deleteThing(id_thing: u19, str_id_thing: []const u8, bypass_confirm: bool) !void {
     // check if there is a running timer for this thing. If yes stop it
     const cur_timer = try globals.dfr.getCurrentTimer();
     if (cur_timer.id_thing == id_thing) {
