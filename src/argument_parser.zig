@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
 const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
@@ -36,6 +35,7 @@ pub const ArgumentParsingError = error{
     TagNameTooLong,
     TagNameInvalid,
     // flags already parsed
+    AutoConfirmAlreadyParsed,
     DivisionsAlreadyParsed,
     DurationAlreadyParsed,
     DurationLessAlreadyParsed,
@@ -59,6 +59,7 @@ pub const ArgumentParsingError = error{
 
 /// Potential types of command line arguments currently parsed
 const ArgType = enum(u8) {
+    auto_confirm,
     divisions,
     duration,
     duration_less,
@@ -121,6 +122,8 @@ fn getArgType(arg: []const u8) ArgType {
         return ArgType.exclude_tags;
     } else if (std.mem.eql(u8, arg, "--no-tags")) {
         return ArgType.no_tags;
+    } else if (std.mem.eql(u8, arg, "-c") or std.mem.eql(u8, arg, "--auto-confirm")) {
+        return ArgType.auto_confirm;
     } else if (std.mem.eql(u8, arg, "-d") or std.mem.eql(u8, arg, "--duration")) {
         return ArgType.duration;
     } else if (std.mem.eql(u8, arg, "-dl") or std.mem.eql(u8, arg, "--duration-less")) {
@@ -189,6 +192,7 @@ fn addTagIfApplicable(al: *std.ArrayList([]const u8), to_add: []const u8) !void 
 pub const ArgumentParser = struct {
     /// the main thing regarding the command (an id to work on, the name of a thing to add, etc.)
     payload: ?[]const u8 = null,
+    auto_confirm: bool = false, // flag --auto-confirm
     divisions: ?u4 = null, // flag --divisions
     duration: ?u12 = null, // flag --duration
     duration_less: ?u12 = null, // flag --duration-less
@@ -431,6 +435,11 @@ pub const ArgumentParser = struct {
                 ArgType.unknown_flag => {
                     try globals.printer.errUnexpectedFlag(arg);
                     return ArgumentParsingError.UnknownFlag;
+                },
+                ArgType.auto_confirm => {
+                    self.auto_confirm = true;
+                    self.current_state = ArgParserState.not_expecting;
+                    continue;
                 },
                 ArgType.start => {
                     self.should_start = true;
@@ -753,6 +762,7 @@ pub const ArgumentParser = struct {
             if (!std.mem.eql(u8, self.payload.?, other.payload.?)) return false;
         }
 
+        if (self.auto_confirm != other.auto_confirm) return false;
         if (self.divisions != other.divisions) return false;
         if (self.duration != other.duration) return false;
         if (self.duration_less != other.duration_less) return false;
@@ -901,6 +911,40 @@ test "Payload already parsed" {
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.UnexpectedArgument,
         .ex_stderr = "Unexpected argument: \"cool\".\n",
+    });
+}
+
+// ---------------------------------------------------------
+// TEST AUTO-CONFIRM
+// ---------------------------------------------------------
+
+test "Auto confirm OK case short" {
+    var ex_state = ArgumentParser{};
+    ex_state.auto_confirm = true;
+
+    try performTest(.{
+        .args = &.{"-c"},
+        .ex_state = &ex_state,
+    });
+}
+
+test "Auto confirm OK case long" {
+    var ex_state = ArgumentParser{};
+    ex_state.auto_confirm = true;
+
+    try performTest(.{
+        .args = &.{"--auto-confirm"},
+        .ex_state = &ex_state,
+    });
+}
+
+test "Auto confirm already parsed (valid)" {
+    var ex_state = ArgumentParser{};
+    ex_state.auto_confirm = true;
+
+    try performTest(.{
+        .args = &.{ "-c", "--auto-confirm" },
+        .ex_state = &ex_state,
     });
 }
 

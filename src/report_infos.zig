@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dfr = @import("data_file_reader.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
@@ -30,7 +30,7 @@ pub fn infosReport(args: *ArgumentParser) !void {
             id_thing = cur_timer.id_thing;
         }
     } else {
-        id_thing = try base62_helper.b62ToB10(args.*.payload.?);
+        id_thing = try id_helper.b62ToB10(args.*.payload.?);
     }
 
     const thing_to_display = try globals.dfr.getThing(id_thing);
@@ -46,7 +46,7 @@ fn displayTableReport(thing: dt.Thing) !void {
 
     // string for the thing ID
     var buf_id_thing: [4]u8 = undefined;
-    const str_id_thing = base62_helper.b10ToB62(&buf_id_thing, thing.id);
+    const str_id_thing = id_helper.b10ToB62(&buf_id_thing, thing.id);
 
     // kickoff
     const offset_kickoff_min: i64 = @as(i64, @intCast(thing.kickoff)) - @as(i64, @intCast(cur_time));

@@ -61,6 +61,19 @@ pub fn generateEmptyDataFile() !void {
     try globals.data_file.writer().writeInt(u56, 0, little_end);
 }
 
+/// Store the position of a thing in the data file if it's associated to a given tag
+pub fn getPosThingAssociatedToTag(thing: dt.Thing, tag_id: u16, positions: *std.ArrayList(usize), pos: usize) void {
+    for (thing.tags) |tag| {
+        if (tag == tag_id) {
+            positions.*.append(pos) catch |err| {
+                std.debug.print("ERROR: while trying to get position of a thing with associated tag: {}\n", .{err});
+            };
+
+            return;
+        }
+    }
+}
+
 /// Write the full content of a data file (for test purposes)
 pub fn writeFullData(full_data: dt.FullData, file_path: []const u8) !void {
     const f = try std.fs.cwd().createFile(file_path, .{});
@@ -419,23 +432,59 @@ pub const DataFileWriter = struct {
         const total_bytes_tag_section = try r.readInt(u64, little_end);
         const num_tags_in_file = try r.readInt(u16, little_end);
 
-        if (globals.dfr.getPosTag(name)) |tag_pos| {
-            try globals.data_file.seekTo(tag_pos);
+        // get the infos of the tag to remove
+        const tag_pos = try globals.dfr.getPosTag(name);
+        try globals.data_file.seekTo(tag_pos);
 
-            // extract fixed data from the tag
-            const raw_fpt = try r.readInt(u24, little_end);
-            const fpt = dt.getTagFixedPartFromInt(raw_fpt);
-            const total_bytes_tag = dt.lgt_fixed_tag + fpt.lgt_name;
+        const raw_fp_tag = try r.readInt(u24, little_end);
+        const fp_tag = dt.getTagFixedPartFromInt(raw_fp_tag);
+        const total_bytes_tag = dt.lgt_fixed_tag + fp_tag.lgt_name;
 
-            // actually remove this tag from the file
-            try self.removeFromFile(total_bytes_tag, tag_pos);
+        // actually remove this tag from the file
+        try self.removeFromFile(total_bytes_tag, tag_pos);
 
-            // rewrite the data at the beginning to account the change
-            try globals.data_file.seekTo(0);
-            try globals.data_file.writer().writeInt(u64, total_bytes_tag_section - total_bytes_tag, little_end);
-            try globals.data_file.writer().writeInt(u16, num_tags_in_file - 1, little_end);
-        } else |err| {
-            return err;
+        // rewrite the data at the beginning to account the change
+        try globals.data_file.seekTo(0);
+        try globals.data_file.writer().writeInt(u64, total_bytes_tag_section - total_bytes_tag, little_end);
+        try globals.data_file.writer().writeInt(u16, num_tags_in_file - 1, little_end);
+
+        // parse all the things in order to store the position in file of all things related to this tag
+        var impacted_things_pos = std.ArrayList(usize).init(globals.allocator);
+        defer impacted_things_pos.deinit();
+
+        try globals.dfr.parseThings(.{ .GetPosThingAssociatedToTag = .{
+            .func = getPosThingAssociatedToTag,
+            .pos_array = &impacted_things_pos,
+            .tag_id = fp_tag.id,
+        } });
+
+        // sort the positions from the furthest to the closest from beginning
+        std.mem.sort(usize, impacted_things_pos.items, {}, comptime std.sort.desc(usize));
+
+        // delete what needs to be deleted from each thing
+        for (impacted_things_pos.items) |pos| {
+            // get infos on the thing to position ourselves on the list of tag ids
+            try globals.data_file.seekTo(pos);
+            var raw_fp_thing = try r.readInt(u136, little_end);
+            var fp_thing = dt.getThingFixedPartFromInt(raw_fp_thing);
+
+            const pos_tag_ids = pos + dt.lgt_fixed_thing + fp_thing.lgt_name;
+            try globals.data_file.seekTo(pos_tag_ids);
+
+            // go through the list and delete the tag id
+            for (0..fp_thing.num_tags) |_| {
+                const cur_tag_id = try r.readInt(u16, little_end);
+                if (cur_tag_id == fp_tag.id) {
+                    try self.removeFromFile(2, try globals.data_file.getPos() - 2);
+
+                    // update the number of tag id in the list for this thing
+                    fp_thing.num_tags -= 1;
+                    raw_fp_thing = dt.getIntFromThingFixedPart(fp_thing);
+                    try globals.data_file.seekTo(pos);
+                    try globals.data_file.writer().writeInt(u136, raw_fp_thing, little_end);
+                    break;
+                }
+            }
         }
     }
 

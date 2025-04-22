@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 
@@ -102,8 +102,8 @@ pub const Printer = struct {
         try self.writeOut("Updated timer {s}{s}-{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
     }
 
-    pub fn deletedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
-        try self.writeOut("Deleted timer {s}{s}-{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
+    pub fn deletedTimer(self: *Printer, str_id: []const u8) !void {
+        try self.writeOut("Deleted timer {s}{s}{s}.\n", .{ ansi.colid, str_id, ansi.colres });
     }
 
     pub fn timerAlreadyRunning(self: *Printer, str_id: []const u8, thing_name: []const u8) !void {
@@ -259,7 +259,8 @@ pub const Printer = struct {
 
     pub fn errThingNotFoundNum(self: *Printer, thing_id: u19) !void {
         var buf_str_id: [4]u8 = undefined;
-        const str_id = base62_helper.b10ToB62(&buf_str_id, thing_id);
+        // TODO pass directly the correct id and remove header id_helper
+        const str_id = id_helper.b10ToB62(&buf_str_id, thing_id);
         try self.errThingNotFoundStr(str_id);
     }
 
@@ -276,8 +277,8 @@ pub const Printer = struct {
         try self.writeErr("Deleting existing things will not help. You will need to start a new data file.\n", .{});
     }
 
-    pub fn errIdThingMissing(self: *Printer) !void {
-        try self.writeErr("Missing the ID of the thing to operate on.\n", .{});
+    pub fn errMissingId(self: *Printer) !void {
+        try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
     }
 
     // ERRORS RELATED TO TAGS
@@ -363,6 +364,10 @@ pub const Printer = struct {
         try self.writeErr("{}\n", .{err});
     }
 
+    pub fn errUnexpected(self: *Printer, err: anyerror) !void {
+        try self.writeErr("An unexpected error occured!\n", .{});
+        try self.writeErr("{}\n", .{err});
+    }
     pub fn errUnexpectedTimerAddition(self: *Printer, err: anyerror) !void {
         try self.writeErr("Unexpected error during the addition of a timer.\n", .{});
         try self.writeErr("{}\n", .{err});
@@ -411,7 +416,23 @@ pub const Printer = struct {
         try self.writeErr("The time offset between now and the start of the timer is too big. Maximum is: {d}\n", .{cur_time});
     }
 
+    pub fn errInvalidTimerId(self: *Printer) !void {
+        try self.writeErr("The provided timer ID is invalid.\n", .{});
+    }
+
+    pub fn errInvalidThingId(self: *Printer) !void {
+        try self.writeErr("The provided thing ID is invalid.\n", .{});
+    }
+
+    pub fn errInvalidTagId(self: *Printer) !void {
+        try self.writeErr("The provided tag ID is invalid.\n", .{});
+    }
+
     pub fn errInvalidEnvVar(self: *Printer, env_var: []const u8) !void {
         try self.writeErr("The {s} environment variable is not valid WTF-8.\n", .{env_var});
+    }
+
+    pub fn errTimerNotFound(self: *Printer, timer_id: []const u8) !void {
+        try self.writeErr("Thing with id {s}{s}{s} not found\n", .{ ansi.colemp, timer_id, ansi.colres });
     }
 };

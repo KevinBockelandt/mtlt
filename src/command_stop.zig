@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
@@ -27,7 +27,7 @@ pub fn cmd(args: *ArgumentParser) !void {
             .add_start_off = args.*.start_less == null,
         });
 
-        const str_id = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
+        const str_id = id_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
 
         // get the name of the thing to stop
         const fpt = try globals.dfr.getFixedPartThing(cur_timer.id_thing);

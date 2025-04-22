@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
@@ -23,7 +23,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     // format the arguments properly
     const kickoff = if (args.*.kickoff) |t| if (t == 0) t else t + cur_time else null;
-    const id_num = try base62_helper.b62ToB10(args.*.payload.?);
+    const id_num = try id_helper.b62ToB10(args.*.payload.?);
     const id_str = args.*.payload.?;
 
     // create the array list for the tags to update
@@ -58,7 +58,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     // if wanted and possible, start the current timer on the updated thing right away
     if (args.*.should_start) {
         if (thing_data.status == @intFromEnum(dt.StatusThing.closed)) {
-            const str_id = base62_helper.b10ToB62(&buf_str_id, thing_data.id);
+            const str_id = id_helper.b10ToB62(&buf_str_id, thing_data.id);
             try globals.printer.cantStartIfClosed(str_id);
             return;
         }

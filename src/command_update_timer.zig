@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
 
@@ -28,7 +28,7 @@ pub fn cmd(args: *ArgumentParser) !void {
                 .start_off = if (args.*.start_less == null) args.*.start_more else args.*.start_less,
                 .add_start_off = args.*.start_less == null,
             }, cur_timer.id_thing)) |_| {
-                const str_id_thing = base62_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
+                const str_id_thing = id_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
                 try globals.printer.updatedTimer(str_id_thing, cur_timer.id_last_timer);
 
                 // TODO pass the new start offset
@@ -51,7 +51,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     const str_id_thing = arg_it.first();
     const str_id_timer = arg_it.rest();
 
-    const id_thing = base62_helper.b62ToB10(str_id_thing) catch |err| {
+    const id_thing = id_helper.b62ToB10(str_id_thing) catch |err| {
         try globals.printer.errUnexpectedTimerIdParsing(err);
         return;
     };

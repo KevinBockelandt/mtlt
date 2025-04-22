@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const command_start = @import("command_start.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
@@ -45,10 +45,14 @@ pub fn cmd(args: *ArgumentParser) !void {
                 kickoff = total_min;
             } else |_| {
                 try globals.printer.errKickoffTooBig();
+                return;
             }
         } else |err| {
             switch (err) {
-                th.TimeError.ReturnVarTypeTooSmall => try globals.printer.errKickoffTooBig(),
+                th.TimeError.ReturnVarTypeTooSmall => {
+                    try globals.printer.errKickoffTooBig();
+                    return;
+                },
                 else => return err,
             }
         }
@@ -72,7 +76,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     };
 
     // display infos about the creation of the thing
-    const str_id = base62_helper.b10ToB62(&buf_str_id, infos_creation.id);
+    const str_id = id_helper.b10ToB62(&buf_str_id, infos_creation.id);
     try globals.printer.createdThing(name, str_id);
 
     if (args.*.kickoff != null) {
@@ -283,36 +287,42 @@ test "add thing with maximum number of ids reached on data file" {
         .cmd = cmd,
         .args = &args,
         .ac_file = ac_file,
+        .ex_file = ac_file,
         .ex_stderr = "The maximum number of things in the data file is reached.\nDeleting existing things will not help. You will need to start a new data file.\n",
     });
 }
 
 test "add thing with kickoff overflowing right away" {
     const ac_file = try it_helper.getStarterFile();
+    const ex_file = try it_helper.getStarterFile();
+
     var args: ArgumentParser = .{ .payload = "kickoffoverflow", .kickoff = 30000000 };
 
     try it_helper.performTest(.{
         .cmd = cmd,
         .args = &args,
         .ac_file = ac_file,
+        .ex_file = ex_file,
         .ex_stderr = "The kickoff value is too big. Please try with a smaller one.\n",
     });
 }
 
 test "add thing with kickoff overflowing with cur timestamp" {
     const ac_file = try it_helper.getStarterFile();
+    const ex_file = try it_helper.getStarterFile();
 
     const cur_time = th.curTimestamp();
     const max_value = std.math.maxInt(u25);
-    const min_to_test = (max_value - cur_time) + 10;
-    const steps_to_test = try th.getStepsFromMinutes(u25, min_to_test);
+    const min_to_test = (max_value - cur_time);
+    const steps_to_test = try th.getStepsFromMinutes(u25, min_to_test) + 10;
 
-    var args = ArgumentParser{ .payload = "kickoffoverflow", .kickoff = steps_to_test };
+    var args: ArgumentParser = .{ .payload = "kickoffoverflow", .kickoff = steps_to_test };
 
     try it_helper.performTest(.{
         .cmd = cmd,
         .args = &args,
         .ac_file = ac_file,
+        .ex_file = ex_file,
         .ex_stderr = "The kickoff value is too big. Please try with a smaller one.\n",
     });
 }

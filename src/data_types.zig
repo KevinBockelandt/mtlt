@@ -127,6 +127,24 @@ pub const FullData = struct {
         self.tags.deinit();
         self.things.deinit();
     }
+
+    pub fn clone(self: *FullData) !FullData {
+        var to_ret: FullData = .{
+            .tags = std.ArrayList(Tag).init(globals.allocator),
+            .things = std.ArrayList(Thing).init(globals.allocator),
+            .cur_timer = self.cur_timer,
+        };
+
+        for (self.tags.items) |tag| {
+            try to_ret.tags.append(tag.dupe());
+        }
+
+        for (self.things.items) |thing| {
+            try to_ret.things.append(thing.dupe());
+        }
+
+        return to_ret;
+    }
 };
 
 /// The fixed part of a tag

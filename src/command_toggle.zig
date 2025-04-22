@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const base62_helper = @import("base62_helper.zig");
+const id_helper = @import("id_helper.zig");
 const command_stop = @import("command_stop.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
@@ -31,10 +31,10 @@ pub fn cmd(args: *ArgumentParser) !void {
             id_thing = cur_timer.id_thing;
         }
     } else {
-        id_thing = try base62_helper.b62ToB10(args.*.payload.?);
+        id_thing = try id_helper.b62ToB10(args.*.payload.?);
     }
 
-    const str_id = base62_helper.b10ToB62(&buf_str_id, id_thing);
+    const str_id = id_helper.b10ToB62(&buf_str_id, id_thing);
 
     //  stop a potential current timer running associated to the thing to toggle
     if (globals.dfr.getFixedPartThing(id_thing)) |fpt| {

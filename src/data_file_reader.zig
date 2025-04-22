@@ -424,12 +424,20 @@ pub const DataFileReader = struct {
 
         self.idx_buf_read_from_file = 0;
         self.num_bytes_read_from_file = 0;
+        self.total_num_bytes_read_from_file = 0;
 
         const lgt_tag_section = try r.readInt(u64, little_end);
         try globals.data_file.seekTo(lgt_tag_section);
         const num_things_in_file: u24 = try r.readInt(u24, little_end);
 
+        const pos_first_thing = try globals.data_file.getPos();
+
         for (0..num_things_in_file) |_| {
+            const start_pos_thing: usize = if (self.total_num_bytes_read_from_file > 0)
+                pos_first_thing + (self.total_num_bytes_read_from_file - (self.num_bytes_read_from_file - self.idx_buf_read_from_file))
+            else
+                try globals.data_file.getPos();
+
             // get the fixed part of the thing
             self.getCurItem(dt.lgt_fixed_thing);
             const int_fpt = std.mem.readInt(u136, self.buf_cur_item[0..dt.lgt_fixed_thing], little_end);
@@ -462,6 +470,9 @@ pub const DataFileReader = struct {
                 },
                 .CheckThingForTagAssociation => |cb_handler| {
                     cb_handler.func(thing, cb_handler.tag_id, cb_handler.num_open, cb_handler.num_closed);
+                },
+                .GetPosThingAssociatedToTag => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.tag_id, cb_handler.pos_array, start_pos_thing);
                 },
             }
 
