@@ -58,8 +58,6 @@ fn getIdToDelete(arg: ?[]const u8) !id_helper.Id {
 
 /// Delete a tag from the data file if confirmed
 fn deleteTag(tag_name: []const u8, bypass_confirm: bool) !void {
-    const w = std.io.getStdOut().writer();
-
     // check that the tag exist in the date file
     _ = globals.dfr.getPosTag(tag_name) catch |err| {
         switch (err) {
@@ -71,8 +69,7 @@ fn deleteTag(tag_name: []const u8, bypass_confirm: bool) !void {
 
     // get confirmation if necessary
     if (!bypass_confirm) {
-        // TODO put that in the printer
-        try w.print("About to delete the tag \"{s}{s}{s}\".\n", .{ ansi.colemp, tag_name, ansi.colres });
+        try globals.printer.confirmDeleteTag(tag_name);
         if (try cli_helper.confirm() == false) return;
     }
 
@@ -82,7 +79,6 @@ fn deleteTag(tag_name: []const u8, bypass_confirm: bool) !void {
 
 /// Delete a timer from the data file
 fn deleteTimer(id: id_helper.Id, bypass_confirm: bool) !void {
-    const w = std.io.getStdOut().writer();
     const id_thing = id.timer.thing_part;
     const id_timer = id.timer.timer_part;
 
@@ -95,7 +91,7 @@ fn deleteTimer(id: id_helper.Id, bypass_confirm: bool) !void {
 
     if (!bypass_confirm) {
         // TODO put that in the printer
-        try w.print("About to delete the timer \"{s}{s}{s}\".\n", .{ ansi.colemp, str_full_id, ansi.colres });
+        try globals.printer.confirmDeleteTimer(str_full_id);
         if (try cli_helper.confirm() == false) return;
     }
 
@@ -124,7 +120,6 @@ fn deleteTimer(id: id_helper.Id, bypass_confirm: bool) !void {
 
 /// Delete a thing from the data file
 fn deleteThing(id_thing: u19, bypass_confirm: bool) !void {
-    const w = std.io.getStdOut().writer();
     var buf_str_id: [4]u8 = undefined;
     const str_id = id_helper.b10ToB62(&buf_str_id, id_thing);
 
@@ -144,7 +139,7 @@ fn deleteThing(id_thing: u19, bypass_confirm: bool) !void {
 
     // ask confirmation before deleting the thing
     if (!bypass_confirm) {
-        try w.print("About to delete thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
+        try globals.printer.confirmDeleteThing(str_id, thing_name);
         if (try cli_helper.confirm() == false) return;
     }
 
@@ -167,14 +162,14 @@ fn deleteThing(id_thing: u19, bypass_confirm: bool) !void {
 /// Print out help for the delete command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt delete <id>{s}
+        \\Usage: {s}mtlt delete [id]{s}
         \\
         \\Deletes either a thing, tag or timer permanently from the data file.
         \\
         \\The ID for a tag is it's name prefixed by the '#' character.
         \\
-        \\If no ID is provided, it deletes the current thing. You can see what
-        \\the current thing is by using {s}mtlt{s} without any sub-command.
+        \\If no ID is provided, it deletes the last timer. You can see what
+        \\the last timer is by using {s}mtlt{s} without any sub-command.
         \\
         \\Examples:
         \\  {s}mtlt delete{s}

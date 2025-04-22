@@ -277,6 +277,10 @@ pub const Printer = struct {
         try self.writeErr("Deleting existing things will not help. You will need to start a new data file.\n", .{});
     }
 
+    pub fn errIdThingMissing(self: *Printer) !void {
+        try self.writeErr("TODO", .{});
+    }
+
     pub fn errMissingId(self: *Printer) !void {
         try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
     }
@@ -368,6 +372,7 @@ pub const Printer = struct {
         try self.writeErr("An unexpected error occured!\n", .{});
         try self.writeErr("{}\n", .{err});
     }
+
     pub fn errUnexpectedTimerAddition(self: *Printer, err: anyerror) !void {
         try self.writeErr("Unexpected error during the addition of a timer.\n", .{});
         try self.writeErr("{}\n", .{err});
@@ -434,5 +439,19 @@ pub const Printer = struct {
 
     pub fn errTimerNotFound(self: *Printer, timer_id: []const u8) !void {
         try self.writeErr("Thing with id {s}{s}{s} not found\n", .{ ansi.colemp, timer_id, ansi.colres });
+    }
+
+    // CONFIRMATION MESSAGES
+
+    pub fn confirmDeleteTag(self: *Printer, tag_name: []const u8) !void {
+        try self.writeErr("About to delete the tag \"{s}{s}{s}\".\n", .{ ansi.colemp, tag_name, ansi.colres });
+    }
+
+    pub fn confirmDeleteTimer(self: *Printer, timer_id: []const u8) !void {
+        try self.writeErr("About to delete the timer \"{s}{s}{s}\".\n", .{ ansi.colemp, timer_id, ansi.colres });
+    }
+
+    pub fn confirmDeleteThing(self: *Printer, str_id: []const u8, thing_name: []const u8) !void {
+        try self.writeErr("About to delete thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
     }
 };
