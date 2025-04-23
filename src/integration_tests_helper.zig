@@ -134,8 +134,8 @@ pub fn getSmallFile(cur_time: u25) !dt.FullData {
     var tags_thing_2 = try globals.allocator.alloc(u16, 1);
     tags_thing_2[0] = 3;
     var timers_thing_2 = try globals.allocator.alloc(dt.Timer, 2);
-    timers_thing_2[0] = .{ .id = 1, .duration = 20, .start = cur_time - 190 };
-    timers_thing_2[1] = .{ .id = 2, .duration = 50, .start = cur_time - 60 };
+    timers_thing_2[0] = .{ .id = 1, .duration = try th.getMinutesFromSteps(u12, 20), .start = cur_time - 190 };
+    timers_thing_2[1] = .{ .id = 2, .duration = try th.getMinutesFromSteps(u12, 50), .start = cur_time - 60 };
     try to_ret.things.append(.{
         .id = 2,
         .creation = cur_time - 200,
@@ -294,8 +294,8 @@ pub fn performTest(td: TestData) !void {
     if (td.ex_stderr) |ex_stderr| {
         const ac_stderr = globals.printer.err_buff[0..globals.printer.cur_pos_err_buff];
         std.testing.expect(std.mem.eql(u8, ac_stderr, ex_stderr)) catch |err| {
-            std.debug.print("ac_stderr: {s}\n", .{ac_stderr});
-            std.debug.print("ex_stderr: {s}\n", .{ex_stderr});
+            std.debug.print("ac_stderr:\n{s}\n", .{ac_stderr});
+            std.debug.print("ex_stderr:\n{s}\n", .{ex_stderr});
             return err;
         };
     }
@@ -304,8 +304,8 @@ pub fn performTest(td: TestData) !void {
     if (td.ex_stdout) |ex_stdout| {
         const ac_stdout = globals.printer.out_buff[0..globals.printer.cur_pos_out_buff];
         std.testing.expect(std.mem.eql(u8, ac_stdout, ex_stdout)) catch |err| {
-            std.debug.print("ac_stdout: {s}\n", .{ac_stdout});
-            std.debug.print("ex_stdout: {s}\n", .{ex_stdout});
+            std.debug.print("ac_stdout:\n{s}\n", .{ac_stdout});
+            std.debug.print("ex_stdout:\n{s}\n", .{ex_stdout});
             return err;
         };
     }

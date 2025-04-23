@@ -144,23 +144,27 @@ pub const Printer = struct {
     // CURRENT THING REPORT
 
     pub fn reportThingIdName(self: *Printer, str_id: []const u8, str_name: []const u8) !void {
-        try self.writeOut(" {s}thing{s} : {s}{s}{s} - {s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id, ansi.colres, str_name });
+        try self.writeOut("        {s}thing{s}: {s}{s}{s} - {s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id, ansi.colres, str_name });
     }
 
     pub fn reportStatus(self: *Printer, status: []const u8) !void {
-        try self.writeOut("{s}status{s} : {s}\n", .{ ansi.colemp, ansi.colres, status });
+        try self.writeOut("       {s}status{s}: {s}\n", .{ ansi.colemp, ansi.colres, status });
     }
 
-    pub fn reportKickoff(self: *Printer, kickoff: u25, col_kickoff: []const u8) !void {
-        try self.writeOut("{s}kickoff{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_kickoff, kickoff, ansi.colres });
+    pub fn reportKickoffPos(self: *Printer, kickoff: u25) !void {
+        try self.writeOut("      {s}kickoff{s}: in {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, kickoff, ansi.colres });
+    }
+
+    pub fn reportKickoffNeg(self: *Printer, kickoff: u25) !void {
+        try self.writeOut("      {s}kickoff{s}: {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, kickoff, ansi.colres });
     }
 
     pub fn reportTimeLeftInfos(self: *Printer, step_left: i25, col_time_left: []const u8) !void {
-        try self.writeOut("  {s}left{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, col_time_left, step_left, ansi.colres });
+        try self.writeOut("         {s}left{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, col_time_left, step_left, ansi.colres });
     }
 
     pub fn reportNoTimer(self: *Printer) !void {
-        try self.writeOut(" {s}timer{s} : no current timer\n", .{ ansi.colemp, ansi.colres });
+        try self.writeOut("{s}current timer{s}: none\n", .{ ansi.colemp, ansi.colres });
     }
 
     pub fn reportNoCurrentThing(self: *Printer) !void {
@@ -169,15 +173,19 @@ pub const Printer = struct {
     }
 
     pub fn reportTimerStarted(self: *Printer, str_duration: []const u8) !void {
-        try self.writeOut(" {s}timer{s} : started {s}{s}{s} ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_duration, ansi.colres });
+        try self.writeOut("{s}current timer{s}: started {s}{s}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_duration, ansi.colres });
     }
 
     pub fn reportStarted(self: *Printer, offset: u25) !void {
-        try self.writeOut(" {s}started{s} : {s}{d}{s} ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, offset, ansi.colres });
+        try self.writeOut("     {s}started{s}: {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, offset, ansi.colres });
     }
 
     pub fn reportDuration(self: *Printer, duration: u12) !void {
-        try self.writeOut("{s}duration{s} : {s}{d}{s}\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
+        try self.writeOut("   {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
+    }
+
+    pub fn reportLastTimer(self: *Printer, id_timer: u11, str_id_thing: []const u8, started: u25, duration: u12) !void {
+        try self.writeOut("   {s}last timer{s}: {s}{d}@{s}{s}, {s}started{s}: {s}{d}{s} steps ago, {s}lasted{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colid, id_timer, str_id_thing, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, started, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
     }
 
     // ERRORS COMMAND PARSER SPECIFIC
@@ -247,8 +255,9 @@ pub const Printer = struct {
     }
 
     pub fn errTimerDurationTooGreat(self: *Printer, duration: u25) !void {
-        try self.writeErr("The current timer has a duration of {s}{d}{s}\n", .{ ansi.colemp, duration, ansi.colres });
-        try self.writeErr("The maximum duration is {s}{d}{s}\n", .{ ansi.colemp, std.math.maxInt(u9), ansi.colres });
+        try self.writeErr("The current timer has a duration of {s}{d}{s}.\n", .{ ansi.colemp, duration, ansi.colres });
+        try self.writeErr("The maximum allowed duration is {s}{d}{s}.\n", .{ ansi.colemp, std.math.maxInt(u12), ansi.colres });
+        try self.writeErr("Please use \"mtlt stop\".\n", .{});
     }
 
     // ERRORS RELATED TO THINGS

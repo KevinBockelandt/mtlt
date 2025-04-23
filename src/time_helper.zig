@@ -81,14 +81,15 @@ pub fn computeTimeLeft(thing: dt.Thing) !i64 {
         time_spent_already += timer.duration;
     }
 
-    // check there is not a current timer for this thing
+    // check that there is not a current timer for this thing
     const cur_timer = try globals.dfr.getCurrentTimer();
     if (cur_timer.id_thing == thing.id and cur_timer.start != 0) {
         const dur_cur_timer = curTimestamp() - cur_timer.start;
         time_spent_already += dur_cur_timer;
     }
 
-    return @as(i64, thing.estimation) - @as(i64, time_spent_already);
+    const time_spent_in_steps: i64 = try getStepsFromMinutes(i64, time_spent_already);
+    return @as(i64, thing.estimation) - time_spent_in_steps;
 }
 
 test "getStepsFromMinutes - u8 - 0" {
