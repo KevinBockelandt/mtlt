@@ -286,8 +286,8 @@ pub const Printer = struct {
         try self.writeErr("Deleting existing things will not help. You will need to start a new data file.\n", .{});
     }
 
-    pub fn errIdThingMissing(self: *Printer) !void {
-        try self.writeErr("TODO", .{});
+    pub fn errMissingIdThing(self: *Printer) !void {
+        try self.writeErr("No ID provided and no current thing to operate on.\n", .{});
     }
 
     pub fn errMissingId(self: *Printer) !void {

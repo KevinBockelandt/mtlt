@@ -6,6 +6,7 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
+const th = @import("time_helper.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
@@ -35,7 +36,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         defer globals.allocator.free(thing_name);
         _ = try globals.data_file.reader().read(thing_name);
 
-        try globals.printer.stoppedTimer(t.id, str_id, thing_name, t.duration);
+        try globals.printer.stoppedTimer(t.id, str_id, thing_name, try th.getStepsFromMinutes(u12, t.duration));
     } else {
         try globals.printer.noTimerRunning();
     }
