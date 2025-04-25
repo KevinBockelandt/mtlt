@@ -290,7 +290,7 @@ pub const Printer = struct {
         try self.writeErr("No ID provided and no current thing to operate on.\n", .{});
     }
 
-    pub fn errMissingId(self: *Printer) !void {
+    pub fn errMissingIdTimer(self: *Printer) !void {
         try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
     }
 
