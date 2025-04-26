@@ -25,7 +25,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
         // no argument and no previous current timer
         if (cur_timer.id_thing == 0) {
-            try globals.printer.errIdThingMissing();
+            try globals.printer.errMissingIdThing();
             return;
         } else {
             id_thing = cur_timer.id_thing;

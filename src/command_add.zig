@@ -80,7 +80,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     try globals.printer.createdThing(name, str_id);
 
     if (args.*.kickoff != null) {
-        try globals.printer.reportKickoff(args.*.kickoff.?);
+        try globals.printer.reportKickoffPos(args.*.kickoff.?);
     }
 
     for (infos_creation.created_tags.items) |tag| {

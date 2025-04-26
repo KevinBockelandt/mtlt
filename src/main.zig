@@ -6,6 +6,8 @@ const command_add = @import("command_add.zig");
 const command_add_tag = @import("command_add_tag.zig");
 const command_add_timer = @import("command_add_timer.zig");
 const command_delete = @import("command_delete.zig");
+const command_delete_tag = @import("command_delete_tag.zig");
+const command_delete_timer = @import("command_delete_timer.zig");
 const command_help = @import("command_help.zig");
 const command_mtlt = @import("command_mtlt.zig");
 const command_start = @import("command_start.zig");
@@ -24,6 +26,8 @@ const report_tags = @import("report_tags.zig");
 const Commands = enum {
     @"add-tag",
     @"add-timer",
+    @"delete-tag",
+    @"delete-timer",
     @"toggle-tag",
     @"update-tag",
     @"update-timer",
@@ -60,9 +64,11 @@ fn parseArgs() !void {
     const args = try std.process.argsAlloc(globals.allocator);
     defer std.process.argsFree(globals.allocator, args);
 
+    var arg_parser = argument_parser.ArgumentParser{};
+
     // if no command is provided, trigger the associated behavior
     if (args.len < 2) {
-        try command_mtlt.cmd();
+        try command_mtlt.cmd(&arg_parser);
         return;
     }
 
@@ -70,7 +76,6 @@ fn parseArgs() !void {
     const cmd = std.meta.stringToEnum(Commands, args[1]) orelse Commands.unknown;
 
     // if there is something beyond the subcommand, parse it
-    var arg_parser = argument_parser.ArgumentParser{};
     arg_parser.init();
     defer arg_parser.deinit();
 
@@ -120,6 +125,8 @@ fn parseArgs() !void {
     switch (cmd) {
         .@"add-tag" => try command_add_tag.cmd(&arg_parser),
         .@"add-timer" => try command_add_timer.cmd(&arg_parser),
+        .@"delete-tag" => try command_delete_tag.cmd(&arg_parser),
+        .@"delete-timer" => try command_delete_timer.cmd(&arg_parser),
         .@"toggle-tag" => try command_toggle_tag.cmd(&arg_parser),
         .@"update-tag" => try command_update_tag.cmd(&arg_parser),
         .@"update-timer" => try command_update_timer.cmd(&arg_parser),

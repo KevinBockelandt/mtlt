@@ -15,7 +15,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
 
     if (args.*.payload == null) {
-        try globals.printer.errIdThingMissing();
+        try globals.printer.errMissingIdThing();
         return;
     }
 

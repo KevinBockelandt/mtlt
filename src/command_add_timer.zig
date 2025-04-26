@@ -13,7 +13,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     //  get the id of the thing associated to the timer to add
     if (args.*.payload == null) {
-        try globals.printer.errIdThingMissing();
+        //try globals.printer.errIdThingMissing();
         // TODO should return an error
         return;
     }

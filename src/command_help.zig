@@ -11,6 +11,8 @@ const help_add_tag = @import("command_add_tag.zig").help;
 const help_add_timer = @import("command_add_timer.zig").help;
 const help_closed = @import("report_closed.zig").help;
 const help_delete = @import("command_delete.zig").help;
+const help_delete_tag = @import("command_delete_tag.zig").help;
+const help_delete_timer = @import("command_delete_timer.zig").help;
 const help_infos = @import("report_infos.zig").help;
 const help_start = @import("command_start.zig").help;
 const help_stop = @import("command_stop.zig").help;
@@ -28,6 +30,8 @@ pub const str_add_tag: [23]u8 = ansi.colid ++ "add-tag".* ++ ansi.colres;
 pub const str_add_timer: [25]u8 = ansi.colid ++ "add-timer".* ++ ansi.colres;
 pub const str_closed: [22]u8 = ansi.colid ++ "closed".* ++ ansi.colres;
 pub const str_delete: [22]u8 = ansi.colid ++ "delete".* ++ ansi.colres;
+pub const str_delete_tag: [26]u8 = ansi.colid ++ "delete-tag".* ++ ansi.colres;
+pub const str_delete_timer: [28]u8 = ansi.colid ++ "delete-timer".* ++ ansi.colres;
 pub const str_infos: [21]u8 = ansi.colid ++ "infos".* ++ ansi.colres;
 pub const str_help: [20]u8 = ansi.colid ++ "help".* ++ ansi.colres;
 pub const str_start: [21]u8 = ansi.colid ++ "start".* ++ ansi.colres;
@@ -49,7 +53,9 @@ fn main_help() !void {
         \\  {s}         Add a new tag
         \\  {s}       Add a new timer
         \\  {s}          Show the list of closed things
-        \\  {s}          Delete a tag, thing or timer
+        \\  {s}          Delete a thing
+        \\  {s}          Delete a tag
+        \\  {s}          Delete a timer
         \\  {s}           Show infos about a thing
         \\  {s}            Show help pages
         \\  {s}           Start a timer on a thing
@@ -74,7 +80,8 @@ fn main_help() !void {
         ansi.colemp,      ansi.colres,
         str_add,          str_add_tag,
         str_add_timer,    str_closed,
-        str_delete,       str_infos,
+        str_delete,       str_delete_tag,
+        str_delete_timer, str_infos,
         str_help,         str_start,
         str_stop,         str_tags,
         str_toggle,       str_toggle_tag,
@@ -109,6 +116,10 @@ pub fn cmd(args: *ArgumentParser) !void {
         try help_closed();
     } else if (std.mem.eql(u8, args.*.payload.?, "delete")) {
         try help_delete();
+    } else if (std.mem.eql(u8, args.*.payload.?, "delete-tag")) {
+        try help_delete_tag();
+    } else if (std.mem.eql(u8, args.*.payload.?, "delete-timer")) {
+        try help_delete_timer();
     } else if (std.mem.eql(u8, args.*.payload.?, "help")) {
         try main_help();
     } else if (std.mem.eql(u8, args.*.payload.?, "infos")) {
