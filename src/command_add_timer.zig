@@ -94,3 +94,13 @@ pub fn help() !void {
         ansi.colemp, ansi.colres,
     });
 }
+
+// TODO test "no current thing - no arg id" {
+// TODO test "no current thing - arg id ok" {
+// TODO test "current thing ok" {
+// TODO test "start-less too big" {
+// TODO test "start-less 0" {
+// TODO test "start-more too big" {
+// TODO test "no duration" {
+// TODO test "duration ok - nothing else" {
+// TODO test "too much timers" {
