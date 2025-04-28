@@ -46,7 +46,7 @@ pub const DataFileReader = struct {
     idx_buf_cur_item: usize = 0,
 
     /// Get the required amount of bytes from the file into buf_cur_item
-    fn getCurItem(self: *DataFileReader, size: u16) void {
+    fn getCurItem(self: *DataFileReader, size: usize) void {
         self.idx_buf_cur_item = 0;
         const left_in_buf_read_from_file_before = self.num_bytes_read_from_file - self.idx_buf_read_from_file;
 
@@ -444,7 +444,7 @@ pub const DataFileReader = struct {
             const fpt = dt.getThingFixedPartFromInt(int_fpt);
 
             // get the variable part of the thing
-            const lgt_variable_thing: u16 = fpt.lgt_name + fpt.num_tags * 2 + fpt.num_timers * 6;
+            const lgt_variable_thing: usize = fpt.lgt_name + fpt.num_tags * 2 + fpt.num_timers * 6;
             self.getCurItem(lgt_variable_thing);
 
             const vpt = try getThingVariablePartFromData(self, fpt.lgt_name, fpt.num_timers, fpt.num_tags, self.buf_cur_item[0..lgt_variable_thing]);

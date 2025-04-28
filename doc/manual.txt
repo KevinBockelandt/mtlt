@@ -8,7 +8,7 @@ help         |
 update       | -t, -e, -s, -k, -n, -sl, -sm, -dl, -dm
 toggle       | -dl, -dm, -s
 start        |
-stop         | -dl, -dm
+stop         | -d, -dl, -dm, -sl, -sm
 tags         | -l, --include-closed
 infos        |
 closed       | -t, --exclude-tags, -n, -l, --no-tags

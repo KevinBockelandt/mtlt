@@ -16,6 +16,8 @@ pub const DataOperationError = error{
     TimerNotFound,
     DurationBelowMin,
     DurationAboveMax,
+    StartBelowMin,
+    StartAboveMax,
 };
 
 const little_end = std.builtin.Endian.little;
@@ -568,11 +570,13 @@ pub const DataFileWriter = struct {
     pub fn stopCurrentTimer(self: *DataFileWriter, input: dt.TimerToUpdate) !dt.Timer {
         const cur_time = time_helper.curTimestamp();
         var timer = try globals.dfr.getCurrentTimer();
-        var duration = @as(u12, @intCast(cur_time - timer.start));
+        var duration: u12 = 0;
 
-        // if there is an specific duration to set
+        // if there is a specific duration to set
         if (input.duration) |dur| {
             duration = dur;
+        } else {
+            duration = @intCast(cur_time - timer.start);
         }
 
         // if there is a duration offset we need to apply
@@ -597,17 +601,17 @@ pub const DataFileWriter = struct {
         // if there is a start offset we need to apply
         if (input.start_off) |start_off| {
             if (input.add_start_off) {
-                // check the offset is not too much
-                // potentially this timer will start in the future
-                if ((std.math.maxInt(u25) - timer.start) < start_off) {
-                    return DataOperationError.DurationAboveMax;
+                // check the offset is not too much. A timer cannot
+                // start after the moment you are closing it
+                if ((cur_time - timer.start) < start_off) {
+                    return DataOperationError.StartAboveMax;
                 } else {
                     timer.start += start_off;
                 }
             } else {
                 // check the offset is not too much
                 if (timer.start < start_off) {
-                    return DataOperationError.DurationBelowMin;
+                    return DataOperationError.StartBelowMin;
                 } else {
                     timer.start -= start_off;
                 }

@@ -5,7 +5,7 @@ const dt = @import("data_types.zig");
 const dfr = @import("data_file_reader.zig");
 const globals = @import("globals.zig");
 const table_printer = @import("table_printer.zig");
-const time_helper = @import("time_helper.zig");
+const th = @import("time_helper.zig");
 const string_helper = @import("string_helper.zig");
 
 const little_end = std.builtin.Endian.little;
@@ -104,6 +104,14 @@ const ArgParserState = enum(u8) {
 fn displayNumberParsingError(T: type, err_in: std.fmt.ParseIntError, option: []const u8) !void {
     switch (err_in) {
         std.fmt.ParseIntError.Overflow => try globals.printer.errOptionTooBig(option, T),
+        std.fmt.ParseIntError.InvalidCharacter => try globals.printer.errOptionInvalidCharacter(option),
+    }
+}
+
+/// Display error to the user related to parsing a number
+fn displayNumberParsingErrorAbsValue(max: usize, err_in: std.fmt.ParseIntError, option: []const u8) !void {
+    switch (err_in) {
+        std.fmt.ParseIntError.Overflow => try globals.printer.errOptionTooBigAbsValue(option, max),
         std.fmt.ParseIntError.InvalidCharacter => try globals.printer.errOptionInvalidCharacter(option),
     }
 }
@@ -471,33 +479,54 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_duration => {
                     if (cur_arg_type == ArgType.unknown) {
+                        const max: usize = @intFromFloat(@round(std.math.maxInt(u12) / th.step_coef));
+
                         if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
-                            self.duration = @intCast(parsed_duration);
-                            self.current_state = ArgParserState.not_expecting;
+                            if (parsed_duration > max) {
+                                try globals.printer.errOptionTooBigAbsValue("Duration", max);
+                                return ArgumentParsingError.CannotParseDuration;
+                            } else {
+                                self.duration = @intCast(parsed_duration);
+                                self.current_state = ArgParserState.not_expecting;
+                            }
                         } else |err| {
-                            try displayNumberParsingError(u12, err, "Duration");
+                            try displayNumberParsingErrorAbsValue(max, err, "Duration");
                             return ArgumentParsingError.CannotParseDuration;
                         }
                     }
                 },
                 ArgParserState.expecting_duration_more => {
                     if (cur_arg_type == ArgType.unknown) {
+                        const max: usize = @intFromFloat(@round(std.math.maxInt(u12) / th.step_coef));
+
                         if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
-                            self.duration_more = @intCast(parsed_duration);
-                            self.current_state = ArgParserState.not_expecting;
+                            if (parsed_duration > max) {
+                                try globals.printer.errOptionTooBigAbsValue("Duration more", max);
+                                return ArgumentParsingError.CannotParseDurationMore;
+                            } else {
+                                self.duration_more = @intCast(parsed_duration);
+                                self.current_state = ArgParserState.not_expecting;
+                            }
                         } else |err| {
-                            try displayNumberParsingError(u12, err, "Duration more");
+                            try displayNumberParsingErrorAbsValue(max, err, "Duration more");
                             return ArgumentParsingError.CannotParseDurationMore;
                         }
                     }
                 },
                 ArgParserState.expecting_duration_less => {
+                    const max: usize = @intFromFloat(@round(std.math.maxInt(u12) / th.step_coef));
+
                     if (cur_arg_type == ArgType.unknown) {
                         if (std.fmt.parseInt(u12, arg, 10)) |parsed_duration| {
-                            self.duration_less = @intCast(parsed_duration);
-                            self.current_state = ArgParserState.not_expecting;
+                            if (parsed_duration > max) {
+                                try globals.printer.errOptionTooBigAbsValue("Duration less", max);
+                                return ArgumentParsingError.CannotParseDurationLess;
+                            } else {
+                                self.duration_less = @intCast(parsed_duration);
+                                self.current_state = ArgParserState.not_expecting;
+                            }
                         } else |err| {
-                            try displayNumberParsingError(u12, err, "Duration less");
+                            try displayNumberParsingErrorAbsValue(max, err, "Duration less");
                             return ArgumentParsingError.CannotParseDurationLess;
                         }
                     }
@@ -588,22 +617,36 @@ pub const ArgumentParser = struct {
                 },
                 ArgParserState.expecting_start_less => {
                     if (cur_arg_type == ArgType.unknown) {
+                        const max: usize = @intFromFloat(@round(std.math.maxInt(u25) / th.step_coef));
+
                         if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
-                            self.start_less = @intCast(parsed_start);
-                            self.current_state = ArgParserState.not_expecting;
+                            if (parsed_start > max) {
+                                try globals.printer.errOptionTooBigAbsValue("Start less", max);
+                                return ArgumentParsingError.CannotParseStartLess;
+                            } else {
+                                self.start_less = @intCast(parsed_start);
+                                self.current_state = ArgParserState.not_expecting;
+                            }
                         } else |err| {
-                            try displayNumberParsingError(u25, err, "Start less");
+                            try displayNumberParsingErrorAbsValue(max, err, "Start less");
                             return ArgumentParsingError.CannotParseStartLess;
                         }
                     }
                 },
                 ArgParserState.expecting_start_more => {
                     if (cur_arg_type == ArgType.unknown) {
+                        const max: usize = @intFromFloat(@round(std.math.maxInt(u25) / th.step_coef));
+
                         if (std.fmt.parseInt(u25, arg, 10)) |parsed_start| {
-                            self.start_more = @intCast(parsed_start);
-                            self.current_state = ArgParserState.not_expecting;
+                            if (parsed_start > max) {
+                                try globals.printer.errOptionTooBigAbsValue("Start more", max);
+                                return ArgumentParsingError.CannotParseStartMore;
+                            } else {
+                                self.start_more = @intCast(parsed_start);
+                                self.current_state = ArgParserState.not_expecting;
+                            }
                         } else |err| {
-                            try displayNumberParsingError(u25, err, "Start more");
+                            try displayNumberParsingErrorAbsValue(max, err, "Start more");
                             return ArgumentParsingError.CannotParseStartMore;
                         }
                     }
@@ -1035,7 +1078,7 @@ test "Duration invalid characters" {
     });
 }
 
-test "Duration number too big" {
+test "Duration number above max u12" {
     var ex_state = ArgumentParser{};
     ex_state.current_state = ArgParserState.expecting_duration;
 
@@ -1043,7 +1086,19 @@ test "Duration number too big" {
         .args = &.{ "--duration", "5000" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParseDuration,
-        .ex_stderr = "Duration number too big. Maximum is: 4095.\n",
+        .ex_stderr = "Duration number too big. Maximum is: 569.\n",
+    });
+}
+
+test "Duration number above max steps" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration;
+
+    try performTest(.{
+        .args = &.{ "--duration", "3000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDuration,
+        .ex_stderr = "Duration number too big. Maximum is: 569.\n",
     });
 }
 
@@ -1096,7 +1151,7 @@ test "Duration-less invalid characters" {
     });
 }
 
-test "Duration-less number too big" {
+test "Duration-less number above max u12" {
     var ex_state = ArgumentParser{};
     ex_state.current_state = ArgParserState.expecting_duration_less;
 
@@ -1104,7 +1159,19 @@ test "Duration-less number too big" {
         .args = &.{ "--duration-less", "5000" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParseDurationLess,
-        .ex_stderr = "Duration less number too big. Maximum is: 4095.\n",
+        .ex_stderr = "Duration less number too big. Maximum is: 569.\n",
+    });
+}
+
+test "Duration-less number above max steps" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_less;
+
+    try performTest(.{
+        .args = &.{ "--duration-less", "3000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDurationLess,
+        .ex_stderr = "Duration less number too big. Maximum is: 569.\n",
     });
 }
 
@@ -1157,7 +1224,7 @@ test "Duration-more invalid characters" {
     });
 }
 
-test "Duration-more number too big" {
+test "Duration-more number above max u12" {
     var ex_state = ArgumentParser{};
     ex_state.current_state = ArgParserState.expecting_duration_more;
 
@@ -1165,7 +1232,19 @@ test "Duration-more number too big" {
         .args = &.{ "--duration-more", "5000" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParseDurationMore,
-        .ex_stderr = "Duration more number too big. Maximum is: 4095.\n",
+        .ex_stderr = "Duration more number too big. Maximum is: 569.\n",
+    });
+}
+
+test "Duration-more number above max steps" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_duration_more;
+
+    try performTest(.{
+        .args = &.{ "--duration-more", "3000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseDurationMore,
+        .ex_stderr = "Duration more number too big. Maximum is: 569.\n",
     });
 }
 
@@ -1770,7 +1849,7 @@ test "Start less invalid characters" {
     });
 }
 
-test "Start less number too big" {
+test "Start less number above max u25" {
     var ex_state = ArgumentParser{};
     ex_state.current_state = ArgParserState.expecting_start_less;
 
@@ -1778,7 +1857,19 @@ test "Start less number too big" {
         .args = &.{ "--start-less", "34000000" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParseStartLess,
-        .ex_stderr = "Start less number too big. Maximum is: 33554431.\n",
+        .ex_stderr = "Start less number too big. Maximum is: 4660338.\n",
+    });
+}
+
+test "Start less number above max steps" {
+    var ex_state = ArgumentParser{};
+    ex_state.current_state = ArgParserState.expecting_start_less;
+
+    try performTest(.{
+        .args = &.{ "--start-less", "4700000" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseStartLess,
+        .ex_stderr = "Start less number too big. Maximum is: 4660338.\n",
     });
 }
 
@@ -1831,15 +1922,15 @@ test "Start more invalid characters" {
     });
 }
 
-test "Start more number too big" {
+test "Start more number above steps" {
     var ex_state = ArgumentParser{};
     ex_state.current_state = ArgParserState.expecting_start_more;
 
     try performTest(.{
-        .args = &.{ "--start-more", "34000000" },
+        .args = &.{ "--start-more", "4700000" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParseStartMore,
-        .ex_stderr = "Start more number too big. Maximum is: 33554431.\n",
+        .ex_stderr = "Start more number too big. Maximum is: 4660338.\n",
     });
 }
 

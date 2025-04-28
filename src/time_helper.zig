@@ -15,6 +15,8 @@ pub const TimeError = error{
     UnsupportedReturnType,
 };
 
+pub const step_coef: f64 = 7.2;
+
 /// Get the number of minutes since January 1 2020
 pub fn curTimestamp() u25 {
     const cur_time_sec: i64 = @intCast(std.time.timestamp() - num_sec_offset_1970_2020);
@@ -24,9 +26,8 @@ pub fn curTimestamp() u25 {
 /// Get the number of steps corresponding to a certain number of minutes
 pub fn getStepsFromMinutes(comptime T: type, min: i64) !T {
     const min_float: f64 = @as(f64, @floatFromInt(min));
-    const coef: f64 = 7.2;
 
-    const res = min_float / coef;
+    const res = min_float / step_coef;
 
     // handle the value differently according to the desired type
     switch (@typeInfo(T)) {
@@ -51,9 +52,8 @@ pub fn getStepsFromMinutes(comptime T: type, min: i64) !T {
 /// Get the number of minutes corresponding to a certain number of steps
 pub fn getMinutesFromSteps(comptime T: type, steps: i64) !T {
     const steps_float: f64 = @as(f64, @floatFromInt(steps));
-    const coef: f64 = 7.2;
 
-    const res = steps_float * coef;
+    const res = steps_float * step_coef;
 
     switch (@typeInfo(T)) {
         .int, .comptime_int => {

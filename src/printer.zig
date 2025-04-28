@@ -91,7 +91,17 @@ pub const Printer = struct {
     }
 
     pub fn stoppedTimer(self: *Printer, id_timer: u11, str_id_thing: []const u8, thing_name: []const u8, duration: u12) !void {
-        try self.writeOut("Stopped timer {s}{d}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{d}{s}\n", .{ ansi.colid, id_timer, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, duration, ansi.colres });
+        try self.writeOut("Stopped timer {s}{d}@{s}{s} for {s}{s}{s} - {s}{s}{s}. It lasted {s}{d}{s} steps.\n", .{ ansi.colid, id_timer, str_id_thing, ansi.colres, ansi.colid, str_id_thing, ansi.colres, ansi.colemp, thing_name, ansi.colres, ansi.colemp, duration, ansi.colres });
+    }
+
+    pub fn stoppedTimerTooSmall(self: *Printer, id_timer: u11, str_id_thing: []const u8) !void {
+        try self.writeOut("The requested duration for the timer falls below 0. It will be set to 0.\n", .{});
+        try self.writeOut("Feel free to use \"{s}mtlt update-timer {d}@{s}{s}\" to adjust the duration of this timer.\n", .{ ansi.colemp, id_timer, str_id_thing, ansi.colres });
+    }
+
+    pub fn stoppedTimerTooBig(self: *Printer, id_timer: u11, str_id_thing: []const u8) !void {
+        try self.writeOut("The duration of the timer exceeds the possible limit. It will be set to the maximum when stopping the timer.\n", .{});
+        try self.writeOut("Feel free to use \"{s}mtlt update-timer {d}@{s}{s}\" to adjust this timer or \"{s}mtlt add-timer {s}{s}\" to create a new timer.\n", .{ ansi.colemp, id_timer, str_id_thing, ansi.colres, ansi.colemp, str_id_thing, ansi.colres });
     }
 
     pub fn addedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
@@ -111,7 +121,7 @@ pub const Printer = struct {
     }
 
     pub fn noTimerRunning(self: *Printer) !void {
-        try self.writeOut("No timer currently running\n", .{});
+        try self.writeOut("No timer currently running.\n", .{});
     }
 
     pub fn deletedThing(self: *Printer, str_id: []const u8, thing_name: []const u8) !void {
@@ -208,6 +218,10 @@ pub const Printer = struct {
 
     pub fn errOptionTooBig(self: *Printer, opt: []const u8, t: type) !void {
         try self.writeErr("{s} number too big. Maximum is: {d}.\n", .{ opt, std.math.maxInt(t) });
+    }
+
+    pub fn errOptionTooBigAbsValue(self: *Printer, opt: []const u8, max: usize) !void {
+        try self.writeErr("{s} number too big. Maximum is: {d}.\n", .{ opt, max });
     }
 
     pub fn errOptionInvalidCharacter(self: *Printer, opt: []const u8) !void {
@@ -462,5 +476,28 @@ pub const Printer = struct {
 
     pub fn confirmDeleteThing(self: *Printer, str_id: []const u8, thing_name: []const u8) !void {
         try self.writeErr("About to delete thing {s}{s}{s} - {s}{s}{s}\n", .{ ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
+    }
+
+    // TIMERS
+
+    pub fn errTooManyTimers(self: *Printer) !void {
+        try self.writeErr("The maximum number of timers for this thing is reached.\n", .{});
+        try self.writeErr("Deleting existing timers will not help. You will need to create a new thing.\n", .{});
+    }
+
+    pub fn errStartAboveMax(self: *Printer) !void {
+        try self.writeErr("The starting moment for a timer cannot be in the future.\n", .{});
+    }
+
+    pub fn errStartBelowMin(self: *Printer) !void {
+        try self.writeErr("The starting moment for a timer cannot be this far in the past.\n", .{});
+    }
+
+    pub fn errDurationAboveMax(self: *Printer) !void {
+        try self.writeErr("The duration for this timer is too great. Please use a lower value.\n", .{});
+    }
+
+    pub fn errDurationBelowMin(self: *Printer) !void {
+        try self.writeErr("The duration for a timer cannot be below 0.\n", .{});
     }
 };
