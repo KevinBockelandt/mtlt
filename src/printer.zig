@@ -105,7 +105,7 @@ pub const Printer = struct {
     }
 
     pub fn addedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
-        try self.writeOut("Added timer {s}{s}-{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
+        try self.writeOut("Added timer {s}{d}@{s}{s}\n", .{ ansi.colid, id_timer, str_id_thing, ansi.colres });
     }
 
     pub fn updatedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
@@ -440,8 +440,8 @@ pub const Printer = struct {
         try self.writeErr("You need to specify the time offset between now and the start of the timer (with the -sl flag)\n", .{});
     }
 
-    pub fn errStartOffsetTooBig(self: *Printer, cur_time: u25) !void {
-        try self.writeErr("The time offset between now and the start of the timer is too big. Maximum is: {d}\n", .{cur_time});
+    pub fn errStartOffsetTooBig(self: *Printer, max_offset: u25) !void {
+        try self.writeErr("The time offset between now and the start of the timer is too big. Maximum is: {d} steps.\n", .{max_offset});
     }
 
     pub fn errInvalidTimerId(self: *Printer) !void {

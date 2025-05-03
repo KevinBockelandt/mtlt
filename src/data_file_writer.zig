@@ -959,4 +959,13 @@ pub const DataFileWriter = struct {
         // if we reach this point we did not found the timer to update
         return DataOperationError.TimerNotFound;
     }
+
+    /// Rewrite data for the current timer section of the file
+    pub fn updateCurrentTimer(self: *DataFileWriter, cur_timer: dt.CurrentTimer) !void {
+        _ = self;
+
+        try globals.data_file.seekFromEnd(-dt.lgt_fixed_current_timer);
+        const to_write = dt.getIntFromCurrentTimer(cur_timer);
+        try globals.data_file.writer().writeInt(u56, to_write, little_end);
+    }
 };

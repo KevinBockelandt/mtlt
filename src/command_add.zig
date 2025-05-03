@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const id_helper = @import("id_helper.zig");
 const command_start = @import("command_start.zig");
+const dfw = @import("data_file_writer.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
-const th = @import("time_helper.zig");
+const id_helper = @import("id_helper.zig");
 const it_helper = @import("integration_tests_helper.zig");
-const dfw = @import("data_file_writer.zig");
+const th = @import("time_helper.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 

@@ -16,9 +16,6 @@ const little_end = std.builtin.Endian.little;
 
 /// Delete a thing from the data file
 pub fn cmd(args: *ArgumentParser) !void {
-    // TODO get id
-    // Either from argument or current thing
-
     var id_thing: u19 = 0;
 
     // if there was an argument in the command line

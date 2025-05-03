@@ -78,6 +78,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     if (cur_timer.id_thing != 0) {
         const cur_thing = try globals.dfr.getThing(cur_timer.id_thing);
+        defer cur_thing.deinit();
 
         const str_id_thing = id_helper.b10ToB62(&buf_str_id, cur_thing.id);
 

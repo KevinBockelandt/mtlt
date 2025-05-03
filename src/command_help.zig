@@ -110,7 +110,7 @@ pub fn cmd(args: *ArgumentParser) !void {
         try help_add();
     } else if (std.mem.eql(u8, args.*.payload.?, "add-tag")) {
         try help_add_tag();
-    } else if (std.mem.eql(u8, args.*.payload.?, "add_timer")) {
+    } else if (std.mem.eql(u8, args.*.payload.?, "add-timer")) {
         try help_add_timer();
     } else if (std.mem.eql(u8, args.*.payload.?, "closed")) {
         try help_closed();
