@@ -46,7 +46,7 @@ pub const str_update_timer: [28]u8 = ansi.colid ++ "update-timer".* ++ ansi.colr
 // Display the entry page for help
 fn main_help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt COMMAND [ARGS]{s}
+        \\Usage: {s}mtlt [COMMAND] [ARGS]{s}
         \\
         \\Commands:
         \\  {s}             Add a new thing
@@ -54,8 +54,8 @@ fn main_help() !void {
         \\  {s}       Add a new timer
         \\  {s}          Show the list of closed things
         \\  {s}          Delete a thing
-        \\  {s}          Delete a tag
-        \\  {s}          Delete a timer
+        \\  {s}      Delete a tag
+        \\  {s}    Delete a timer
         \\  {s}           Show infos about a thing
         \\  {s}            Show help pages
         \\  {s}           Start a timer on a thing

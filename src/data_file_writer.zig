@@ -717,11 +717,20 @@ pub const DataFileWriter = struct {
     pub fn updateTagName(self: *DataFileWriter, old_name: []const u8, new_name: []const u8) !void {
         const w = globals.data_file.writer();
 
-        // TODO the argument parser makes this error impossble. Should be removed
         if (new_name.len > std.math.maxInt(u6)) {
             return DataOperationError.NameTooLong;
         }
 
+        // check that there is not already a tag with the new name
+        if (globals.dfr.getPosTag(new_name)) |_| {
+            return DataOperationError.TagWithThisNameAlreadyExisting;
+        } else |err| {
+            if (err != dfr.DataParsingError.TagNotFound) {
+                return err;
+            }
+        }
+
+        // get info on the tag to update
         if (globals.dfr.getFixedPartTag(old_name)) |fpt| {
             var new_fpt = fpt;
 

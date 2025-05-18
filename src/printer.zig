@@ -343,7 +343,7 @@ pub const Printer = struct {
         try self.writeErr("Deleting existing tags will not help. You will need to start a new data file.\n", .{});
     }
 
-    pub fn errUpdateTagMissingOldName(self: *Printer) !void {
+    pub fn errUpdateTagMissingCurName(self: *Printer) !void {
         try self.writeErr("The current name of the tag to udpate is missing.\n", .{});
         try self.writeErr("The format of the command can be seen with \"mtlt help update-tag\".\n", .{});
     }

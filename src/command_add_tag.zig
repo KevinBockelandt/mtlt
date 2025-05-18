@@ -54,25 +54,25 @@ pub fn help() !void {
         \\Creates a new tag.
         \\
         \\The tag name can only contain ASCII letters, numbers and the '_' or '-'
-        \\characters. If no priority is specified, 'someday' is used by default.
+        \\characters. If no priority is specified, "someday" is used by default..
         \\
         \\Options:
-        \\  {s}-p{s}, {s}--priority{s}         Can be 'now', 'soon' or 'someday'
+        \\  {s}-p{s}, {s}--priority{s}         Can be "now", "soon" or "someday"
         \\
         \\Examples:
         \\  {s}mtlt add-tag "myCoolTag"{s}
-        \\      Create a new tag called 'myCoolTag' with priority 'someday'.
+        \\      Create a new tag called "myCoolTag" with priority "someday".
         \\
         \\  {s}mtlt add-tag "1-also-good" -p now{s}
-        \\      Create a new tag called '1-also-good' with priority 'now'.
+        \\      Create a new tag called "1-also-good" with priority "now".
         \\
         \\  {s}mtlt add-tag "_it_works" -p soon{s}
-        \\      Create a new tag called '_it_works' with priority 'soon'.
+        \\      Create a new tag called "_it_works" with priority "soon".
         \\
     , .{
         ansi.colemp, ansi.colres,
-        ansi.colemp, ansi.colres,
-        ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,

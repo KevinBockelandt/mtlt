@@ -1,7 +1,11 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
+const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const it_helper = @import("integration_tests_helper.zig");
+const string_helper = @import("string_helper.zig");
+const th = @import("time_helper.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataOperationError = @import("data_file_writer.zig").DataOperationError;
@@ -10,28 +14,39 @@ const DataParsingError = @import("data_file_reader.zig").DataParsingError;
 /// Update the name of a tag
 pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload == null) {
-        try globals.printer.errUpdateTagMissingOldName();
+        try globals.printer.errUpdateTagMissingCurName();
         return;
     }
+
+    const cur_name = args.*.payload.?;
 
     var was_something_updated = false;
 
     // Update the priority of the tag if it's appropriate
     if (args.*.priority != null) {
-        try globals.dfw.updateTagPriority(args.*.payload.?, args.*.priority.?);
-        try globals.printer.updatedTagPriority(args.*.payload.?, args.*.priority.?);
+        try globals.dfw.updateTagPriority(cur_name, args.*.priority.?);
+        try globals.printer.updatedTagPriority(cur_name, args.*.priority.?);
         was_something_updated = true;
     }
 
     // Update the name of the tag if it's appropriate
     if (args.*.name != null) {
-        if (globals.dfw.updateTagName(args.*.payload.?, args.*.name.?)) |_| {
-            try globals.printer.updatedTagName(args.*.payload.?, args.*.name.?);
+        const new_name = args.*.name.?;
+
+        // check for invalid characters in the tag name
+        if (!string_helper.isValidTagName(new_name)) {
+            try globals.printer.errNameTagInvalidChara();
+            return;
+        }
+
+        // udpate the tag name
+        if (globals.dfw.updateTagName(cur_name, new_name)) |_| {
+            try globals.printer.updatedTagName(cur_name, new_name);
         } else |err| {
             switch (err) {
-                DataParsingError.TagNotFound => try globals.printer.errTagNotFoundName(args.*.payload.?),
-                DataOperationError.NameTooLong => try globals.printer.errNameTooLong(args.*.name.?),
-                DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(args.*.name.?),
+                DataParsingError.TagNotFound => try globals.printer.errTagNotFoundName(cur_name),
+                DataOperationError.NameTooLong => try globals.printer.errNameTooLong(new_name),
+                DataOperationError.TagWithThisNameAlreadyExisting => try globals.printer.errNameTagAlreadyExisting(new_name),
                 else => return err,
             }
         }
@@ -40,32 +55,35 @@ pub fn cmd(args: *ArgumentParser) !void {
     }
 
     if (!was_something_updated) {
-        try globals.printer.updatedTagNothing(args.*.payload.?);
+        try globals.printer.updatedTagNothing(cur_name);
     }
 }
 
 /// Print out help for the update-tag command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt update-tag <old_name> -n <new_name>{s}
+        \\Usage: {s}mtlt update-tag <tag_name> [OPTIONS]{s}
         \\
-        \\Updates the name of a tag
+        \\Updates the name and / or priority of a tag.
         \\
         \\The tag names can only contain ASCII letters, numbers and the '_' or '-'
-        \\characters
+        \\characters.
         \\
         \\Options:
-        \\  {s}-n{s}, {s}--name{s}            New name of the tag
+        \\  {s}-n{s}, {s}--name{s}      New name of the tag
+        \\  {s}-p{s}, {s}--priority{s}  New priority. Can be "now", "soon" or "someday"
         \\
         \\Examples:
         \\  {s}mtlt update-tag old_name -n new_name{s}
-        \\      Update the tag called 'old_name' to change it to 'new_name'.
+        \\      Update the tag called "old_name" to change it to "new_name".
         \\
-        \\  {s}mtlt update-tag withTypo -n withoutTypo{s}
-        \\      Update the tag called 'withTypo' to change it to 'withoutTypo'.
+        \\  {s}mtlt update-tag reallyUrgent -p now{s}
+        \\      Update the tag called "reallyUrgent" to set it's priority to "now".
         \\
     , .{
         ansi.colemp, ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
         ansi.colid,  ansi.colres,
         ansi.colid,  ansi.colres,
         ansi.colemp, ansi.colres,
@@ -73,10 +91,121 @@ pub fn help() !void {
     });
 }
 
-// TODO test "update tag - new name ok" {
+test "update tag - tag id not specified" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .name = "new_name" };
 
-// TODO test "update tag - new name invalid" {
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_stderr = "The current name of the tag to udpate is missing.\nThe format of the command can be seen with \"mtlt help update-tag\".\n",
+    });
+}
 
-// TODO test "update tag - new priority soon" {
+test "update tag - new name ok" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.tags.items[0].name = "new_tag_name";
+    var args: ArgumentParser = .{ .payload = "now", .name = "new_tag_name" };
 
-// TODO test "update tag - new priority now from closed" {
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "update tag - new name too long" {
+    const cur_time = th.curTimestamp();
+    const tag_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    var args: ArgumentParser = .{ .payload = "now", .name = tag_name };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_stderr = "The name \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" is too long.\n",
+    });
+}
+
+test "update tag - new name invalid" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .payload = "now", .name = "invalid@name" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_stderr = "The tag name can only contain ascii letters, numbers or the '-' or '_' character.\n",
+    });
+}
+
+test "update tag - new name already existing" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .payload = "now", .name = "soon" };
+
+    var buf_ex_stderr: [128]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "A tag with the name {s}soon{s} already exists\n", .{ ansi.colemp, ansi.colres });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "update tag - new priority" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.tags.items[1].status = dt.StatusTag.now;
+
+    var args: ArgumentParser = .{ .payload = "soon", .priority = .now };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "update tag - new priority from closed" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.tags.items[0].status = dt.StatusTag.someday;
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.tags.items[0].status = dt.StatusTag.closed;
+
+    var args: ArgumentParser = .{ .payload = "now", .priority = .someday };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "update tag - updating nothing" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .payload = "now" };
+
+    var buf_ex_stdout: [128]u8 = undefined;
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "Nothing was updated on the tag {s}now{s}.\n", .{ ansi.colemp, ansi.colres });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stderr = "",
+        .ex_stdout = ex_stdout,
+    });
+}
