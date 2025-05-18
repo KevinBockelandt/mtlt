@@ -158,6 +158,10 @@ pub fn getNumBytesUTF8(first_byte: u8) !u8 {
 
 /// Return a version of the given slice with trimmed surrounding spaces
 pub fn trimSurroundingSpaces(str: []const u8) error{EmptyString}![]const u8 {
+    if (str.len == 0) {
+        return StringError.EmptyString;
+    }
+
     var beg: usize = 0;
 
     while (true) {
@@ -349,7 +353,15 @@ test "cutString - test 5" {
     try std.testing.expect(std.mem.eql(u8, cs.lines[1], "Ｂc"));
 }
 
-test "trimSurroundingSpaces - empty string" {
+test "trimSurroundingSpaces - empty string 1" {
+    if (trimSurroundingSpaces("")) |_| {
+        unreachable;
+    } else |err| {
+        try std.testing.expect(err == error.EmptyString);
+    }
+}
+
+test "trimSurroundingSpaces - empty string 2" {
     if (trimSurroundingSpaces("       ")) |_| {
         unreachable;
     } else |err| {

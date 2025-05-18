@@ -444,7 +444,7 @@ pub const DataFileReader = struct {
             const fpt = dt.getThingFixedPartFromInt(int_fpt);
 
             // get the variable part of the thing
-            const lgt_variable_thing: usize = fpt.lgt_name + fpt.num_tags * 2 + fpt.num_timers * 6;
+            const lgt_variable_thing: usize = fpt.lgt_name + @as(usize, fpt.num_tags) * 2 + @as(usize, fpt.num_timers) * 6;
             self.getCurItem(lgt_variable_thing);
 
             const vpt = try getThingVariablePartFromData(self, fpt.lgt_name, fpt.num_timers, fpt.num_tags, self.buf_cur_item[0..lgt_variable_thing]);

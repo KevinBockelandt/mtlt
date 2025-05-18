@@ -119,7 +119,7 @@ fn displayNumberParsingErrorAbsValue(max: usize, err_in: std.fmt.ParseIntError, 
 /// Return the type of a command line argument
 fn getArgType(arg: []const u8) ArgType {
     if (arg.len < 1) {
-        return ArgType.empty;
+        return ArgType.unknown;
     }
 
     if (std.mem.eql(u8, arg, "--divisions")) {
@@ -1636,7 +1636,18 @@ test "Name OK case with surrounding spaces" {
     });
 }
 
-test "Name empty string" {
+test "Name empty string 1" {
+    var ex_state = ArgumentParser{};
+
+    try performTest(.{
+        .args = &.{ "-n", "" },
+        .ex_state = &ex_state,
+        .ex_err = ArgumentParsingError.CannotParseName,
+        .ex_stderr = "There is an empty string for option name.\n",
+    });
+}
+
+test "Name empty string 2" {
     var ex_state = ArgumentParser{};
 
     try performTest(.{

@@ -287,7 +287,7 @@ test "id provided ok - current timer ok on another thing" {
     var buf_start: [128]u8 = undefined;
     var buf_ex_stdout: [512]u8 = undefined;
 
-    const str_stop = try std.fmt.bufPrint(&buf_stop, "Stopped timer {s}1{s} for {s}1{s} - {s}Name thing 1{s}. It lasted {s}3{s}\n", .{ ansi.colid, ansi.colres, ansi.colid, ansi.colres, ansi.colemp, ansi.colres, ansi.colemp, ansi.colres });
+    const str_stop = try std.fmt.bufPrint(&buf_stop, "Stopped timer {s}1@1{s} for {s}1{s} - {s}Name thing 1{s}. It lasted {s}3{s} steps.\n", .{ ansi.colid, ansi.colres, ansi.colid, ansi.colres, ansi.colemp, ansi.colres, ansi.colemp, ansi.colres });
     const str_start = try std.fmt.bufPrint(&buf_start, "Started a timer for: {s}2{s} - {s}Name thing 2{s}\n", .{ ansi.colid, ansi.colres, ansi.colemp, ansi.colres });
     const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}", .{ str_stop, str_start });
 

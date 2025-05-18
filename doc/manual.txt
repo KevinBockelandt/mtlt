@@ -5,7 +5,9 @@ add-tag      |
 add-timer    | -sl, -sm, -d
 delete       |
 help         |
-update       | -t, -e, -s, -k, -n, -sl, -sm, -dl, -dm
+update       | -t, -e, -s, -k, -n
+update-tag   | -n, -p
+update-timer | -sl, -sm, -d, -dl, -dm
 toggle       | -dl, -dm, -s
 start        |
 stop         | -d, -dl, -dm, -sl, -sm

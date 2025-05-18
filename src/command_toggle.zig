@@ -87,3 +87,9 @@ pub fn cmd(args: *ArgumentParser) !void {
 pub fn help() !void {
     try std.io.getStdOut().writer().print("TODO help toggle\n", .{});
 }
+
+// TODO test "toggle - the current thing - no current thing" {
+// TODO test "toggle - the current thing - closing ok" {
+// TODO test "toggle - the current thing - opening ok" {
+// TODO test "toggle - id thing - closing ok - stops timer" {
+// TODO test "toggle - id thing - opening ok" {

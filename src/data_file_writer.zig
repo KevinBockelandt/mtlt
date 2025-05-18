@@ -831,7 +831,7 @@ pub const DataFileWriter = struct {
         fpt.estimation = if (input.estimation) |e| e else fpt.estimation;
 
         // update number of tags
-        if (new_tags.items.len < std.math.maxInt(u6)) {
+        if (new_tags.items.len <= std.math.maxInt(u6)) {
             fpt.num_tags = @intCast(new_tags.items.len);
         } else {
             return DataOperationError.TooManyTags;

@@ -147,3 +147,13 @@ pub fn help() !void {
         ansi.colemp, ansi.colres,
     });
 }
+
+// TODO test "update timer - duration ok" {
+// TODO test "update timer - duration less too big" {
+// TODO test "update timer - duration less ok" {
+// TODO test "update timer - duration more too big" {
+// TODO test "update timer - duration more ok" {
+// TODO test "update timer - start less too big" {
+// TODO test "update timer - start less ok" {
+// TODO test "update timer - start more too big" {
+// TODO test "update timer - start more ok" {

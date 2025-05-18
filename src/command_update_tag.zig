@@ -72,3 +72,11 @@ pub fn help() !void {
         ansi.colemp, ansi.colres,
     });
 }
+
+// TODO test "update tag - new name ok" {
+
+// TODO test "update tag - new name invalid" {
+
+// TODO test "update tag - new priority soon" {
+
+// TODO test "update tag - new priority now from closed" {
