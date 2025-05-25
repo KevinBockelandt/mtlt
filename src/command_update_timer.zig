@@ -4,8 +4,11 @@ const ansi = @import("ansi_codes.zig");
 const id_helper = @import("id_helper.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const it_helper = @import("integration_tests_helper.zig");
+const th = @import("time_helper.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
+const DataOperationError = @import("data_file_writer.zig").DataOperationError;
 
 /// Update a timer
 pub fn cmd(args: *ArgumentParser) !void {
@@ -14,61 +17,49 @@ pub fn cmd(args: *ArgumentParser) !void {
     try args.*.checkOnlyOneTypeDurationArg();
     try args.*.checkNoStartLessAndMore();
 
+    var id_thing: u19 = undefined;
+    var id_timer: u11 = undefined;
+    var str_id_thing: []const u8 = undefined;
+    var str_id_timer: []const u8 = undefined;
+
     // if there is no argument with the command
     if (args.*.payload == null) {
         const cur_timer = try globals.dfr.getCurrentTimer();
 
-        // and there is a previous timer to update
+        // check there is a last timer id to work on
         if (cur_timer.id_thing != 0 and cur_timer.id_last_timer != 0) {
-            if (globals.dfw.updateTimer(.{
-                .id = cur_timer.id_last_timer,
-                .duration = args.*.duration,
-                .duration_off = if (args.*.duration_less == null) args.*.duration_more else args.*.duration_less,
-                .add_duration_off = args.*.duration_less == null,
-                .start_off = if (args.*.start_less == null) args.*.start_more else args.*.start_less,
-                .add_start_off = args.*.start_less == null,
-            }, cur_timer.id_thing)) |_| {
-                const str_id_thing = id_helper.b10ToB62(&buf_str_id, cur_timer.id_thing);
-                try globals.printer.updatedTimer(str_id_thing, cur_timer.id_last_timer);
-
-                // TODO pass the new start offset
-                try globals.printer.reportStarted(0);
-                // TODO pass the new duration
-                try globals.printer.reportDuration(0);
-                return;
-            } else |err| {
-                try globals.printer.errUnexpectedUpdateTimer(err);
-                return err;
-            }
+            id_thing = cur_timer.id_thing;
+            id_timer = cur_timer.id_last_timer;
+            str_id_thing = id_helper.b10ToB62(&buf_str_id, id_thing);
+        } else {
+            try globals.printer.noLastTimerToWorkOn();
+            return;
         }
+    } else {
+        var arg_it = std.mem.splitSequence(u8, args.*.payload.?, "-");
 
-        try globals.printer.noLastTimerToWorkOn();
-        return;
+        str_id_thing = arg_it.first();
+        str_id_timer = arg_it.rest();
+
+        id_thing = id_helper.b62ToB10(str_id_thing) catch |err| {
+            try globals.printer.errUnexpectedTimerIdParsing(err);
+            return;
+        };
+        id_timer = std.fmt.parseInt(u11, str_id_timer, 10) catch |err| {
+            try globals.printer.errUnexpectedTimerIdParsing(err);
+            return;
+        };
     }
-
-    var arg_it = std.mem.splitSequence(u8, args.*.payload.?, "-");
-
-    const str_id_thing = arg_it.first();
-    const str_id_timer = arg_it.rest();
-
-    const id_thing = id_helper.b62ToB10(str_id_thing) catch |err| {
-        try globals.printer.errUnexpectedTimerIdParsing(err);
-        return;
-    };
-    const id_timer = std.fmt.parseInt(u11, str_id_timer, 10) catch |err| {
-        try globals.printer.errUnexpectedTimerIdParsing(err);
-        return;
-    };
 
     // get the values to pass regarding the duration offset
     var duration_off: ?u12 = null;
     var add_duration_off = false;
 
     if (args.*.duration_more != null) {
-        duration_off = args.*.duration_more;
+        duration_off = try th.getMinutesFromSteps(u12, args.*.duration_more.?);
         add_duration_off = true;
     } else if (args.*.duration_less != null) {
-        duration_off = args.*.duration_less;
+        duration_off = try th.getMinutesFromSteps(u12, args.*.duration_less.?);
         add_duration_off = false;
     }
 
@@ -77,10 +68,10 @@ pub fn cmd(args: *ArgumentParser) !void {
     var add_start_off = false;
 
     if (args.*.start_more != null) {
-        start_off = args.*.start_more;
+        start_off = try th.getMinutesFromSteps(u25, args.*.start_more.?);
         add_start_off = true;
     } else if (args.*.start_less != null) {
-        start_off = args.*.start_less;
+        start_off = try th.getMinutesFromSteps(u25, args.*.start_less.?);
         add_start_off = false;
     }
 
@@ -88,16 +79,27 @@ pub fn cmd(args: *ArgumentParser) !void {
         try globals.printer.nothingToUpdateTimer();
     }
 
+    const duration: ?u12 = if (args.*.duration == null)
+        null
+    else
+        try th.getMinutesFromSteps(u12, args.*.duration.?);
+
     const update_data = dt.TimerToUpdate{
         .id = id_timer,
-        .duration = args.*.duration,
+        .duration = duration,
         .duration_off = duration_off,
         .add_duration_off = add_duration_off,
         .start_off = start_off,
         .add_start_off = add_start_off,
     };
 
-    try globals.dfw.updateTimer(update_data, id_thing);
+    const new_timer = globals.dfw.updateTimer(update_data, id_thing) catch |err| {
+        switch (err) {
+            DataOperationError.TimerNotFound => try globals.printer.noTimerWithId(args.*.payload.?),
+            else => try globals.printer.errUnexpectedUpdateTimer(err),
+        }
+        return;
+    };
 
     // display feedback message
     const fpt = try globals.dfr.getFixedPartThing(id_thing);
@@ -106,6 +108,8 @@ pub fn cmd(args: *ArgumentParser) !void {
     _ = try globals.data_file.readAll(name_thing);
 
     try globals.printer.updatedTimer(str_id_thing, id_timer);
+    try globals.printer.reportUpdateTimerStarted(try th.getStepsFromMinutes(u25, th.curTimestamp() - new_timer.start));
+    try globals.printer.reportUpdateTimerDuration(try th.getStepsFromMinutes(u12, new_timer.duration));
 }
 
 /// Print out help for the update-timer command
@@ -148,12 +152,153 @@ pub fn help() !void {
     });
 }
 
-// TODO test "update timer - duration ok" {
+test "update timer - manually specifying ID - ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].duration = 72;
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 26, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 10, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
+
+test "update timer - manually specifying ID - not existing" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .payload = "2-4", .duration = 10 };
+
+    var buf_ex_stderr: [256]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "No timer found with ID {s}2-4{s}.\n", .{ ansi.colid, ansi.colres });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "update timer - manually specifying ID - invalid" {
+    const cur_time = th.curTimestamp();
+
+    var args: ArgumentParser = .{ .payload = "2.1", .duration = 10 };
+
+    var buf_ex_stdout: [256]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stdout, "Unexpected error during parsing of the timer ID.\nerror.ContainsInvalidCharacters\n", .{});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "update timer - last timer ok - ok" {
+    const cur_time = th.curTimestamp();
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.cur_timer.id_thing = 2;
+    ac_file.cur_timer.id_last_timer = 1;
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.cur_timer.id_thing = 2;
+    ex_file.cur_timer.id_last_timer = 1;
+    ex_file.things.items[1].timers[0].duration = 72;
+
+    var args: ArgumentParser = .{ .duration = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 26, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 10, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
+
+test "update timer - no ID available" {
+    const cur_time = th.curTimestamp();
+    var args: ArgumentParser = .{ .duration = 10 };
+
+    var buf_ex_stdout: [512]u8 = undefined;
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "There is no immediate last timer to work on. Please specify an ID.\nIt should have the format {s}<id thing>-<id timer>{s}. For example: {s}b-2{s}\n", .{ ansi.colid, ansi.colres, ansi.colid, ansi.colres });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
+
+test "update timer - duration ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].duration = 72;
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 26, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 10, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
+
 // TODO test "update timer - duration less too big" {
 // TODO test "update timer - duration less ok" {
 // TODO test "update timer - duration more too big" {
 // TODO test "update timer - duration more ok" {
 // TODO test "update timer - start less too big" {
 // TODO test "update timer - start less ok" {
-// TODO test "update timer - start more too big" {
+// TODO test "update timer - start more gets in the future" {
 // TODO test "update timer - start more ok" {
