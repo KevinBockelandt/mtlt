@@ -2,6 +2,8 @@
 
 const std = @import("std");
 const ansi_codes = @import("ansi_codes.zig");
+const dfr = @import("data_file_reader.zig");
+const globals = @import("globals.zig");
 
 const max_num_lines_cut_string = 25;
 
@@ -264,6 +266,40 @@ fn getCodePointFromUTF8(b1: u8, b2: u8, b3: u8, b4: u8) StringError!u32 {
     }
 
     return StringError.MalformedUTF8Data;
+}
+
+/// Return a string with tag names from a list of tag ids
+pub fn getTagNamesFromIds(buf: *[4096]u8, tag_ids: []const u16) ![]const u8 {
+    if (tag_ids.len == 0) {
+        buf[0] = '-';
+        return buf[0..1];
+    }
+
+    var idx_buf_tags: usize = 0;
+    var buf_str_tag_name: [64]u8 = undefined;
+
+    for (tag_ids, 0..tag_ids.len) |tag_id, i| {
+        if (globals.dfr.getTagNameFromId(&buf_str_tag_name, tag_id)) |name_to_add| {
+            const e_idx_name = idx_buf_tags + name_to_add.len;
+            std.mem.copyForwards(u8, buf[idx_buf_tags..e_idx_name], name_to_add);
+
+            // add a , between tag names. Except for the last one
+            if (i != tag_ids.len - 1) {
+                std.mem.copyForwards(u8, buf[e_idx_name..][0..2], ", ");
+                idx_buf_tags = e_idx_name + 2;
+            } else {
+                idx_buf_tags = e_idx_name;
+            }
+        } else |err| {
+            if (err == dfr.DataParsingError.TagNotFound) {
+                try globals.printer.errTagNotFoundId(tag_id);
+            } else {
+                try globals.printer.errUnexpectedGetTagName(tag_id, err);
+            }
+        }
+    }
+
+    return buf[0..idx_buf_tags];
 }
 
 test "getCodePointFromUTF8 - 1 byte" {

@@ -268,6 +268,27 @@ const TestData = struct {
     ex_file: ?dt.FullData = null,
 };
 
+pub fn setupTest(ac_file: dt.FullData) !void {
+    try globals.printer.init();
+    try globals.initDataFileNames();
+
+    // delete the potentially existing test file
+    std.fs.cwd().deleteFile(globals.data_file_path) catch |err| {
+        if (err == std.posix.UnlinkError.FileNotFound) {} else {
+            unreachable;
+        }
+    };
+
+    try globals.openDataFiles();
+    try dfw.writeFullData(ac_file, globals.data_file_path);
+}
+
+pub fn closeTest() !void {
+    globals.printer.deinit();
+    globals.deinitDataFileNames();
+    globals.closeDataFiles();
+}
+
 pub fn performTest(td: TestData) !void {
     try globals.printer.init();
     defer globals.printer.deinit();

@@ -241,7 +241,7 @@ pub fn printFileDataHex(f: std.fs.File) !void {
 }
 
 pub fn main() !void {
-    try globals.initDataFileNames(null);
+    try globals.initDataFileNames();
     try globals.openDataFiles();
 
     var parser = dfr.DataFileReader{};

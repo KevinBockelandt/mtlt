@@ -147,6 +147,10 @@ pub const Printer = struct {
         try self.writeOut("There are no tags to list.\n", .{});
     }
 
+    pub fn nextReportEmpty(self: *Printer) !void {
+        try self.writeOut("There are no things to show. Try the \"mtlt plan\" command.\n", .{});
+    }
+
     pub fn missingEnvVar(self: *Printer, env_var: []const u8) !void {
         try self.writeOut("Please setup the {s} environment variable.\n", .{env_var});
     }

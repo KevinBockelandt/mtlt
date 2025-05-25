@@ -165,6 +165,18 @@ pub const FixedPartThing = struct {
     kickoff: u25 = 0,
     estimation: u16 = 0,
     closure: u25 = 0,
+
+    pub fn print(self: *const FixedPartThing) void {
+        std.debug.print("lgt_name: {d}\n", .{self.lgt_name});
+        std.debug.print("id: {d}\n", .{self.id});
+        std.debug.print("num_timers: {d}\n", .{self.num_timers});
+        std.debug.print("num_tags: {d}\n", .{self.num_tags});
+        std.debug.print("status: {d}\n", .{self.status});
+        std.debug.print("creation: {d}\n", .{self.creation});
+        std.debug.print("kickoff: {d}\n", .{self.kickoff});
+        std.debug.print("estimation: {d}\n", .{self.estimation});
+        std.debug.print("closure: {d}\n", .{self.closure});
+    }
 };
 
 /// The variable part of a thing
@@ -190,6 +202,7 @@ pub const TagToSort = struct {
 pub const ThingToSort = struct {
     thing: Thing = undefined,
     coef: u64 = 0,
+    highest_prio: u2 = 0,
 
     pub fn deinit(self: *const ThingToSort) void {
         self.thing.deinit();

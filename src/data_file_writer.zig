@@ -34,7 +34,7 @@ pub fn generateEmptyDataFile() !void {
     const fp_now_tag = dt.getIntFromTagFixedPart(.{
         .lgt_name = 3,
         .status = @intFromEnum(dt.StatusTag.now),
-        .id = 1,
+        .id = 3,
     });
     try globals.data_file.writer().writeInt(u24, fp_now_tag, little_end);
     _ = try globals.data_file.writer().write("now");
@@ -52,7 +52,7 @@ pub fn generateEmptyDataFile() !void {
     const fp_someday_tag = dt.getIntFromTagFixedPart(.{
         .lgt_name = 7,
         .status = @intFromEnum(dt.StatusTag.someday),
-        .id = 3,
+        .id = 1,
     });
     try globals.data_file.writer().writeInt(u24, fp_someday_tag, little_end);
     _ = try globals.data_file.writer().write("someday");
@@ -317,6 +317,7 @@ pub const DataFileWriter = struct {
         r = globals.data_file.reader();
 
         var total_bytes_tag_section = try r.readInt(u64, little_end);
+
         try globals.data_file.seekTo(total_bytes_tag_section);
         const num_things_in_file = try r.readInt(u24, little_end);
 
@@ -348,7 +349,7 @@ pub const DataFileWriter = struct {
         });
 
         // create and populate a buffer that we will use to add the thing's data to the file
-        var buf_to_write: [1024]u8 = undefined;
+        var buf_to_write: [5120]u8 = undefined;
         std.mem.writeInt(u136, buf_to_write[0..dt.lgt_fixed_thing], raw_int_fpt, little_end);
 
         // add the name to the buffer
@@ -786,8 +787,6 @@ pub const DataFileWriter = struct {
                 }
             }
         }
-
-        // TODO need to make sure there are no duplicates in the tag list
 
         // get the list of tags currently associated to the thing
         var current_tags = std.ArrayList(u16).init(globals.allocator);

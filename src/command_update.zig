@@ -27,7 +27,9 @@ pub fn cmd(args: *ArgumentParser) !void {
     var kickoff: ?u25 = undefined;
 
     if (args.*.kickoff) |k| {
-        if (th.getMinutesFromSteps(u25, k)) |min| {
+        if (k == 0) {
+            kickoff = 0;
+        } else if (th.getMinutesFromSteps(u25, k)) |min| {
             if (std.math.add(u25, min, cur_time)) |total_min| {
                 kickoff = total_min;
             } else |_| {
@@ -103,20 +105,25 @@ pub fn help() !void {
         \\already associated to the thing it won't be anymore and if it was not
         \\already associated it will be.
         \\
+        \\The kickoff duration represents the number of steps in the future from now.
+        \\Except if the value is 0, in which case it removes any existing kickoff on
+        \\the thing.
+        \\
         \\Options:
-        \\  {s}-e{s}, {s}--estimation{s}         How many steps will it take to complete
-        \\  {s}-k{s}, {s}--kickoff{s}            When should the thing start
-        \\  {s}-n{s}, {s}--name{s}               Name of the thing
-        \\  {s}-s{s}, {s}--start{s}              Start a timer on the thing right away
-        \\  {s}-t{s}, {s}--tags{s}               Tags to add or remove from this thing
+        \\  {s}-e{s}, {s}--estimation{s}      How many steps will it take to complete
+        \\  {s}-k{s}, {s}--kickoff{s}         When should the thing start
+        \\  {s}-n{s}, {s}--name{s}            Name of the thing
+        \\  {s}-s{s}, {s}--start{s}           Start a timer on the thing right away
+        \\  {s}-t{s}, {s}--tags{s}            Tags to add or remove from this thing
         \\
         \\Examples:
-        \\  {s}mtlt update 4b -n "new name"{s}
-        \\      Update the name of thing ID "4b".
+        \\  {s}mtlt update 4b -n "new name" -k 30{s}
+        \\      Update the name of thing ID "4b" and it's kickoff to 30 steps in the
+        \\      future.
         \\
         \\  {s}mtlt update 7 -e 10 -k 0 -s{s}
-        \\      Update thing with ID "7" to change it's estimation to 10 steps, it's
-        \\      kickoff in 0 steps and start a timer on it right away.
+        \\      Update thing with ID "7" to change it's estimation to 10 steps, remove
+        \\      it's kickoff time and start a timer on the thing right away.
         \\
         \\  {s}mtlt update F2 -t soon myCoolTag -s{s}
         \\      Update the tag association for the tags "soon" and "myCoolTag" on
@@ -331,6 +338,21 @@ test "update thing - estimation ok" {
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.things.items[0].estimation = 40;
     var args: ArgumentParser = .{ .payload = "3", .estimation = 40 };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "update thing - kickoff at 0 (to remove it)" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[0].kickoff = 0;
+    var args: ArgumentParser = .{ .payload = "3", .kickoff = 0 };
 
     try it_helper.performTest(.{
         .cmd = cmd,

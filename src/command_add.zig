@@ -219,6 +219,99 @@ test "add thing with name + tag creation + kickoff + estimation + start" {
     });
 }
 
+test "add multiple things" {
+    var ex_file = try it_helper.getStarterFile();
+
+    var expected_tags_1: [1]u16 = .{3};
+    var expected_tags_2: [1]u16 = .{4};
+    try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.someday, .name = "newtag" });
+
+    const thing_to_add_1: dt.Thing = .{
+        .id = 1,
+        .name = "test1",
+        .tags = expected_tags_1[0..],
+        .timers = &[_]dt.Timer{},
+        .kickoff = th.curTimestamp() + try th.getMinutesFromSteps(u25, 34),
+        .estimation = 5432,
+        .creation = th.curTimestamp(),
+    };
+    try ex_file.things.insert(0, thing_to_add_1);
+
+    const thing_to_add_2: dt.Thing = .{
+        .id = 2,
+        .name = "test2",
+        .tags = expected_tags_2[0..],
+        .timers = &[_]dt.Timer{},
+        .kickoff = th.curTimestamp() + try th.getMinutesFromSteps(u25, 34),
+        .estimation = 5432,
+        .creation = th.curTimestamp(),
+    };
+    try ex_file.things.insert(0, thing_to_add_2);
+
+    var tags1 = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags1.deinit();
+    try tags1.append("now");
+
+    var tags2 = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags2.deinit();
+    try tags2.append("newtag");
+
+    try it_helper.setupTest(try it_helper.getStarterFile());
+
+    var args: ArgumentParser = .{
+        .payload = "test1",
+        .tags = tags1,
+        .kickoff = 34,
+        .estimation = 5432,
+    };
+    try cmd(&args);
+
+    args = .{
+        .payload = "test2",
+        .tags = tags2,
+        .kickoff = 34,
+        .estimation = 5432,
+    };
+    try cmd(&args);
+
+    try dfw.writeFullData(ex_file, it_helper.integration_test_file_path);
+    try it_helper.compareFiles(ex_file);
+}
+
+test "add thing with name + tag creation" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    var expected_tags: [1]u16 = .{4};
+
+    const thing_to_add: dt.Thing = .{
+        .id = 4,
+        .name = "third thing",
+        .tags = expected_tags[0..],
+        .timers = &[_]dt.Timer{},
+        .kickoff = 0,
+        .estimation = 0,
+        .creation = cur_time,
+    };
+
+    try ex_file.things.insert(0, thing_to_add);
+    try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.someday, .name = "newTag" });
+
+    var tags = std.ArrayList([]const u8).init(globals.allocator);
+    defer tags.deinit();
+    try tags.append("newTag");
+    var args: ArgumentParser = .{
+        .payload = "third thing",
+        .tags = tags,
+    };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+    });
+}
+
 test "add thing with no name" {
     var args: ArgumentParser = .{};
 

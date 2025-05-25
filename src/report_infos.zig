@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const id_helper = @import("id_helper.zig");
 const dfr = @import("data_file_reader.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
+const id_helper = @import("id_helper.zig");
 const table_printer = @import("table_printer.zig");
 const th = @import("time_helper.zig");
 

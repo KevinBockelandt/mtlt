@@ -114,6 +114,19 @@ pub const DataFileReader = struct {
         return dt.getTagFixedPartFromInt(raw_fpt_int);
     }
 
+    /// Return the fixed part the specified tag
+    /// Leaves the data file cursor at the position after the returned fixed part
+    pub fn getFixedPartTagFromId(self: *DataFileReader, id: u16) !dt.FixedPartTag {
+        if (self.getPosTagFromId(id)) |tag_pos| {
+            try globals.data_file.seekTo(tag_pos);
+        } else |err| {
+            return err;
+        }
+
+        const raw_fpt_int = try globals.data_file.reader().readInt(u24, little_end);
+        return dt.getTagFixedPartFromInt(raw_fpt_int);
+    }
+
     /// Return the fixed part the specified thing
     /// Leaves the data file cursor at the position after the returned fixed part
     pub fn getFixedPartThing(self: *DataFileReader, id: u19) !dt.FixedPartThing {
@@ -273,6 +286,23 @@ pub const DataFileReader = struct {
             try globals.data_file.seekTo(cur_pos);
             return err;
         }
+    }
+
+    // Return the highest priority among the tags associated to a thing
+    // Put the cursor position back where it was after
+    pub fn getHighestPriorityOfThing(self: *DataFileReader, tag_ids: []const u16) !u2 {
+        const cur_pos = try globals.data_file.getPos();
+
+        var highest_prio: u2 = 0;
+        for (tag_ids) |t_id| {
+            const fpt = try self.getFixedPartTagFromId(t_id);
+            if (fpt.status > highest_prio) {
+                highest_prio = fpt.status;
+            }
+        }
+
+        try globals.data_file.seekTo(cur_pos);
+        return highest_prio;
     }
 
     /// Populate the given array list with all the tag IDs associated to the specified thing
