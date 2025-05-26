@@ -314,7 +314,33 @@ test "update timer - duration less too big" {
     });
 }
 
-// TODO test "update timer - duration less ok" {
+test "update timer - duration less ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].duration = 72;
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration_less = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 26, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 10, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
 
 test "update timer - duration more too big" {
     const cur_time = th.curTimestamp();
@@ -334,7 +360,33 @@ test "update timer - duration more too big" {
     });
 }
 
-// TODO test "update timer - duration more ok" {
+test "update timer - duration more ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].duration = 216;
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration_more = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 26, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 30, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
 
 // TODO test "update timer - start less too big" {
 // TODO test "update timer - start less ok" {
