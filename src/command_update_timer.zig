@@ -95,6 +95,8 @@ pub fn cmd(args: *ArgumentParser) !void {
 
     const new_timer = globals.dfw.updateTimer(update_data, id_thing) catch |err| {
         switch (err) {
+            DataOperationError.DurationBelowMin => try globals.printer.errStartLessTooBig(),
+            DataOperationError.DurationAboveMax => try globals.printer.errStartMoreTooBig(),
             DataOperationError.TimerNotFound => try globals.printer.noTimerWithId(args.*.payload.?),
             else => try globals.printer.errUnexpectedUpdateTimer(err),
         }
@@ -294,10 +296,46 @@ test "update timer - duration ok" {
     });
 }
 
-// TODO test "update timer - duration less too big" {
+test "update timer - duration less too big" {
+    const cur_time = th.curTimestamp();
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration_less = 100 };
+
+    var buf_ex_stderr: [1024]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-less option is too big. No operation performed.\n", .{});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
 // TODO test "update timer - duration less ok" {
-// TODO test "update timer - duration more too big" {
+
+test "update timer - duration more too big" {
+    const cur_time = th.curTimestamp();
+
+    var args: ArgumentParser = .{ .payload = "2-1", .duration_more = try th.getStepsFromMinutes(u12, std.math.maxInt(u12) - 10) };
+
+    var buf_ex_stderr: [1024]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-more option is too big. No operation performed.\n", .{});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
 // TODO test "update timer - duration more ok" {
+
 // TODO test "update timer - start less too big" {
 // TODO test "update timer - start less ok" {
 // TODO test "update timer - start more gets in the future" {

@@ -316,6 +316,16 @@ pub const Printer = struct {
         try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
     }
 
+    // ERRORS RELATED TO TIMERS
+
+    pub fn errStartLessTooBig(self: *Printer) !void {
+        try self.writeErr("The value of the start-less option is too big. No operation performed.\n", .{});
+    }
+
+    pub fn errStartMoreTooBig(self: *Printer) !void {
+        try self.writeErr("The value of the start-more option is too big. No operation performed.\n", .{});
+    }
+
     // ERRORS RELATED TO TAGS
 
     pub fn errTagNotFoundName(self: *Printer, tag_name: []const u8) !void {

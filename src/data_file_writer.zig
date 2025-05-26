@@ -940,9 +940,8 @@ pub const DataFileWriter = struct {
                 // if there is a start offset we need to apply
                 if (input.start_off) |start_off| {
                     if (input.add_start_off) {
-                        // check the offset is not too much
-                        // TODO change this check. Timers cannot start in the future
-                        if ((std.math.maxInt(u25) - timer.start) < start_off) {
+                        // check the offset is not too much. A timer cannot start in the future
+                        if ((time_helper.curTimestamp() - timer.start) < start_off) {
                             return DataOperationError.StartInFuture;
                         } else {
                             timer.start += start_off;
