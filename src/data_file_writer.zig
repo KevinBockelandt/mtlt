@@ -682,8 +682,12 @@ pub const DataFileWriter = struct {
         _ = self;
         var fpt = try globals.dfr.getFixedPartThing(id);
 
+        if (fpt.status == @intFromEnum(dt.StatusThing.open)) {
+            fpt.closure = time_helper.curTimestamp();
+        } else {
+            fpt.closure = 0;
+        }
         fpt.status ^= 1;
-        fpt.closure = time_helper.curTimestamp();
 
         // rewrite the data
         const raw_fpt_int = dt.getIntFromThingFixedPart(fpt);

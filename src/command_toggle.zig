@@ -1,11 +1,12 @@
 const std = @import("std");
 
 const ansi = @import("ansi_codes.zig");
-const id_helper = @import("id_helper.zig");
 const command_stop = @import("command_stop.zig");
 const dt = @import("data_types.zig");
 const globals = @import("globals.zig");
-const time_helper = @import("time_helper.zig");
+const id_helper = @import("id_helper.zig");
+const it_helper = @import("integration_tests_helper.zig");
+const th = @import("time_helper.zig");
 
 const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const DataParsingError = @import("data_file_reader.zig").DataParsingError;
@@ -17,7 +18,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
 
     // get the current timer contained in the data file
-    const cur_timer = try globals.dfr.getCurrentTimer();
+    var cur_timer = try globals.dfr.getCurrentTimer();
 
     var id_thing: u19 = undefined;
 
@@ -40,6 +41,7 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (globals.dfr.getFixedPartThing(id_thing)) |fpt| {
         if (fpt.status == @intFromEnum(dt.StatusThing.open) and cur_timer.id_thing == id_thing and cur_timer.start != 0) {
             try command_stop.cmd(args);
+            cur_timer = try globals.dfr.getCurrentTimer();
         }
     } else |err| {
         if (err == DataParsingError.ThingNotFound) {
@@ -57,10 +59,11 @@ pub fn cmd(args: *ArgumentParser) !void {
     // actually toggle the status
     if (globals.dfw.toggleThingStatus(id_thing)) |new_status| {
         const str_new_status: []const u8 = @tagName(new_status);
+
         try globals.printer.reportThingIdName(str_id, thing_data.name);
         try globals.printer.reportStatus(str_new_status);
 
-        // Display recap on the time spent on this thing
+        // display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
             // get the total amount of time spent on this thing
             var total_time_spent: u64 = 0;
@@ -75,6 +78,17 @@ pub fn cmd(args: *ArgumentParser) !void {
                 try globals.printer.reportTimeLeftInfos(@intCast(remaining_time), col_remaining_time);
             }
         }
+
+        // if we re-opened the thing
+        if (new_status == dt.StatusThing.open) {
+            if (args.*.should_start) {
+                cur_timer.start = th.curTimestamp();
+            }
+            cur_timer.id_last_timer = 0;
+        }
+
+        cur_timer.id_thing = id_thing;
+        try globals.dfw.updateCurrentTimer(cur_timer);
     } else |err| {
         switch (err) {
             DataParsingError.ThingNotFound => try globals.printer.errThingNotFoundStr(str_id),
@@ -88,8 +102,125 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print("TODO help toggle\n", .{});
 }
 
-// TODO test "toggle - the current thing - no current thing" {
-// TODO test "toggle - the current thing - closing ok" {
-// TODO test "toggle - the current thing - opening ok" {
+test "toggle - the current thing - no current thing" {
+    const cur_time = th.curTimestamp();
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.cur_timer.id_thing = 0;
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.cur_timer.id_thing = 0;
+
+    var buf_ex_stderr: [1024]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "No ID provided and no current thing to operate on.\n", .{});
+
+    var args = ArgumentParser{};
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "toggle - the current thing - closing ok - no timer" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[2].closure = cur_time;
+    ex_file.things.items[2].status = dt.StatusThing.closed;
+
+    var args = ArgumentParser{};
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "toggle - the current thing - closing ok - timer stopped" {
+    const cur_time = th.curTimestamp();
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.cur_timer.start = cur_time - 100;
+    ac_file.cur_timer.id_thing = 1;
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    var timers = try globals.allocator.alloc(dt.Timer, 1);
+    timers[0] = .{ .id = 1, .duration = 100, .start = cur_time - 100 };
+
+    ex_file.things.items[2].closure = cur_time;
+    ex_file.things.items[2].status = dt.StatusThing.closed;
+    ex_file.things.items[2].timers = timers[0..];
+    ex_file.cur_timer.start = 0;
+    ex_file.cur_timer.id_thing = 1;
+    ex_file.cur_timer.id_last_timer = 1;
+
+    var args = ArgumentParser{};
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "toggle - the current thing - opening ok - starts timer" {
+    const cur_time = th.curTimestamp();
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.cur_timer.id_thing = 3;
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[0].closure = 0;
+    ex_file.things.items[0].status = dt.StatusThing.open;
+
+    ex_file.cur_timer.start = cur_time;
+    ex_file.cur_timer.id_thing = 3;
+
+    var args: ArgumentParser = .{ .should_start = true };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
+test "toggle - id thing - opening ok - no timer to start" {
+    const cur_time = th.curTimestamp();
+
+    var ac_file = try it_helper.getSmallFile(cur_time);
+    ac_file.things.items[2].status = dt.StatusThing.closed;
+    ac_file.cur_timer.id_thing = 3;
+    ac_file.cur_timer.id_last_timer = 2;
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[2].closure = 0;
+    ex_file.things.items[2].status = dt.StatusThing.open;
+
+    ex_file.cur_timer.id_thing = 1;
+    ex_file.cur_timer.id_last_timer = 0;
+
+    var args: ArgumentParser = .{ .payload = "1" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = ac_file,
+        .ex_file = ex_file,
+        .ex_stderr = "",
+    });
+}
+
 // TODO test "toggle - id thing - closing ok - stops timer" {
-// TODO test "toggle - id thing - opening ok" {
