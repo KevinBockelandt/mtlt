@@ -36,7 +36,7 @@ pub fn cmd(args: *ArgumentParser) !void {
             return;
         }
     } else {
-        var arg_it = std.mem.splitSequence(u8, args.*.payload.?, "-");
+        var arg_it = std.mem.splitSequence(u8, args.*.payload.?, "@");
 
         str_id_thing = arg_it.first();
         str_id_timer = arg_it.rest();
@@ -97,6 +97,8 @@ pub fn cmd(args: *ArgumentParser) !void {
         switch (err) {
             DataOperationError.DurationBelowMin => try globals.printer.errStartLessTooBig(),
             DataOperationError.DurationAboveMax => try globals.printer.errStartMoreTooBig(),
+            DataOperationError.StartBelowMin => try globals.printer.errStartLessTooBig(),
+            DataOperationError.StartInFuture => try globals.printer.errStartMoreTooBig(),
             DataOperationError.TimerNotFound => try globals.printer.noTimerWithId(args.*.payload.?),
             else => try globals.printer.errUnexpectedUpdateTimer(err),
         }
@@ -119,24 +121,28 @@ pub fn help() !void {
     try std.io.getStdOut().writer().print(
         \\Usage: {s}mtlt update-timer [timer_id]{s}
         \\
-        \\Updates the given timer.
+        \\Update the given timer.
         \\
         \\If no ID is provided, it updates the last previous timer. You can see what
         \\the last previous timer is by using {s}mtlt{s} without any sub-command.
         \\
         \\Options:
-        \\  {s}-sl{s}, {s}--start-less{s}       Amount of time to retrieve from start time
-        \\  {s}-sm{s}, {s}--start-more{s}       Amount of time to add to start time
-        \\  {s}-dl{s}, {s}--duration-less{s}    Amount of time to retrieve from duration
-        \\  {s}-dm{s}, {s}--duration-more{s}    Amount of time to add to duration
+        \\  {s}-sl{s}, {s}--start-less{s}       How many steps to retrieve from start time
+        \\  {s}-sm{s}, {s}--start-more{s}       How many steps to add to start time
+        \\  {s}-d{s},  {s}--duration{s}         How many steps for the complete duration
+        \\  {s}-dl{s}, {s}--duration-less{s}    How many steps to retrieve from duration
+        \\  {s}-dm{s}, {s}--duration-more{s}    How many steps to add to duration
         \\
         \\Examples:
-        \\  {s}mtlt update-timer -sl 10 -dm 10{s}
-        \\      Update the current timer to start it 10 minutes sooner and make it last 10
-        \\      minutes more
+        \\  {s}mtlt update-timer -d 18{s}
+        \\      Update the current timer so that it's duration is 18 steps.
         \\
-        \\  {s}mtlt update-timer 3b-4 -dl 1:05{s}
-        \\      Update the timer with id '3b-4' to make it last 1 hour and 5 minutes less
+        \\  {s}mtlt update-timer -sl 10 -dm 10{s}
+        \\      Update the current timer to start it 10 steps sooner and increase it's
+        \\      duration by 10 steps.
+        \\
+        \\  {s}mtlt update-timer 3b@4 -dl 22{s}
+        \\      Update the timer with id '3b@4' to reducse it's duration by 22 steps.
         \\
     , .{
         ansi.colemp, ansi.colres,
@@ -149,6 +155,9 @@ pub fn help() !void {
         ansi.colid,  ansi.colres,
         ansi.colid,  ansi.colres,
         ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colid,  ansi.colres,
+        ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
     });
@@ -160,7 +169,7 @@ test "update timer - manually specifying ID - ok" {
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.things.items[1].timers[0].duration = 72;
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration = 10 };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration = 10 };
 
     var buf_1: [256]u8 = undefined;
     var buf_2: [256]u8 = undefined;
@@ -184,10 +193,10 @@ test "update timer - manually specifying ID - ok" {
 
 test "update timer - manually specifying ID - not existing" {
     const cur_time = th.curTimestamp();
-    var args: ArgumentParser = .{ .payload = "2-4", .duration = 10 };
+    var args: ArgumentParser = .{ .payload = "2@4", .duration = 10 };
 
     var buf_ex_stderr: [256]u8 = undefined;
-    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "No timer found with ID {s}2-4{s}.\n", .{ ansi.colid, ansi.colres });
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "No timer found with ID {s}2@4{s}.\n", .{ ansi.colid, ansi.colres });
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -274,7 +283,7 @@ test "update timer - duration ok" {
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.things.items[1].timers[0].duration = 72;
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration = 10 };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration = 10 };
 
     var buf_1: [256]u8 = undefined;
     var buf_2: [256]u8 = undefined;
@@ -299,7 +308,7 @@ test "update timer - duration ok" {
 test "update timer - duration less too big" {
     const cur_time = th.curTimestamp();
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration_less = 100 };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration_less = 100 };
 
     var buf_ex_stderr: [1024]u8 = undefined;
     const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-less option is too big. No operation performed.\n", .{});
@@ -320,7 +329,7 @@ test "update timer - duration less ok" {
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.things.items[1].timers[0].duration = 72;
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration_less = 10 };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration_less = 10 };
 
     var buf_1: [256]u8 = undefined;
     var buf_2: [256]u8 = undefined;
@@ -345,7 +354,7 @@ test "update timer - duration less ok" {
 test "update timer - duration more too big" {
     const cur_time = th.curTimestamp();
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration_more = try th.getStepsFromMinutes(u12, std.math.maxInt(u12) - 10) };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration_more = try th.getStepsFromMinutes(u12, std.math.maxInt(u12) - 10) };
 
     var buf_ex_stderr: [1024]u8 = undefined;
     const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-more option is too big. No operation performed.\n", .{});
@@ -366,7 +375,7 @@ test "update timer - duration more ok" {
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.things.items[1].timers[0].duration = 216;
 
-    var args: ArgumentParser = .{ .payload = "2-1", .duration_more = 10 };
+    var args: ArgumentParser = .{ .payload = "2@1", .duration_more = 10 };
 
     var buf_1: [256]u8 = undefined;
     var buf_2: [256]u8 = undefined;
@@ -388,7 +397,94 @@ test "update timer - duration more ok" {
     });
 }
 
-// TODO test "update timer - start less too big" {
-// TODO test "update timer - start less ok" {
-// TODO test "update timer - start more gets in the future" {
-// TODO test "update timer - start more ok" {
+test "update timer - start less too big" {
+    const cur_time = th.curTimestamp();
+
+    var args: ArgumentParser = .{ .payload = "2@1", .start_less = try th.getStepsFromMinutes(u25, th.curTimestamp()) };
+
+    var buf_ex_stderr: [128]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-less option is too big. No operation performed.\n", .{});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "update timer - start less ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].start = cur_time - 262;
+
+    var args: ArgumentParser = .{ .payload = "2@1", .start_less = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 36, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 20, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
+
+test "update timer - start more gets in the future" {
+    const cur_time = th.curTimestamp();
+
+    var args: ArgumentParser = .{ .payload = "2@1", .start_more = 100 };
+
+    var buf_ex_stderr: [128]u8 = undefined;
+    const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "The value of the start-more option is too big. No operation performed.\n", .{});
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = try it_helper.getSmallFile(cur_time),
+        .ex_stdout = "",
+        .ex_stderr = ex_stderr,
+    });
+}
+
+test "update timer - start more ok" {
+    const cur_time = th.curTimestamp();
+
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[1].timers[0].start = cur_time - 118;
+
+    var args: ArgumentParser = .{ .payload = "2@1", .start_more = 10 };
+
+    var buf_1: [256]u8 = undefined;
+    var buf_2: [256]u8 = undefined;
+    var buf_3: [256]u8 = undefined;
+    var buf_ex_stdout: [1024]u8 = undefined;
+
+    const str_1 = try std.fmt.bufPrint(&buf_1, "Updated timer {s}2@1{s}\n", .{ ansi.colid, ansi.colres });
+    const str_2 = try std.fmt.bufPrint(&buf_2, "  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 16, ansi.colres });
+    const str_3 = try std.fmt.bufPrint(&buf_3, "  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, 20, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}", .{ str_1, str_2, str_3 });
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stdout = ex_stdout,
+        .ex_stderr = "",
+    });
+}
