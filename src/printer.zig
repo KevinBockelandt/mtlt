@@ -109,7 +109,7 @@ pub const Printer = struct {
     }
 
     pub fn updatedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
-        try self.writeOut("Updated timer {s}{s}-{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
+        try self.writeOut("Updated timer {s}{s}@{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
     }
 
     pub fn deletedTimer(self: *Printer, str_id: []const u8) !void {
@@ -122,6 +122,10 @@ pub const Printer = struct {
 
     pub fn noTimerRunning(self: *Printer) !void {
         try self.writeOut("No timer currently running.\n", .{});
+    }
+
+    pub fn noTimerWithId(self: *Printer, timer_id: []const u8) !void {
+        try self.writeErr("No timer found with ID {s}{s}{s}.\n", .{ ansi.colid, timer_id, ansi.colres });
     }
 
     pub fn deletedThing(self: *Printer, str_id: []const u8, thing_name: []const u8) !void {
@@ -190,12 +194,12 @@ pub const Printer = struct {
         try self.writeOut("{s}current timer{s}: started {s}{s}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_duration, ansi.colres });
     }
 
-    pub fn reportStarted(self: *Printer, offset: u25) !void {
-        try self.writeOut("     {s}started{s}: {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, offset, ansi.colres });
+    pub fn reportUpdateTimerStarted(self: *Printer, offset: u25) !void {
+        try self.writeOut("  {s}started{s} : {s}{d}{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, offset, ansi.colres });
     }
 
-    pub fn reportDuration(self: *Printer, duration: u12) !void {
-        try self.writeOut("   {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
+    pub fn reportUpdateTimerDuration(self: *Printer, duration: u12) !void {
+        try self.writeOut("  {s}duration{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
     }
 
     pub fn reportLastTimer(self: *Printer, id_timer: u11, str_id_thing: []const u8, started: u25, duration: u12) !void {
@@ -310,6 +314,16 @@ pub const Printer = struct {
 
     pub fn errMissingIdTimer(self: *Printer) !void {
         try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
+    }
+
+    // ERRORS RELATED TO TIMERS
+
+    pub fn errStartLessTooBig(self: *Printer) !void {
+        try self.writeErr("The value of the start-less option is too big. No operation performed.\n", .{});
+    }
+
+    pub fn errStartMoreTooBig(self: *Printer) !void {
+        try self.writeErr("The value of the start-more option is too big. No operation performed.\n", .{});
     }
 
     // ERRORS RELATED TO TAGS

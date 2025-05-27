@@ -122,6 +122,11 @@ test "getStepsFromMinutes - u8 - 50000" {
     try std.testing.expect(res == TimeError.ReturnVarTypeTooSmall);
 }
 
+test "getStepsFromMinutes - u12 - max u12" {
+    const res = try getStepsFromMinutes(u12, std.math.maxInt(u12));
+    try std.testing.expect(res == 569);
+}
+
 test "getStepsFromMinutes - i16 - 50000" {
     const res = try getStepsFromMinutes(i16, 50000);
     try std.testing.expect(res == 6944);

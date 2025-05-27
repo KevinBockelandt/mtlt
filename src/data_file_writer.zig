@@ -18,6 +18,7 @@ pub const DataOperationError = error{
     DurationAboveMax,
     StartBelowMin,
     StartAboveMax,
+    StartInFuture,
 };
 
 const little_end = std.builtin.Endian.little;
@@ -897,7 +898,7 @@ pub const DataFileWriter = struct {
     }
 
     /// Update the timer of a thing
-    pub fn updateTimer(self: *DataFileWriter, input: dt.TimerToUpdate, id_thing: u19) !void {
+    pub fn updateTimer(self: *DataFileWriter, input: dt.TimerToUpdate, id_thing: u19) !dt.Timer {
         _ = self;
 
         const thing = try globals.dfr.getThing(id_thing);
@@ -939,17 +940,16 @@ pub const DataFileWriter = struct {
                 // if there is a start offset we need to apply
                 if (input.start_off) |start_off| {
                     if (input.add_start_off) {
-                        // check the offset is not too much
-                        // potentially this timer will start in the future
-                        if ((std.math.maxInt(u25) - timer.start) < start_off) {
-                            return DataOperationError.DurationAboveMax;
+                        // check the offset is not too much. A timer cannot start in the future
+                        if ((time_helper.curTimestamp() - timer.start) < start_off) {
+                            return DataOperationError.StartInFuture;
                         } else {
                             timer.start += start_off;
                         }
                     } else {
                         // check the offset is not too much
                         if (timer.start < start_off) {
-                            return DataOperationError.DurationBelowMin;
+                            return DataOperationError.StartBelowMin;
                         } else {
                             timer.start -= start_off;
                         }
@@ -960,7 +960,11 @@ pub const DataFileWriter = struct {
                 try globals.data_file.seekBy(-dt.lgt_fixed_timer);
                 const raw_int_to_write = dt.getIntFromTimer(timer);
                 try globals.data_file.writer().writeInt(u48, raw_int_to_write, little_end);
-                return;
+                return .{
+                    .id = 0,
+                    .duration = timer.duration,
+                    .start = timer.start,
+                };
             }
         }
 
