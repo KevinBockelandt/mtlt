@@ -15,13 +15,23 @@ const DataOperationError = @import("data_file_writer.zig").DataOperationError;
 /// Update a thing
 pub fn cmd(args: *ArgumentParser) !void {
     var buf_str_id: [4]u8 = undefined;
-
-    if (args.*.payload == null) {
-        try globals.printer.errMissingIdThing();
-        return;
-    }
-
     const cur_time = th.curTimestamp();
+    const cur_timer = try globals.dfr.getCurrentTimer();
+
+    var id_num: u19 = undefined;
+
+    // determine the id of the thing to toggle
+    if (args.*.payload == null) {
+        // no argument and no previous current timer
+        if (cur_timer.id_thing == 0) {
+            try globals.printer.errMissingIdThing();
+            return;
+        } else {
+            id_num = cur_timer.id_thing;
+        }
+    } else {
+        id_num = try id_helper.b62ToB10(args.*.payload.?);
+    }
 
     // get the kickoff timestamp in minutes and make sure it does not overflow
     var kickoff: ?u25 = undefined;
@@ -49,9 +59,6 @@ pub fn cmd(args: *ArgumentParser) !void {
         kickoff = null;
     }
 
-    const id_num = try id_helper.b62ToB10(args.*.payload.?);
-    const id_str = args.*.payload.?;
-
     // create the array list for the tags to update
     var created_tags = std.ArrayList(dt.Tag).init(globals.allocator);
     defer created_tags.deinit();
@@ -76,7 +83,8 @@ pub fn cmd(args: *ArgumentParser) !void {
     defer globals.allocator.free(thing_name);
     _ = try globals.data_file.reader().read(thing_name);
 
-    try globals.printer.updatedThing(thing_name, id_str);
+    const str_id = id_helper.b10ToB62(&buf_str_id, id_num);
+    try globals.printer.updatedThing(thing_name, str_id);
 
     for (created_tags.items) |ct| {
         try globals.printer.createdTag(ct.name);
@@ -85,7 +93,6 @@ pub fn cmd(args: *ArgumentParser) !void {
     // if wanted and possible, start the current timer on the updated thing right away
     if (args.*.should_start) {
         if (thing_data.status == @intFromEnum(dt.StatusThing.closed)) {
-            const str_id = id_helper.b10ToB62(&buf_str_id, thing_data.id);
             try globals.printer.cantStartIfClosed(str_id);
             return;
         }
@@ -120,9 +127,9 @@ pub fn help() !void {
         \\  {s}-t{s}, {s}--tags{s}            Tags to add or remove from this thing
         \\
         \\Examples:
-        \\  {s}mtlt update 4b -n "new name" -k 30{s}
-        \\      Update the name of thing ID "4b" and it's kickoff to 30 steps in the
-        \\      future.
+        \\  {s}mtlt update -n "new name" -k 30{s}
+        \\      Update the name of the current thing and it's kickoff to 30 steps in
+        \\      the future.
         \\
         \\  {s}mtlt update 7 -e 10 -k 0 -s{s}
         \\      Update thing with ID "7" to change it's estimation to 10 steps, remove
@@ -148,6 +155,34 @@ pub fn help() !void {
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
+    });
+}
+
+test "update thing - no current thing - no thing id" {
+    var args: ArgumentParser = .{ .name = "new name thing" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = try it_helper.getStarterFile(),
+        .ex_stderr = "No ID provided and no current thing to operate on.\n",
+        .ex_stdout = "",
+    });
+}
+
+test "update thing - current thing ok - name ok" {
+    const cur_time = th.curTimestamp();
+    var ex_file = try it_helper.getSmallFile(cur_time);
+    ex_file.things.items[2].name = "new name thing";
+    var args: ArgumentParser = .{ .name = "new name thing" };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getSmallFile(cur_time),
+        .ex_file = ex_file,
+        .ex_stderr = "",
     });
 }
 
