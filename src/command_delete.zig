@@ -81,7 +81,7 @@ pub fn cmd(args: *ArgumentParser) !void {
 /// Print out help for the delete command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt delete [id]{s}
+        \\Usage: {s}mtlt delete [thing_id]{s}
         \\
         \\Deletes a thing permanently from the data file.
         \\

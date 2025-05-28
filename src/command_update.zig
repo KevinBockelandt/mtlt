@@ -97,9 +97,12 @@ pub fn cmd(args: *ArgumentParser) !void {
 /// Print out help for the update command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt update <thing_id> [OPTIONS]{s}
+        \\Usage: {s}mtlt update [thing_id] [OPTIONS]{s}
         \\
         \\Update an existing thing.
+        \\
+        \\If no ID is provided, it deletes the current thing. You can see what
+        \\the current thing is by using {s}mtlt{s} without any sub-command.
         \\
         \\All the specified tags will see their association toggled. If it was
         \\already associated to the thing it won't be anymore and if it was not
@@ -130,6 +133,7 @@ pub fn help() !void {
         \\      the thing with ID "F2" and start a timer on that thing right away.
         \\
     , .{
+        ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
         ansi.colemp, ansi.colres,
