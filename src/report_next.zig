@@ -167,7 +167,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
                     .back_col = line_back_col,
                 };
             } else {
-                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}{d} ago{s}", .{ ansi.colnegdur, kickoff_offset, ansi.colres });
+                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}{d} ago{s}", .{ ansi.colnegdur, @abs(kickoff_offset), ansi.colres });
                 to_display[i][3] = .{
                     .content = try globals.allocator.dupe(u8, kickoff_offset_str),
                     .alignment = .left,
