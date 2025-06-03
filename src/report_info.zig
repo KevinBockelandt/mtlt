@@ -14,7 +14,7 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 const little_end = std.builtin.Endian.little;
 
 /// Display informations on the specified thing
-pub fn infosReport(args: *ArgumentParser) !void {
+pub fn infoReport(args: *ArgumentParser) !void {
     // get the current timer contained in the data file
     const cur_timer = try globals.dfr.getCurrentTimer();
 
@@ -210,7 +210,7 @@ fn displayTableReport(thing: dt.Thing) !void {
 /// Print out help for the infos command
 pub fn help() !void {
     try std.io.getStdOut().writer().print(
-        \\Usage: {s}mtlt infos [thing_id]{s}
+        \\Usage: {s}mtlt info [thing_id]{s}
         \\
         \\Displays all informations related to the specified thing.
         \\
@@ -218,10 +218,10 @@ pub fn help() !void {
         \\see what the current thing is by using {s}mtlt{s} without any sub-command.
         \\
         \\Examples:
-        \\  {s}mtlt infos{s}
+        \\  {s}mtlt info{s}
         \\      Display infos about the current thing.
         \\
-        \\  {s}mtlt infos b5{s}
+        \\  {s}mtlt info b5{s}
         \\      Display infos about the thing with id 'b5'.
         \\
     , .{
