@@ -222,7 +222,7 @@ pub fn planReport(args: *ArgumentParser) !void {
     } });
 
     if (things_to_sort.items.len < 1) {
-        try globals.printer.nextReportEmpty();
+        try globals.printer.planReportEmpty();
         return;
     }
 
