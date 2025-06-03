@@ -20,8 +20,9 @@ pub const CellFrontCol = enum {
 
 pub const CellBackCol = enum {
     gray,
-    reset,
     highlight,
+    table_line,
+    reset,
 };
 
 pub const Cell = struct {
@@ -78,6 +79,7 @@ fn printBackColor(col: CellBackCol, writer: anytype) !void {
         .gray => try writer.print("{s}", .{ansi.back_col_grayscale_2}),
         .highlight => try writer.print("{s}", .{ansi.back_col_highlight}),
         .reset => try writer.print("{s}", .{ansi.back_col_reset}),
+        .table_line => try writer.print("{s}", .{ansi.back_col_table_line}),
     }
 }
 

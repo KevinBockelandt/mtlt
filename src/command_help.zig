@@ -15,6 +15,7 @@ const help_delete_tag = @import("command_delete_tag.zig").help;
 const help_delete_timer = @import("command_delete_timer.zig").help;
 const help_info = @import("report_info.zig").help;
 const help_next = @import("report_next.zig").help;
+const help_plan = @import("report_plan.zig").help;
 const help_start = @import("command_start.zig").help;
 const help_stop = @import("command_stop.zig").help;
 const help_tags = @import("report_tags.zig").help;
@@ -35,6 +36,7 @@ pub const str_delete_tag: [26]u8 = ansi.colid ++ "delete-tag".* ++ ansi.colres;
 pub const str_delete_timer: [28]u8 = ansi.colid ++ "delete-timer".* ++ ansi.colres;
 pub const str_info: [20]u8 = ansi.colid ++ "info".* ++ ansi.colres;
 pub const str_next: [20]u8 = ansi.colid ++ "next".* ++ ansi.colres;
+pub const str_plan: [20]u8 = ansi.colid ++ "plan".* ++ ansi.colres;
 pub const str_help: [20]u8 = ansi.colid ++ "help".* ++ ansi.colres;
 pub const str_start: [21]u8 = ansi.colid ++ "start".* ++ ansi.colres;
 pub const str_stop: [20]u8 = ansi.colid ++ "stop".* ++ ansi.colres;
@@ -60,6 +62,7 @@ fn main_help() !void {
         \\  {s}    Delete a timer
         \\  {s}            Display infos about a thing
         \\  {s}            Display the list of things with the highest priority
+        \\  {s}            Display the list of things that would need planning
         \\  {s}            Show help pages
         \\  {s}           Start a timer on a thing
         \\  {s}            Stop the current timer
@@ -86,13 +89,14 @@ fn main_help() !void {
         str_delete,       str_delete_tag,
         str_delete_timer, str_info,
         str_next,         str_help,
-        str_start,        str_stop,
-        str_tags,         str_toggle,
-        str_toggle_tag,   str_update,
-        str_update_tag,   str_update_timer,
-        ansi.colemp,      ansi.colres,
-        ansi.colemp,      ansi.colres,
-        ansi.colemp,      ansi.colres,
+        str_plan,         str_start,
+        str_stop,         str_tags,
+        str_toggle,       str_toggle_tag,
+        str_update,       str_update_tag,
+        str_update_timer, ansi.colemp,
+        ansi.colres,      ansi.colemp,
+        ansi.colres,      ansi.colemp,
+        ansi.colres,
     });
 }
 
@@ -127,10 +131,12 @@ pub fn cmd(args: *ArgumentParser) !void {
         try main_help();
     } else if (std.mem.eql(u8, args.*.payload.?, "info")) {
         try help_info();
-    } else if (std.mem.eql(u8, args.*.payload.?, "next")) {
-        try help_next();
     } else if (std.mem.eql(u8, args.*.payload.?, "intro")) {
         try help_intro();
+    } else if (std.mem.eql(u8, args.*.payload.?, "next")) {
+        try help_next();
+    } else if (std.mem.eql(u8, args.*.payload.?, "plan")) {
+        try help_plan();
     } else if (std.mem.eql(u8, args.*.payload.?, "start")) {
         try help_start();
     } else if (std.mem.eql(u8, args.*.payload.?, "stop")) {

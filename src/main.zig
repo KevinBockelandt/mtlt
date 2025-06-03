@@ -22,6 +22,7 @@ const globals = @import("globals.zig");
 const report_closed = @import("report_closed.zig");
 const report_info = @import("report_info.zig");
 const report_next = @import("report_next.zig");
+const report_plan = @import("report_plan.zig");
 const report_tags = @import("report_tags.zig");
 
 const Commands = enum {
@@ -38,6 +39,7 @@ const Commands = enum {
     help,
     info,
     next,
+    plan,
     start,
     stop,
     tags,
@@ -138,6 +140,7 @@ fn parseArgs() !void {
         .help => try command_help.cmd(&arg_parser),
         .info => try report_info.infoReport(&arg_parser),
         .next => try report_next.nextReport(&arg_parser),
+        .plan => try report_plan.planReport(&arg_parser),
         .start => try command_start.cmd(&arg_parser),
         .stop => try command_stop.cmd(&arg_parser),
         .tags => try report_tags.tagsReport(&arg_parser),

@@ -17,7 +17,7 @@ const little_end = std.builtin.Endian.little;
 // Array list of things included in the report
 var things_to_sort: std.ArrayList(dt.ThingToSort) = undefined;
 
-/// Compare 2 things_to_sort according to their associated coef used for sorting
+/// Compare 2 things_to_sort in order to sort them
 fn compareThings(_: void, a: dt.ThingToSort, b: dt.ThingToSort) bool {
     const a_kick = if (a.thing.kickoff != 0) a.thing.kickoff else std.math.maxInt(u25);
     const b_kick = if (b.thing.kickoff != 0) b.thing.kickoff else std.math.maxInt(u25);
@@ -167,7 +167,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
                     .back_col = line_back_col,
                 };
             } else {
-                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}{d} ago{s}", .{ ansi.colnegdur, kickoff_offset, ansi.colres });
+                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}{d} ago{s}", .{ ansi.colnegdur, @abs(kickoff_offset), ansi.colres });
                 to_display[i][3] = .{
                     .content = try globals.allocator.dupe(u8, kickoff_offset_str),
                     .alignment = .left,

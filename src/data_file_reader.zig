@@ -512,6 +512,13 @@ pub const DataFileReader = struct {
         try globals.data_file.seekTo(cur_pos);
     }
 
+    pub fn getAllTags(self: *DataFileReader, tags: *std.ArrayList(dt.Tag)) !void {
+        try self.parseTags(.{ .AddTagToArrayList = .{
+            .func = addTagToList,
+            .tag_array = tags,
+        } });
+    }
+
     /// Parse the entire data file
     pub fn getFullData(self: *DataFileReader) !dt.FullData {
         var fd: dt.FullData = .{};
