@@ -66,12 +66,15 @@ pub fn cmd(args: *ArgumentParser) !void {
         // display recap on the time spent on this thing
         if (thing_data.timers.len > 0) {
             // get the total amount of time spent on this thing
-            var total_time_spent: u64 = 0;
+            var total_time_spent: i64 = 0;
             for (thing_data.timers) |timer| {
                 total_time_spent += timer.duration;
             }
 
-            const remaining_time: i64 = @as(i64, @intCast(thing_data.estimation)) - @as(i64, @intCast(total_time_spent));
+            // convert total time spent from minutes to steps
+            total_time_spent = try th.getStepsFromMinutes(i64, total_time_spent);
+
+            const remaining_time: i64 = @as(i64, @intCast(thing_data.estimation)) - total_time_spent;
             const col_remaining_time = ansi.getDurCol(remaining_time);
 
             if (thing_data.estimation > 0) {

@@ -97,7 +97,7 @@ fn displayTableReport(thing: dt.Thing) !void {
     // create a table with all the timers
     var timers_table = try globals.allocator.alloc([]table_printer.Cell, thing.timers.len + 1);
     defer globals.allocator.free(timers_table);
-    var total_spent_time: u64 = 0;
+    var total_spent_time: i64 = 0;
 
     const num_cols = 3;
 
@@ -146,7 +146,8 @@ fn displayTableReport(thing: dt.Thing) !void {
 
         // DURATION column
         var buf_duration: [128]u8 = undefined;
-        const str_duration = try std.fmt.bufPrint(&buf_duration, "{d}", .{timer.duration});
+        const duration: i64 = try th.getStepsFromMinutes(i64, timer.duration);
+        const str_duration = try std.fmt.bufPrint(&buf_duration, "{d}", .{duration});
         timers_table[i][2] = .{
             .content = try globals.allocator.dupe(u8, str_duration),
             .alignment = .right,
@@ -156,7 +157,8 @@ fn displayTableReport(thing: dt.Thing) !void {
     }
 
     // time offset
-    const time_offset: i64 = @as(i64, @intCast(total_spent_time)) - @as(i64, @intCast(thing.estimation));
+    total_spent_time = try th.getStepsFromMinutes(i64, total_spent_time);
+    const time_offset: i64 = total_spent_time - @as(i64, @intCast(thing.estimation));
 
     try w.print("{s}                ID{s} : {s}{s}{s}\n", .{ ansi.colemp, ansi.colres, ansi.colid, str_id_thing, ansi.colres });
     try w.print("{s}              Name{s} : {s}\n", .{ ansi.colemp, ansi.colres, thing.name });
@@ -183,12 +185,12 @@ fn displayTableReport(thing: dt.Thing) !void {
 
     if (thing.estimation > 0) {
         if (time_offset > 0) {
-            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} over{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colnegdur, @abs(time_offset), ansi.colres });
+            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} over{s} estimation)\n", .{ ansi.colemp, ansi.colres, @abs(total_spent_time), ansi.colnegdur, @abs(time_offset), ansi.colres });
         } else {
-            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} under{s} estimation)\n", .{ ansi.colemp, ansi.colres, total_spent_time, ansi.colposdur, @abs(time_offset), ansi.colres });
+            try w.print("{s}  Total time spent{s} : {d} steps ({s}{d} under{s} estimation)\n", .{ ansi.colemp, ansi.colres, @abs(total_spent_time), ansi.colposdur, @abs(time_offset), ansi.colres });
         }
     } else {
-        try w.print("{s}  Total time spent{s} : {d} steps\n", .{ ansi.colemp, ansi.colres, total_spent_time });
+        try w.print("{s}  Total time spent{s} : {d} steps\n", .{ ansi.colemp, ansi.colres, @abs(total_spent_time) });
     }
 
     if (thing.timers.len > 0) {
