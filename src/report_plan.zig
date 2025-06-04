@@ -85,13 +85,25 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort), in
     const cur_time: i64 = @intCast(th.curTimestamp());
     const kickoff_offset: i64 = try th.getStepsFromMinutes(i64, @as(i64, @intCast(thing.kickoff)) - cur_time);
 
-    switch (kickoff_offset) {
-        0...200 => time_planned[0] += thing.estimation,
-        201...400 => time_planned[1] += thing.estimation,
-        401...600 => time_planned[2] += thing.estimation,
-        601...800 => time_planned[3] += thing.estimation,
-        801...1000 => time_planned[4] += thing.estimation,
-        else => {},
+    if (thing.kickoff > 0) {
+        var time_left = th.computeTimeLeft(thing) catch |err| {
+            std.debug.print("ERROR: while computing time left for a thing: {}\n", .{err});
+            return;
+        };
+        time_left = @max(time_left, 0);
+
+        if (kickoff_offset < 0) {
+            time_planned[0] += @intCast(time_left);
+        } else {
+            switch (kickoff_offset) {
+                0...200 => time_planned[0] += @intCast(time_left),
+                201...400 => time_planned[1] += @intCast(time_left),
+                401...600 => time_planned[2] += @intCast(time_left),
+                601...800 => time_planned[3] += @intCast(time_left),
+                801...1000 => time_planned[4] += @intCast(time_left),
+                else => {},
+            }
+        }
     }
 
     const highest_prio = try getHighestPriorityOfThing(thing);
@@ -438,12 +450,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
 
         // LEFT COLUMN
         if (thing.estimation > 0) {
-            var time_spent: i64 = 0;
-            for (thing.timers) |t| {
-                time_spent += t.duration;
-            }
-
-            const time_left: i64 = @as(i64, @intCast(thing.estimation)) - try th.getStepsFromMinutes(i64, time_spent);
+            const time_left = try th.computeTimeLeft(thing);
 
             if (time_left >= 0) {
                 const time_left_str = try std.fmt.bufPrint(&buf_str, "{s}{d}{s}", .{ ansi.colposdur, time_left, ansi.colres });

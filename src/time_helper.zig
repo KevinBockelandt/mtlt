@@ -76,7 +76,7 @@ pub fn getMinutesFromSteps(comptime T: type, steps: i64) !T {
 
 /// Compute the remaining time for a particular thing
 pub fn computeTimeLeft(thing: dt.Thing) !i64 {
-    var time_spent_already: u32 = 0;
+    var time_spent_already: i64 = 0;
     for (thing.timers) |timer| {
         time_spent_already += timer.duration;
     }
