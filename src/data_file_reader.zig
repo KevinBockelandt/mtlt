@@ -492,6 +492,9 @@ pub const DataFileReader = struct {
             };
 
             switch (cb) {
+                .AddThingToSortToArrayListTagFiltered => |cb_handler| {
+                    cb_handler.func(thing, cb_handler.thing_array, cb_handler.included_tag_ids, cb_handler.excluded_tag_ids);
+                },
                 .AddThingToSortToArrayList => |cb_handler| {
                     cb_handler.func(thing, cb_handler.thing_array);
                 },

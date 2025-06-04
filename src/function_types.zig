@@ -19,10 +19,17 @@ pub const TagParsingCallbacks = union(enum) {
 
 const AddThingToArrayList = fn (dt.Thing, *std.ArrayList(dt.Thing)) void;
 const AddThingToSortToArrayList = fn (dt.Thing, *std.ArrayList(dt.ThingToSort)) void;
+const AddThingToSortToArrayListTagFiltered = fn (dt.Thing, *std.ArrayList(dt.ThingToSort), []u16, []u16) void;
 const CheckThingForTagAssociation = fn (dt.Thing, u16, *u24, *u24) void;
 const GetPosThingAssociatedToTag = fn (dt.Thing, u16, *std.ArrayList(usize), usize) void;
 
 pub const ThingParsingCallbacks = union(enum) {
+    AddThingToSortToArrayListTagFiltered: struct {
+        func: *const AddThingToSortToArrayListTagFiltered,
+        thing_array: *std.ArrayList(dt.ThingToSort),
+        included_tag_ids: []u16,
+        excluded_tag_ids: []u16,
+    },
     AddThingToSortToArrayList: struct {
         func: *const AddThingToSortToArrayList,
         thing_array: *std.ArrayList(dt.ThingToSort),
