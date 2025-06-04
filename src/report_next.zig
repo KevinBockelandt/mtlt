@@ -14,6 +14,9 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 const little_end = std.builtin.Endian.little;
 
+// Complete list of tags in the data file
+var tags: std.ArrayList(dt.Tag) = undefined;
+
 // Array list of things included in the report
 var things_to_sort: std.ArrayList(dt.ThingToSort) = undefined;
 
@@ -53,15 +56,48 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) vo
         return;
     }
 
+    const highest_prio = getHighestPriorityOfThing(thing);
+    if (highest_prio < 2) {
+        return;
+    }
+
     const dup_thing = thing.dupe();
 
-    arr.*.append(.{ .thing = dup_thing, .coef = 0, .highest_prio = 0 }) catch |err| {
+    arr.*.append(.{ .thing = dup_thing, .coef = 0, .highest_prio = highest_prio }) catch |err| {
         std.debug.print("ERROR: while trying to add a thing to next report during parsing: {}\n", .{err});
     };
 }
 
+fn getHighestPriorityOfThing(thing: dt.Thing) u2 {
+    var highest_prio: u2 = 0;
+    for (thing.tags) |t_id| {
+        // TODO could sorting stuff improve performance here
+        for (tags.items) |tag| {
+            if (t_id == tag.id) {
+                const prio = @intFromEnum(tag.status);
+                if (prio > highest_prio) {
+                    highest_prio = prio;
+                }
+                break;
+            }
+        }
+    }
+
+    return highest_prio;
+}
+
 /// Display a report of the things to do by order of priority
 pub fn nextReport(args: *ArgumentParser) !void {
+    // get the complete list of tags in the data file
+    tags = std.ArrayList(dt.Tag).init(globals.allocator);
+    defer {
+        for (tags.items) |tag| {
+            tag.deinit();
+        }
+        tags.deinit();
+    }
+    try globals.dfr.getAllTags(&tags);
+
     // create a list of all the things to display
     things_to_sort = std.ArrayList(dt.ThingToSort).init(globals.allocator);
     defer things_to_sort.deinit();
@@ -74,12 +110,6 @@ pub fn nextReport(args: *ArgumentParser) !void {
     if (things_to_sort.items.len < 1) {
         try globals.printer.nextReportEmpty();
         return;
-    }
-
-    // get the highest priority for all the retrieved things
-    for (0..things_to_sort.items.len) |i| {
-        var t = &things_to_sort.items[i];
-        t.highest_prio = try globals.dfr.getHighestPriorityOfThing(t.thing.tags);
     }
 
     const things_to_sort_slice = try things_to_sort.toOwnedSlice();
