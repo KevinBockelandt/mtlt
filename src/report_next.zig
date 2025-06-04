@@ -99,7 +99,7 @@ pub fn nextReport(args: *ArgumentParser) !void {
 
 /// Setup the table printer to display the data to the user
 fn displayTableReport(things: []dt.ThingToSort) !void {
-    const num_cols: u8 = 5;
+    const num_cols: u8 = 6;
 
     // string for the thing IDs
     var buf_str: [4096]u8 = undefined;
@@ -115,7 +115,8 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
     to_display[0][1] = .{ .content = "Name", .alignment = .left, .front_col = .title, .back_col = .gray };
     to_display[0][2] = .{ .content = "Priority", .alignment = .left, .front_col = .title, .back_col = .gray };
     to_display[0][3] = .{ .content = "Kickoff", .alignment = .left, .front_col = .title, .back_col = .gray };
-    to_display[0][4] = .{ .content = "Tags", .alignment = .left, .front_col = .title, .back_col = .gray };
+    to_display[0][4] = .{ .content = "Left", .alignment = .left, .front_col = .title, .back_col = .gray };
+    to_display[0][5] = .{ .content = "Tags", .alignment = .left, .front_col = .title, .back_col = .gray };
 
     // setup the data of the table based on the list of tags we want to display
     for (things, 1..things.len + 1) |thing_to_sort, i| {
@@ -184,8 +185,43 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
             };
         }
 
+        // LEFT COLUMN
+        if (thing.estimation > 0) {
+            var time_spent: i64 = 0;
+            for (thing.timers) |t| {
+                time_spent += t.duration;
+            }
+
+            const time_left: i64 = @as(i64, @intCast(thing.estimation)) - try th.getStepsFromMinutes(i64, time_spent);
+
+            if (time_left >= 0) {
+                const time_left_str = try std.fmt.bufPrint(&buf_str, "{s}{d}{s}", .{ ansi.colposdur, time_left, ansi.colres });
+                to_display[i][4] = .{
+                    .content = try globals.allocator.dupe(u8, time_left_str),
+                    .alignment = .left,
+                    .front_col = null,
+                    .back_col = line_back_col,
+                };
+            } else {
+                const time_left_str = try std.fmt.bufPrint(&buf_str, "{s}{d}{s}", .{ ansi.colnegdur, time_left, ansi.colres });
+                to_display[i][4] = .{
+                    .content = try globals.allocator.dupe(u8, time_left_str),
+                    .alignment = .left,
+                    .front_col = null,
+                    .back_col = line_back_col,
+                };
+            }
+        } else {
+            to_display[i][4] = .{
+                .content = try globals.allocator.dupe(u8, "-"),
+                .alignment = .left,
+                .front_col = null,
+                .back_col = line_back_col,
+            };
+        }
+
         // TAGS column
-        to_display[i][4] = .{
+        to_display[i][5] = .{
             .content = try globals.allocator.dupe(u8, try sh.getTagNamesFromIds(&buf_str, thing.tags)),
             .alignment = .left,
             .front_col = null,
@@ -202,6 +238,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
         globals.allocator.free(to_display[i][2].content);
         globals.allocator.free(to_display[i][3].content);
         globals.allocator.free(to_display[i][4].content);
+        globals.allocator.free(to_display[i][5].content);
         globals.allocator.free(to_display[i]);
     }
 }
