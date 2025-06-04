@@ -109,7 +109,7 @@ pub const Printer = struct {
     }
 
     pub fn updatedTimer(self: *Printer, str_id_thing: []const u8, id_timer: u11) !void {
-        try self.writeOut("Updated timer {s}{s}@{d}{s}\n", .{ ansi.colid, str_id_thing, id_timer, ansi.colres });
+        try self.writeOut("Updated timer {s}{d}@{s}{s}\n", .{ ansi.colid, id_timer, str_id_thing, ansi.colres });
     }
 
     pub fn deletedTimer(self: *Printer, str_id: []const u8) !void {
