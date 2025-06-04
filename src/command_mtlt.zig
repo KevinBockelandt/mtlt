@@ -13,20 +13,6 @@ const ArgumentParser = @import("argument_parser.zig").ArgumentParser;
 
 const little_end = std.builtin.Endian.little;
 
-// display infos on the kickoff of current thing
-fn displayKickoffInfos(kickoff: u25) !void {
-    if (kickoff != 0) {
-        const kickoff_offset_min = @as(i64, kickoff) - @as(i64, th.curTimestamp());
-        const kickoff_offset_step = try th.getStepsFromMinutes(i64, kickoff_offset_min);
-
-        if (kickoff_offset_step >= 0) {
-            try globals.printer.reportKickoffPos(@intCast(kickoff_offset_step));
-        } else {
-            try globals.printer.reportKickoffNeg(@intCast(@abs(kickoff_offset_step)));
-        }
-    }
-}
-
 // display infos on the time left if there is an estimation
 fn displayTimeLeftInfos(cur_thing: dt.Thing) !void {
     if (cur_thing.estimation != 0) {
@@ -86,7 +72,6 @@ pub fn cmd(args: *ArgumentParser) !void {
         try globals.printer.reportStatus(@tagName(cur_thing.status));
 
         if (cur_thing.status == .open) {
-            try displayKickoffInfos(cur_thing.kickoff);
             try displayTimeLeftInfos(cur_thing);
         }
 
@@ -151,12 +136,11 @@ test "mtlt report - current thing status closed" {
     });
 }
 
-test "mtlt report - current thing OK - no last timer - no current timer - no kickoff - no estimation" {
+test "mtlt report - current thing OK - no last timer - no current timer - no estimation" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.cur_timer.id_thing = 2;
     ex_file.cur_timer.id_last_timer = 0;
-    ex_file.things.items[1].kickoff = 0;
     ex_file.things.items[1].estimation = 0;
     const ac_file = try ex_file.clone();
 
@@ -184,12 +168,11 @@ test "mtlt report - current thing OK - no last timer - no current timer - no kic
     });
 }
 
-test "mtlt report - current thing OK - no last timer - no current timer - kickoff positive - left positive" {
+test "mtlt report - current thing OK - no last timer - no current timer - left positive" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.cur_timer.id_thing = 1;
     ex_file.cur_timer.id_last_timer = 0;
-    ex_file.things.items[2].kickoff = cur_time + try th.getMinutesFromSteps(u25, 20);
     ex_file.things.items[2].estimation = 80;
     var timers = try globals.allocator.alloc(dt.Timer, 2);
     timers[0] = .{ .id = 1, .duration = try th.getMinutesFromSteps(u12, 20), .start = cur_time - 100 };
@@ -201,16 +184,14 @@ test "mtlt report - current thing OK - no last timer - no current timer - kickof
     var buf_thing: [128]u8 = undefined;
     var buf_status: [128]u8 = undefined;
     var buf_left: [128]u8 = undefined;
-    var buf_kickoff: [128]u8 = undefined;
     var buf_timer: [128]u8 = undefined;
     var buf_ex_stdout: [512]u8 = undefined;
 
     const str_thing = try std.fmt.bufPrint(&buf_thing, "        {s}thing{s}: {s}1{s} - Name thing 1\n", .{ ansi.colemp, ansi.colres, ansi.colid, ansi.colres });
     const str_status = try std.fmt.bufPrint(&buf_status, "       {s}status{s}: open\n", .{ ansi.colemp, ansi.colres });
-    const str_kickoff = try std.fmt.bufPrint(&buf_kickoff, "      {s}kickoff{s}: in {s}20{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
     const str_left = try std.fmt.bufPrint(&buf_left, "         {s}left{s}: {s}40{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colposdur, ansi.colres });
     const str_timer = try std.fmt.bufPrint(&buf_timer, "{s}current timer{s}: none\n", .{ ansi.colemp, ansi.colres });
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}{s}", .{ str_thing, str_status, str_kickoff, str_left, str_timer });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}", .{ str_thing, str_status, str_left, str_timer });
 
     var args = ArgumentParser{};
 
@@ -224,12 +205,11 @@ test "mtlt report - current thing OK - no last timer - no current timer - kickof
     });
 }
 
-test "mtlt report - current thing OK - no last timer - no current timer - kickoff negative - left negative" {
+test "mtlt report - current thing OK - no last timer - no current timer - left negative" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.cur_timer.id_thing = 1;
     ex_file.cur_timer.id_last_timer = 0;
-    ex_file.things.items[2].kickoff = cur_time - try th.getMinutesFromSteps(u25, 20);
     ex_file.things.items[2].estimation = 30;
     var timers = try globals.allocator.alloc(dt.Timer, 2);
     timers[0] = .{ .id = 1, .duration = try th.getMinutesFromSteps(u12, 20), .start = cur_time - 100 };
@@ -241,16 +221,14 @@ test "mtlt report - current thing OK - no last timer - no current timer - kickof
     var buf_thing: [128]u8 = undefined;
     var buf_status: [128]u8 = undefined;
     var buf_left: [128]u8 = undefined;
-    var buf_kickoff: [128]u8 = undefined;
     var buf_timer: [128]u8 = undefined;
     var buf_ex_stdout: [512]u8 = undefined;
 
     const str_thing = try std.fmt.bufPrint(&buf_thing, "        {s}thing{s}: {s}1{s} - Name thing 1\n", .{ ansi.colemp, ansi.colres, ansi.colid, ansi.colres });
     const str_status = try std.fmt.bufPrint(&buf_status, "       {s}status{s}: open\n", .{ ansi.colemp, ansi.colres });
-    const str_kickoff = try std.fmt.bufPrint(&buf_kickoff, "      {s}kickoff{s}: {s}20{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
     const str_left = try std.fmt.bufPrint(&buf_left, "         {s}left{s}: {s}-10{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colnegdur, ansi.colres });
     const str_timer = try std.fmt.bufPrint(&buf_timer, "{s}current timer{s}: none\n", .{ ansi.colemp, ansi.colres });
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}{s}", .{ str_thing, str_status, str_kickoff, str_left, str_timer });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}", .{ str_thing, str_status, str_left, str_timer });
 
     var args = ArgumentParser{};
 
@@ -270,7 +248,6 @@ test "mtlt report - current thing OK - no last timer - current timer ok - left n
     ex_file.cur_timer.id_thing = 1;
     ex_file.cur_timer.id_last_timer = 0;
     ex_file.cur_timer.start = cur_time - try th.getMinutesFromSteps(u12, 30);
-    ex_file.things.items[2].kickoff = cur_time - try th.getMinutesFromSteps(u25, 20);
     ex_file.things.items[2].estimation = 50;
     var timers = try globals.allocator.alloc(dt.Timer, 2);
     timers[0] = .{ .id = 1, .duration = try th.getMinutesFromSteps(u12, 20), .start = cur_time - 100 };
@@ -282,16 +259,14 @@ test "mtlt report - current thing OK - no last timer - current timer ok - left n
     var buf_thing: [128]u8 = undefined;
     var buf_status: [128]u8 = undefined;
     var buf_left: [128]u8 = undefined;
-    var buf_kickoff: [128]u8 = undefined;
     var buf_timer: [128]u8 = undefined;
     var buf_ex_stdout: [512]u8 = undefined;
 
     const str_thing = try std.fmt.bufPrint(&buf_thing, "        {s}thing{s}: {s}1{s} - Name thing 1\n", .{ ansi.colemp, ansi.colres, ansi.colid, ansi.colres });
     const str_status = try std.fmt.bufPrint(&buf_status, "       {s}status{s}: open\n", .{ ansi.colemp, ansi.colres });
-    const str_kickoff = try std.fmt.bufPrint(&buf_kickoff, "      {s}kickoff{s}: {s}20{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
     const str_left = try std.fmt.bufPrint(&buf_left, "         {s}left{s}: {s}-20{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colnegdur, ansi.colres });
     const str_timer = try std.fmt.bufPrint(&buf_timer, "{s}current timer{s}: started {s}30{s} steps ago\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}{s}", .{ str_thing, str_status, str_kickoff, str_left, str_timer });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}", .{ str_thing, str_status, str_left, str_timer });
 
     var args = ArgumentParser{};
 
@@ -336,12 +311,11 @@ test "mtlt report - current thing OK - no last timer - current timer too big" {
     });
 }
 
-test "mtlt report - current thing OK - last timer ok - no current timer - kickoff positive - left positive" {
+test "mtlt report - current thing OK - last timer ok - no current timer - left positive" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.cur_timer.id_thing = 1;
     ex_file.cur_timer.id_last_timer = 1;
-    ex_file.things.items[2].kickoff = cur_time + try th.getMinutesFromSteps(u25, 20);
     ex_file.things.items[2].estimation = 80;
     var timers = try globals.allocator.alloc(dt.Timer, 2);
     timers[0] = .{ .id = 1, .duration = try th.getMinutesFromSteps(u12, 20), .start = cur_time - 100 };
@@ -353,18 +327,16 @@ test "mtlt report - current thing OK - last timer ok - no current timer - kickof
     var buf_thing: [128]u8 = undefined;
     var buf_status: [128]u8 = undefined;
     var buf_left: [128]u8 = undefined;
-    var buf_kickoff: [128]u8 = undefined;
     var buf_timer: [128]u8 = undefined;
     var buf_last_timer: [256]u8 = undefined;
     var buf_ex_stdout: [1024]u8 = undefined;
 
     const str_thing = try std.fmt.bufPrint(&buf_thing, "        {s}thing{s}: {s}1{s} - Name thing 1\n", .{ ansi.colemp, ansi.colres, ansi.colid, ansi.colres });
     const str_status = try std.fmt.bufPrint(&buf_status, "       {s}status{s}: open\n", .{ ansi.colemp, ansi.colres });
-    const str_kickoff = try std.fmt.bufPrint(&buf_kickoff, "      {s}kickoff{s}: in {s}20{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
     const str_left = try std.fmt.bufPrint(&buf_left, "         {s}left{s}: {s}40{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colposdur, ansi.colres });
     const str_last_timer = try std.fmt.bufPrint(&buf_last_timer, "   {s}last timer{s}: {s}1@1{s}, {s}started{s}: {s}14{s} steps ago, {s}lasted{s}: {s}20{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colid, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, ansi.colres });
     const str_timer = try std.fmt.bufPrint(&buf_timer, "{s}current timer{s}: none\n", .{ ansi.colemp, ansi.colres });
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}{s}{s}", .{ str_thing, str_status, str_kickoff, str_left, str_last_timer, str_timer });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "{s}{s}{s}{s}{s}", .{ str_thing, str_status, str_left, str_last_timer, str_timer });
 
     var args = ArgumentParser{};
 
