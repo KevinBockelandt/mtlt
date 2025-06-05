@@ -30,7 +30,13 @@ pub fn cmd(args: *ArgumentParser) !void {
             id_thing = cur_timer.id_thing;
         }
     } else {
-        id_thing = try id_helper.b62ToB10(args.*.payload.?);
+        id_thing = id_helper.b62ToB10(args.*.payload.?) catch |err| {
+            switch (err) {
+                id_helper.Base62Error.TooBig => try globals.printer.errIdTooBig(),
+                id_helper.Base62Error.ContainsInvalidCharacters => try globals.printer.errIdInvalidCharacters(),
+            }
+            return;
+        };
     }
 
     const fpt = globals.dfr.getFixedPartThing(id_thing) catch |err| {
@@ -206,6 +212,32 @@ test "id provided that doesn't exist" {
         .ac_file = ac_file,
         .ex_file = ex_file,
         .ex_stderr = ex_stderr,
+        .ex_stdout = "",
+    });
+}
+
+test "id provided is too big" {
+    var args = ArgumentParser{ .payload = "idtoolong", .auto_confirm = true };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = try it_helper.getStarterFile(),
+        .ex_stderr = "The provided ID is too big.\n",
+        .ex_stdout = "",
+    });
+}
+
+test "id provided contains invalid characters" {
+    var args = ArgumentParser{ .payload = "i.i", .auto_confirm = true };
+
+    try it_helper.performTest(.{
+        .cmd = cmd,
+        .args = &args,
+        .ac_file = try it_helper.getStarterFile(),
+        .ex_file = try it_helper.getStarterFile(),
+        .ex_stderr = "The provided ID contains invalid characters.\n",
         .ex_stdout = "",
     });
 }

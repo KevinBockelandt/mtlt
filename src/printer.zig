@@ -316,6 +316,14 @@ pub const Printer = struct {
         try self.writeErr("No ID provided and no current thing to operate on.\n", .{});
     }
 
+    pub fn errIdTooBig(self: *Printer) !void {
+        try self.writeErr("The provided ID is too big.\n", .{});
+    }
+
+    pub fn errIdInvalidCharacters(self: *Printer) !void {
+        try self.writeErr("The provided ID contains invalid characters.\n", .{});
+    }
+
     pub fn errMissingIdTimer(self: *Printer) !void {
         try self.writeErr("No ID provided and no last timer to operate on.\n", .{});
     }

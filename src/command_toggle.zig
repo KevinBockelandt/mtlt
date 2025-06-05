@@ -32,7 +32,13 @@ pub fn cmd(args: *ArgumentParser) !void {
             id_thing = cur_timer.id_thing;
         }
     } else {
-        id_thing = try id_helper.b62ToB10(args.*.payload.?);
+        id_thing = id_helper.b62ToB10(args.*.payload.?) catch |err| {
+            switch (err) {
+                id_helper.Base62Error.TooBig => try globals.printer.errIdTooBig(),
+                id_helper.Base62Error.ContainsInvalidCharacters => try globals.printer.errIdInvalidCharacters(),
+            }
+            return;
+        };
     }
 
     const str_id = id_helper.b10ToB62(&buf_str_id, id_thing);

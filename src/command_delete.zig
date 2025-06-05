@@ -22,8 +22,8 @@ pub fn cmd(args: *ArgumentParser) !void {
     if (args.*.payload != null) {
         id_thing = id_helper.b62ToB10(args.*.payload.?) catch |err| {
             switch (err) {
-                id_helper.Base62Error.TooBig => try globals.printer.errInvalidThingId(),
-                id_helper.Base62Error.ContainsInvalidCharacters => try globals.printer.errInvalidThingId(),
+                id_helper.Base62Error.TooBig => try globals.printer.errIdTooBig(),
+                id_helper.Base62Error.ContainsInvalidCharacters => try globals.printer.errIdInvalidCharacters(),
             }
             return;
         };
