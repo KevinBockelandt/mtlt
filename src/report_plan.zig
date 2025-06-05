@@ -350,9 +350,13 @@ pub fn planReport(args: *ArgumentParser) !void {
     try displayAlreadyPlanned();
 
     var limit = if (args.*.limit != null) args.*.limit.? else 10;
-    limit = if (limit > things_to_sort_slice.len) @intCast(things_to_sort_slice.len) else limit;
 
-    try displayTableReport(things_to_sort_slice[0..limit]);
+    if (limit == 0) {
+        try displayTableReport(things_to_sort_slice[0..]);
+    } else {
+        limit = if (limit > things_to_sort_slice.len) @intCast(things_to_sort_slice.len) else limit;
+        try displayTableReport(things_to_sort_slice[0..limit]);
+    }
 
     // free memory
     for (things_to_sort_slice) |thing_to_sort| {
