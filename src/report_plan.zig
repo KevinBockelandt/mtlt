@@ -107,7 +107,7 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort), in
     }
 
     const highest_prio = try getHighestPriorityOfThing(thing);
-    if (highest_prio > 2) {
+    if (highest_prio > 2 or (kickoff_offset < 600 and thing.kickoff != 0)) {
         return;
     }
 
