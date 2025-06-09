@@ -56,8 +56,13 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) vo
         return;
     }
 
+    const cur_time: i64 = @intCast(th.curTimestamp());
+    const kick = if (thing.kickoff != 0) thing.kickoff else std.math.maxInt(u25);
+    const kick_offset: i64 = try th.getStepsFromMinutes(i64, @as(i64, @intCast(kick)) - cur_time);
+
     const highest_prio = getHighestPriorityOfThing(thing);
-    if (highest_prio < 2) {
+
+    if (highest_prio < 2 and kick_offset > 600) {
         return;
     }
 
