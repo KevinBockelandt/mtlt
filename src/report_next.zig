@@ -197,24 +197,20 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
         if (thing.kickoff > 0) {
             const kickoff_offset_min: i64 = @as(i64, @intCast(thing.kickoff)) - @as(i64, @intCast(th.curTimestamp()));
             const kickoff_offset: i64 = try th.getStepsFromMinutes(i64, kickoff_offset_min);
+            var kickoff_offset_str: []const u8 = undefined;
 
             if (kickoff_offset >= 0) {
-                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}in {d}{s}", .{ ansi.colposdur, kickoff_offset, ansi.colres });
-                to_display[i][3] = .{
-                    .content = try globals.allocator.dupe(u8, kickoff_offset_str),
-                    .alignment = .left,
-                    .front_col = null,
-                    .back_col = line_back_col,
-                };
+                kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "in {d}", .{kickoff_offset});
             } else {
-                const kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{s}{d} ago{s}", .{ ansi.colnegdur, @abs(kickoff_offset), ansi.colres });
-                to_display[i][3] = .{
-                    .content = try globals.allocator.dupe(u8, kickoff_offset_str),
-                    .alignment = .left,
-                    .front_col = null,
-                    .back_col = line_back_col,
-                };
+                kickoff_offset_str = try std.fmt.bufPrint(&buf_str, "{d} ago", .{@abs(kickoff_offset)});
             }
+
+            to_display[i][3] = .{
+                .content = try globals.allocator.dupe(u8, kickoff_offset_str),
+                .alignment = .left,
+                .front_col = null,
+                .back_col = line_back_col,
+            };
         } else {
             to_display[i][3] = .{
                 .content = try globals.allocator.dupe(u8, "-"),
