@@ -56,6 +56,8 @@ pub fn cmd(args: *ArgumentParser) !void {
                 else => return err,
             }
         }
+    } else if (args.*.should_start) {
+        kickoff = th.curTimestamp();
     } else {
         kickoff = 0;
     }
@@ -99,6 +101,9 @@ pub fn help() !void {
         \\Usage: {s}mtlt add <thing_name> [OPTIONS]{s}
         \\
         \\Creates a new thing.
+        \\
+        \\If the start option is specified while no kickoff is given, the kickoff will
+        \\be set to 0 automatically.
         \\
         \\Options:
         \\  {s}-e{s}, {s}--estimation{s}         How many steps will it take to complete
