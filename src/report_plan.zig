@@ -92,17 +92,20 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort), in
         };
         time_left = @max(time_left, 0);
 
-        if (kickoff_offset < 0) {
+        if (kickoff_offset < 200) {
             time_planned[0] += @intCast(time_left);
-        } else {
-            switch (kickoff_offset) {
-                0...200 => time_planned[0] += @intCast(time_left),
-                201...400 => time_planned[1] += @intCast(time_left),
-                401...600 => time_planned[2] += @intCast(time_left),
-                601...800 => time_planned[3] += @intCast(time_left),
-                801...1000 => time_planned[4] += @intCast(time_left),
-                else => {},
-            }
+        }
+        if (kickoff_offset < 400) {
+            time_planned[1] += @intCast(time_left);
+        }
+        if (kickoff_offset < 600) {
+            time_planned[2] += @intCast(time_left);
+        }
+        if (kickoff_offset < 800) {
+            time_planned[3] += @intCast(time_left);
+        }
+        if (kickoff_offset < 1000) {
+            time_planned[4] += @intCast(time_left);
         }
     }
 
