@@ -113,7 +113,7 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort), in
 
     const dup_thing = thing.dupe();
 
-    arr.*.append(.{ .thing = dup_thing, .coef = 0, .highest_prio = 0 }) catch |err| {
+    arr.*.append(.{ .thing = dup_thing, .coef = 0, .highest_prio = highest_prio }) catch |err| {
         std.debug.print("ERROR: while trying to add a thing to next report during parsing: {}\n", .{err});
     };
 }
