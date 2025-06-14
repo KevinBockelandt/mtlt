@@ -57,6 +57,28 @@ pub fn cmd(args: *ArgumentParser) !void {
     try start_id(id_thing, thing_name);
 }
 
+/// Update the kickoff to now if it's higher
+fn update_kickoff_if_necessary(id: u19) !void {
+    const fpt = try globals.dfr.getFixedPartThing(id);
+    const cur_time = th.curTimestamp();
+
+    var update_tags = std.ArrayList([]const u8).init(globals.allocator);
+    defer update_tags.deinit();
+
+    var created_tags = std.ArrayList(dt.Tag).init(globals.allocator);
+    defer created_tags.deinit();
+
+    if (fpt.kickoff > cur_time) {
+        try globals.dfw.updateThing(.{
+            .id = id,
+            .kickoff = cur_time,
+            .estimation = null,
+            .name = null,
+            .tags = update_tags,
+        }, &created_tags);
+    }
+}
+
 /// Start a timer on a thing with the specified ID
 pub fn start_id(id: u19, thing_name: []const u8) !void {
     const cur_timer = try globals.dfr.getCurrentTimer();
@@ -64,6 +86,7 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
 
     // If there is no previous current timer and we have an ID to start on
     if (cur_timer.id_thing == 0 and id != 0) {
+        try update_kickoff_if_necessary(id);
         try globals.dfw.startCurrentTimer(id);
         try globals.printer.startedTimer(str_id, thing_name);
         return;
@@ -74,6 +97,8 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
         // create an empty default arg parser just to pass to `stop` that requires one
         var arg_parser = ArgumentParser{};
         try command_stop.cmd(&arg_parser);
+
+        try update_kickoff_if_necessary(id);
         try globals.dfw.startCurrentTimer(id);
         try globals.printer.startedTimer(str_id, thing_name);
         return;
@@ -81,6 +106,7 @@ pub fn start_id(id: u19, thing_name: []const u8) !void {
 
     // If there is a stopped previous current timer
     if (cur_timer.id_thing != 0 and cur_timer.start == 0) {
+        try update_kickoff_if_necessary(id);
         try globals.dfw.startCurrentTimer(id);
         try globals.printer.startedTimer(str_id, thing_name);
         return;
