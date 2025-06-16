@@ -68,7 +68,7 @@ fn update_kickoff_if_necessary(id: u19) !void {
     var created_tags = std.ArrayList(dt.Tag).init(globals.allocator);
     defer created_tags.deinit();
 
-    if (fpt.kickoff > cur_time) {
+    if (fpt.kickoff > cur_time or fpt.kickoff == 0) {
         try globals.dfw.updateThing(.{
             .id = id,
             .kickoff = cur_time,
