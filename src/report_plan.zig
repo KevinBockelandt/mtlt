@@ -35,7 +35,7 @@ fn compareThings(_: void, a: dt.ThingToSort, b: dt.ThingToSort) bool {
         return a_kick_offset < b_kick_offset;
     }
 
-    // if one of the 2 things has a "now" priority and not the other one
+    // if one of the 2 things has a "next" priority and not the other one
     if (a.highest_prio == 3 and b.highest_prio < 3) {
         return true;
     } else if (b.highest_prio == 3 and a.highest_prio < 3) {
@@ -170,7 +170,7 @@ fn displayTagsPerPriority() !void {
 
     for (tags.items) |tag| {
         switch (tag.status) {
-            dt.StatusTag.now => {
+            dt.StatusTag.next => {
                 num_tags_prio_max += 1;
                 if (lgt_str_max < max_lgt_str - max_lgt_tag - 3) {
                     lgt_str_max += try addTagToStr(buf_str_max[lgt_str_max..], lgt_str_max, tag.name);
@@ -212,9 +212,9 @@ fn displayTagsPerPriority() !void {
     to_display[0][1] = .{ .content = "#", .alignment = .left, .front_col = .title, .back_col = .gray };
     to_display[0][2] = .{ .content = "Tag names", .alignment = .left, .front_col = .title, .back_col = .gray };
 
-    // now line
+    // next line
     to_display[1] = try globals.allocator.alloc(table_printer.Cell, 3);
-    to_display[1][0] = .{ .content = "now", .alignment = .right, .front_col = null, .back_col = null };
+    to_display[1][0] = .{ .content = "next", .alignment = .right, .front_col = null, .back_col = null };
     const str_num_max = try std.fmt.bufPrint(&buf, "{d}", .{num_tags_prio_max});
     to_display[1][1] = .{ .content = try globals.allocator.dupe(u8, str_num_max), .alignment = .left, .front_col = null, .back_col = null };
     to_display[1][2] = .{ .content = buf_str_max[0..lgt_str_max], .alignment = .left, .front_col = null, .back_col = null };
@@ -417,7 +417,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
                 0 => try globals.allocator.dupe(u8, "-"),
                 1 => try globals.allocator.dupe(u8, "-"),
                 2 => try globals.allocator.dupe(u8, "soon"),
-                3 => try globals.allocator.dupe(u8, "now"),
+                3 => try globals.allocator.dupe(u8, "next"),
             },
             .alignment = .left,
             .front_col = null,

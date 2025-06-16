@@ -144,9 +144,9 @@ test "toggle tag - specified tag name ok - to close" {
     ex_file.tags.items[0].status = dt.StatusTag.closed;
 
     var buf_ex_stdout: [128]u8 = undefined;
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "Tag {s}now{s} is now {s}closed{s}.\n", .{ ansi.colemp, ansi.colres, ansi.colemp, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "Tag {s}next{s} is now {s}closed{s}.\n", .{ ansi.colemp, ansi.colres, ansi.colemp, ansi.colres });
 
-    var args = ArgumentParser{ .payload = "now" };
+    var args = ArgumentParser{ .payload = "next" };
 
     try it_helper.performTest(.{
         .cmd = cmd,

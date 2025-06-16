@@ -606,8 +606,8 @@ pub const ArgumentParser = struct {
                         } else if (std.mem.eql(u8, arg, "soon")) {
                             self.priority = dt.StatusTag.soon;
                             self.current_state = ArgParserState.not_expecting;
-                        } else if (std.mem.eql(u8, arg, "now")) {
-                            self.priority = dt.StatusTag.now;
+                        } else if (std.mem.eql(u8, arg, "next")) {
+                            self.priority = dt.StatusTag.next;
                             self.current_state = ArgParserState.not_expecting;
                         } else {
                             try globals.printer.errInvalidPriority();
@@ -1737,12 +1737,12 @@ test "No tags already parsed (valid)" {
 // TEST PRIORITY
 // ---------------------------------------------------------
 
-test "Priority OK case short now" {
+test "Priority OK case short next" {
     var ex_state = ArgumentParser{};
-    ex_state.priority = dt.StatusTag.now;
+    ex_state.priority = dt.StatusTag.next;
 
     try performTest(.{
-        .args = &.{ "-p", "now" },
+        .args = &.{ "-p", "next" },
         .ex_state = &ex_state,
     });
 }
@@ -1774,7 +1774,7 @@ test "Priority invalid option" {
         .args = &.{ "-p", "wrong" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.CannotParsePriority,
-        .ex_stderr = "The specified priority level does not exist.\nValid values are \"someday\" (default), \"soon\" and \"now\".\n",
+        .ex_stderr = "The specified priority level does not exist.\nValid values are \"someday\" (default), \"soon\" and \"next\".\n",
     });
 }
 
@@ -1783,7 +1783,7 @@ test "Priority already parsed" {
     ex_state.priority = dt.StatusTag.soon;
 
     try performTest(.{
-        .args = &.{ "-p", "soon", "--priority", "now" },
+        .args = &.{ "-p", "soon", "--priority", "next" },
         .ex_state = &ex_state,
         .ex_err = ArgumentParsingError.PriorityAlreadyParsed,
         .ex_stderr = "There can be only one \"-p\" or \"--priority\" flag.\n",

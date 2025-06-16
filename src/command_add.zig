@@ -255,7 +255,7 @@ test "add multiple things" {
 
     var tags1 = std.ArrayList([]const u8).init(globals.allocator);
     defer tags1.deinit();
-    try tags1.append("now");
+    try tags1.append("next");
 
     var tags2 = std.ArrayList([]const u8).init(globals.allocator);
     defer tags2.deinit();

@@ -23,7 +23,7 @@ pub const StatusTag = enum(u2) {
     closed = 0,
     someday = 1,
     soon = 2,
-    now = 3,
+    next = 3,
 };
 
 /// Durations in the application

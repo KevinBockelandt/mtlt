@@ -57,14 +57,14 @@ pub fn help() !void {
         \\characters. If no priority is specified, "someday" is used by default..
         \\
         \\Options:
-        \\  {s}-p{s}, {s}--priority{s}         Can be "now", "soon" or "someday"
+        \\  {s}-p{s}, {s}--priority{s}         Can be "next", "soon" or "someday"
         \\
         \\Examples:
         \\  {s}mtlt add-tag "myCoolTag"{s}
         \\      Create a new tag called "myCoolTag" with priority "someday".
         \\
-        \\  {s}mtlt add-tag "1-also-good" -p now{s}
-        \\      Create a new tag called "1-also-good" with priority "now".
+        \\  {s}mtlt add-tag "1-also-good" -p next{s}
+        \\      Create a new tag called "1-also-good" with priority "next".
         \\
         \\  {s}mtlt add-tag "_it_works" -p soon{s}
         \\      Create a new tag called "_it_works" with priority "soon".
@@ -118,10 +118,10 @@ test "add tag in starter file with priority soon" {
     });
 }
 
-test "add tag in starter file with priority now" {
+test "add tag in starter file with priority next" {
     var ex_file = try it_helper.getStarterFile();
-    try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.now, .name = "testnow" });
-    var args: ArgumentParser = .{ .payload = "testnow", .priority = dt.StatusTag.now };
+    try ex_file.tags.insert(0, .{ .id = 4, .status = dt.StatusTag.next, .name = "testnext" });
+    var args: ArgumentParser = .{ .payload = "testnext", .priority = dt.StatusTag.next };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -133,7 +133,7 @@ test "add tag in starter file with priority now" {
 
 test "add tag in a file where the max tag ID is reached" {
     var ac_file = try it_helper.getStarterFile();
-    try ac_file.tags.insert(0, .{ .id = 65535, .status = dt.StatusTag.now, .name = "maxIdTag" });
+    try ac_file.tags.insert(0, .{ .id = 65535, .status = dt.StatusTag.next, .name = "maxIdTag" });
     var args: ArgumentParser = .{ .payload = "overboardIdTag", .priority = null };
 
     try it_helper.performTest(.{

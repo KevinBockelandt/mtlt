@@ -71,14 +71,14 @@ pub fn help() !void {
         \\
         \\Options:
         \\  {s}-n{s}, {s}--name{s}      New name of the tag
-        \\  {s}-p{s}, {s}--priority{s}  New priority. Can be "now", "soon" or "someday"
+        \\  {s}-p{s}, {s}--priority{s}  New priority. Can be "next", "soon" or "someday"
         \\
         \\Examples:
         \\  {s}mtlt update-tag old_name -n new_name{s}
         \\      Update the tag called "old_name" to change it to "new_name".
         \\
-        \\  {s}mtlt update-tag reallyUrgent -p now{s}
-        \\      Update the tag called "reallyUrgent" to set it's priority to "now".
+        \\  {s}mtlt update-tag reallyUrgent -p next{s}
+        \\      Update the tag called "reallyUrgent" to set it's priority to "next".
         \\
     , .{
         ansi.colemp, ansi.colres,
@@ -107,7 +107,7 @@ test "update tag - new name ok" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
     ex_file.tags.items[0].name = "new_tag_name";
-    var args: ArgumentParser = .{ .payload = "now", .name = "new_tag_name" };
+    var args: ArgumentParser = .{ .payload = "next", .name = "new_tag_name" };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -121,7 +121,7 @@ test "update tag - new name ok" {
 test "update tag - new name too long" {
     const cur_time = th.curTimestamp();
     const tag_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    var args: ArgumentParser = .{ .payload = "now", .name = tag_name };
+    var args: ArgumentParser = .{ .payload = "next", .name = tag_name };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -133,7 +133,7 @@ test "update tag - new name too long" {
 
 test "update tag - new name invalid" {
     const cur_time = th.curTimestamp();
-    var args: ArgumentParser = .{ .payload = "now", .name = "invalid@name" };
+    var args: ArgumentParser = .{ .payload = "next", .name = "invalid@name" };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -145,7 +145,7 @@ test "update tag - new name invalid" {
 
 test "update tag - new name already existing" {
     const cur_time = th.curTimestamp();
-    var args: ArgumentParser = .{ .payload = "now", .name = "soon" };
+    var args: ArgumentParser = .{ .payload = "next", .name = "soon" };
 
     var buf_ex_stderr: [128]u8 = undefined;
     const ex_stderr = try std.fmt.bufPrint(&buf_ex_stderr, "A tag with the name {s}soon{s} already exists\n", .{ ansi.colemp, ansi.colres });
@@ -161,9 +161,9 @@ test "update tag - new name already existing" {
 test "update tag - new priority" {
     const cur_time = th.curTimestamp();
     var ex_file = try it_helper.getSmallFile(cur_time);
-    ex_file.tags.items[1].status = dt.StatusTag.now;
+    ex_file.tags.items[1].status = dt.StatusTag.next;
 
-    var args: ArgumentParser = .{ .payload = "soon", .priority = .now };
+    var args: ArgumentParser = .{ .payload = "soon", .priority = .next };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -182,7 +182,7 @@ test "update tag - new priority from closed" {
     var ac_file = try it_helper.getSmallFile(cur_time);
     ac_file.tags.items[0].status = dt.StatusTag.closed;
 
-    var args: ArgumentParser = .{ .payload = "now", .priority = .someday };
+    var args: ArgumentParser = .{ .payload = "next", .priority = .someday };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -195,10 +195,10 @@ test "update tag - new priority from closed" {
 
 test "update tag - updating nothing" {
     const cur_time = th.curTimestamp();
-    var args: ArgumentParser = .{ .payload = "now" };
+    var args: ArgumentParser = .{ .payload = "next" };
 
     var buf_ex_stdout: [128]u8 = undefined;
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "Nothing was updated on the tag {s}now{s}.\n", .{ ansi.colemp, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "Nothing was updated on the tag {s}next{s}.\n", .{ ansi.colemp, ansi.colres });
 
     try it_helper.performTest(.{
         .cmd = cmd,

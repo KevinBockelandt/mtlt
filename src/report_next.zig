@@ -30,25 +30,14 @@ fn compareThings(_: void, a: dt.ThingToSort, b: dt.ThingToSort) bool {
     const a_kick_offset: i64 = try th.getStepsFromMinutes(i64, @as(i64, @intCast(a_kick)) - cur_time);
     const b_kick_offset: i64 = try th.getStepsFromMinutes(i64, @as(i64, @intCast(b_kick)) - cur_time);
 
-    // if the kickoff time is already passed or below 200
-    if (a_kick_offset <= 200 or b_kick_offset <= 200) {
+    if (a_kick_offset <= 200 and b_kick_offset <= 200) {
         return a_kick_offset < b_kick_offset;
     }
 
-    // if one of the 2 things has a "now" priority and not the other one
-    if (a.highest_prio == 3 and b.highest_prio < 3) {
-        return true;
-    } else if (b.highest_prio == 3 and a.highest_prio < 3) {
-        return false;
-    }
+    if (a.thing.kickoff == 0 and b_kick_offset > 200) return true;
+    if (b.thing.kickoff == 0 and a_kick_offset > 200) return false;
 
-    // if the kickoff time is below 600
-    if (a_kick_offset <= 600 or b_kick_offset <= 600) {
-        return a_kick_offset < b_kick_offset;
-    }
-
-    // at this point, it's just a matter of priority
-    return a.highest_prio > b.highest_prio;
+    return a_kick_offset < b_kick_offset;
 }
 
 fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) void {
@@ -62,7 +51,7 @@ fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) vo
 
     const highest_prio = getHighestPriorityOfThing(thing);
 
-    if (highest_prio < 2 and kick_offset > 600) {
+    if (highest_prio < 3 and kick_offset > 400) {
         return;
     }
 
@@ -186,7 +175,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
                 0 => try globals.allocator.dupe(u8, "-"),
                 1 => try globals.allocator.dupe(u8, "-"),
                 2 => try globals.allocator.dupe(u8, "soon"),
-                3 => try globals.allocator.dupe(u8, "now"),
+                3 => try globals.allocator.dupe(u8, "next"),
             },
             .alignment = .left,
             .front_col = null,

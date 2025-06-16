@@ -124,13 +124,13 @@ test "delete tag OK simple" {
     var ex_file = try it_helper.getSmallFile(cur_time);
 
     var buf_ex_stdout: [128]u8 = undefined;
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "The tag {s}now{s} was deleted\n", .{ ansi.colemp, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "The tag {s}next{s} was deleted\n", .{ ansi.colemp, ansi.colres });
 
     _ = ex_file.tags.orderedRemove(0);
     globals.allocator.free(ex_file.things.items[1].tags);
     ex_file.things.items[1].tags = &[_]u16{};
 
-    var args = ArgumentParser{ .payload = "now", .auto_confirm = true };
+    var args = ArgumentParser{ .payload = "next", .auto_confirm = true };
 
     try it_helper.performTest(.{
         .cmd = cmd,
@@ -146,7 +146,7 @@ test "delete tag OK complex" {
     var ex_file = try it_helper.getMediumFile(cur_time);
     const ac_file = try ex_file.clone();
 
-    // remove the "now" tag from the file
+    // remove the "next" tag from the file
     _ = ex_file.tags.orderedRemove(30);
 
     ex_file.things.items[10].tags = &[_]u16{};
@@ -164,9 +164,9 @@ test "delete tag OK complex" {
     ex_file.things.items[50].tags = tag_2_1[0..];
 
     var buf_ex_stdout: [128]u8 = undefined;
-    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "The tag {s}now{s} was deleted\n", .{ ansi.colemp, ansi.colres });
+    const ex_stdout = try std.fmt.bufPrint(&buf_ex_stdout, "The tag {s}next{s} was deleted\n", .{ ansi.colemp, ansi.colres });
 
-    var args = ArgumentParser{ .payload = "now", .auto_confirm = true };
+    var args = ArgumentParser{ .payload = "next", .auto_confirm = true };
 
     try it_helper.performTest(.{
         .cmd = cmd,
