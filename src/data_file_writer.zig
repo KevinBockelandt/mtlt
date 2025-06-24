@@ -31,14 +31,14 @@ pub fn generateEmptyDataFile() !void {
     // number of tags in the file
     try globals.data_file.writer().writeInt(u16, 3, little_end);
 
-    // add 'now' tag
-    const fp_now_tag = dt.getIntFromTagFixedPart(.{
+    // add 'next' tag
+    const fp_next_tag = dt.getIntFromTagFixedPart(.{
         .lgt_name = 3,
-        .status = @intFromEnum(dt.StatusTag.now),
+        .status = @intFromEnum(dt.StatusTag.next),
         .id = 3,
     });
-    try globals.data_file.writer().writeInt(u24, fp_now_tag, little_end);
-    _ = try globals.data_file.writer().write("now");
+    try globals.data_file.writer().writeInt(u24, fp_next_tag, little_end);
+    _ = try globals.data_file.writer().write("next");
 
     // add 'soon' tag
     const fp_soon_tag = dt.getIntFromTagFixedPart(.{

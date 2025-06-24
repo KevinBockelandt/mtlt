@@ -107,7 +107,7 @@ pub fn initTest() !void {
 pub fn getStarterFile() !dt.FullData {
     var to_ret: dt.FullData = .{};
     to_ret.init();
-    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
+    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.next, .name = "next" });
     try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
     try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
     return to_ret;
@@ -160,7 +160,7 @@ pub fn getSmallFile(cur_time: u25) !dt.FullData {
         .timers = &[_]dt.Timer{},
     });
 
-    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
+    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.next, .name = "next" });
     try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
     try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
 
@@ -222,7 +222,7 @@ pub fn getMediumFile(cur_time: u25) !dt.FullData {
         const status_tag = rand.uintAtMost(u2, 3);
         try to_ret.tags.append(.{ .id = @intCast(idx), .status = @enumFromInt(status_tag), .name = alloc_tag_name });
     }
-    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.now, .name = "now" });
+    try to_ret.tags.append(.{ .id = 3, .status = dt.StatusTag.next, .name = "next" });
     try to_ret.tags.append(.{ .id = 2, .status = dt.StatusTag.soon, .name = "soon" });
     try to_ret.tags.append(.{ .id = 1, .status = dt.StatusTag.someday, .name = "someday" });
 

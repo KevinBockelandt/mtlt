@@ -246,7 +246,7 @@ pub const Printer = struct {
 
     pub fn errInvalidPriority(self: *Printer) !void {
         try self.writeErr("The specified priority level does not exist.\n", .{});
-        try self.writeErr("Valid values are \"someday\" (default), \"soon\" and \"now\".\n", .{});
+        try self.writeErr("Valid values are \"someday\" (default), \"soon\" and \"next\".\n", .{});
     }
 
     pub fn outContradictionAllTagsFlags(self: *Printer) !void {

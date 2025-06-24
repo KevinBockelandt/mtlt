@@ -6,9 +6,24 @@ pub fn confirm() !bool {
 
     try w.print("Do you want to proceed? [y/N] ", .{});
 
-    var buf: [1]u8 = undefined;
-    const read = try r.read(&buf);
-    if (read == 0) return false;
+    var first: u8 = 0;
+    var got_input = false;
 
-    return (buf[0] == 'y') or (buf[0] == 'Y');
+    var buf: [1]u8 = undefined;
+    while (true) {
+        const read = try r.read(&buf);
+
+        if (read == 0) {
+            break;
+        } else if (buf[0] == '\n') {
+            break;
+        }
+
+        if (!got_input) {
+            first = buf[0];
+            got_input = true;
+        }
+    }
+
+    return first == 'y' or first == 'Y';
 }

@@ -293,7 +293,7 @@ test "update thing - remove and add existing and non-existing tags" {
 
     var tags = std.ArrayList([]const u8).init(globals.allocator);
     defer tags.deinit();
-    try tags.append("now");
+    try tags.append("next");
     try tags.append("soon");
     try tags.append("newtag1");
     var args: ArgumentParser = .{ .payload = "3", .tags = tags };
