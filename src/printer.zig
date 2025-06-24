@@ -210,6 +210,14 @@ pub const Printer = struct {
         try self.writeOut("   {s}last timer{s}: {s}{d}@{s}{s}, {s}started{s}: {s}{d}{s} steps ago, {s}lasted{s}: {s}{d}{s} steps\n", .{ ansi.colemp, ansi.colres, ansi.colid, id_timer, str_id_thing, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, started, ansi.colres, ansi.colemp, ansi.colres, ansi.coldurntr, duration, ansi.colres });
     }
 
+    pub fn NextReportNoCurrentTimer(self: *Printer) !void {
+        try self.writeOut("{s}Current timer{s}: none.\n\n", .{ ansi.colemp, ansi.colres });
+    }
+
+    pub fn NextReportCurrentTimer(self: *Printer, str_duration: []const u8, str_id: []const u8, thing_name: []const u8) !void {
+        try self.writeOut("{s}Current timer{s}: started {s}{s}{s} steps ago on {s}{s}{s} - {s}{s}{s}.\n\n", .{ ansi.colemp, ansi.colres, ansi.coldurntr, str_duration, ansi.colres, ansi.colid, str_id, ansi.colres, ansi.colemp, thing_name, ansi.colres });
+    }
+
     // ERRORS COMMAND PARSER SPECIFIC
 
     pub fn errMultipleFlagsLong(self: *Printer, long: []const u8) !void {

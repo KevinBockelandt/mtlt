@@ -82,6 +82,9 @@ fn getHighestPriorityOfThing(thing: dt.Thing) u2 {
 
 /// Display a report of the things to do by order of priority
 pub fn nextReport(args: *ArgumentParser) !void {
+    // display right away infos on the currently running timer
+    try displayCurrentTimer();
+
     // get the complete list of tags in the data file
     tags = std.ArrayList(dt.Tag).init(globals.allocator);
     defer {
@@ -125,6 +128,28 @@ pub fn nextReport(args: *ArgumentParser) !void {
     }
 }
 
+pub fn displayCurrentTimer() !void {
+    const cur_timer = try globals.dfr.getCurrentTimer();
+
+    if (cur_timer.id_thing == 0 or cur_timer.start == 0) {
+        try globals.printer.NextReportNoCurrentTimer();
+        return;
+    }
+
+    const thing_to_display = try globals.dfr.getThing(cur_timer.id_thing);
+    defer thing_to_display.deinit();
+
+    var buf_duration: [128]u8 = undefined;
+    var duration: i64 = @as(i64, @intCast(th.curTimestamp())) - @as(i64, @intCast(cur_timer.start));
+    duration = try th.getStepsFromMinutes(i64, duration);
+    const str_duration = try std.fmt.bufPrint(&buf_duration, "{d}", .{duration});
+
+    var buf_id: [4]u8 = undefined;
+    const str_id = id_helper.b10ToB62(&buf_id, cur_timer.id_thing);
+
+    try globals.printer.NextReportCurrentTimer(str_duration, str_id, thing_to_display.name);
+}
+
 /// Setup the table printer to display the data to the user
 fn displayTableReport(things: []dt.ThingToSort) !void {
     const num_cols: u8 = 6;
@@ -157,7 +182,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
         to_display[i][0] = .{
             .content = try globals.allocator.dupe(u8, str_id),
             .alignment = .left,
-            .front_col = null,
+            .front_col = .id,
             .back_col = line_back_col,
         };
 
@@ -165,7 +190,7 @@ fn displayTableReport(things: []dt.ThingToSort) !void {
         to_display[i][1] = .{
             .content = try globals.allocator.dupe(u8, thing.name),
             .alignment = .left,
-            .front_col = .id,
+            .front_col = null,
             .back_col = line_back_col,
         };
 
