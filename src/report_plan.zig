@@ -288,7 +288,7 @@ fn displayAlreadyPlanned() !void {
     _ = try std.io.getStdOut().write("\n");
 }
 
-/// Display a report of the things to do by order of priority
+/// Display a report of things that need planning
 pub fn planReport(args: *ArgumentParser) !void {
     time_planned = .{ 0, 0, 0, 0, 0 };
 

@@ -40,9 +40,35 @@ fn compareThings(_: void, a: dt.ThingToSort, b: dt.ThingToSort) bool {
     return a_kick_offset < b_kick_offset;
 }
 
-fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort)) void {
+fn addThingToSortToList(thing: dt.Thing, arr: *std.ArrayList(dt.ThingToSort), included_tag_ids: []u16, excluded_tag_ids: []u16) void {
     if (thing.status != dt.StatusThing.open) {
         return;
+    }
+
+    // ignore this thing if it's part of the excluded tags list
+    for (excluded_tag_ids) |et| {
+        for (thing.tags) |tt| {
+            if (tt == et) {
+                return;
+            }
+        }
+    }
+
+    // ignore this thing if there is a list of requested tag and it's not part of it
+    if (included_tag_ids.len > 0) {
+        var is_in_list = false;
+        for (included_tag_ids) |it| {
+            for (thing.tags) |tt| {
+                if (tt == it) {
+                    is_in_list = true;
+                    break;
+                }
+            }
+        }
+
+        if (is_in_list == false) {
+            return;
+        }
     }
 
     const cur_time: i64 = @intCast(th.curTimestamp());
@@ -95,13 +121,39 @@ pub fn nextReport(args: *ArgumentParser) !void {
     }
     try globals.dfr.getAllTags(&tags);
 
+    // convert list of tags to include to use u16 instead of names
+    var included_tag_ids = std.ArrayList(u16).init(globals.allocator);
+    defer included_tag_ids.deinit();
+    for (args.*.tags.items) |tag_to_include| {
+        for (tags.items) |tag_in_file| {
+            if (std.mem.eql(u8, tag_in_file.name, tag_to_include)) {
+                try included_tag_ids.append(tag_in_file.id);
+                break;
+            }
+        }
+    }
+
+    // convert list of tags to exclude to use u16 instead of names
+    var excluded_tag_ids = std.ArrayList(u16).init(globals.allocator);
+    defer excluded_tag_ids.deinit();
+    for (args.*.excluded_tags.items) |tag_to_exclude| {
+        for (tags.items) |tag_in_file| {
+            if (std.mem.eql(u8, tag_in_file.name, tag_to_exclude)) {
+                try excluded_tag_ids.append(tag_in_file.id);
+                break;
+            }
+        }
+    }
+
     // create a list of all the things to display
     things_to_sort = std.ArrayList(dt.ThingToSort).init(globals.allocator);
     defer things_to_sort.deinit();
 
-    try globals.dfr.parseThings(.{ .AddThingToSortToArrayList = .{
+    try globals.dfr.parseThings(.{ .AddThingToSortToArrayListTagFiltered = .{
         .func = addThingToSortToList,
         .thing_array = &things_to_sort,
+        .included_tag_ids = included_tag_ids.items,
+        .excluded_tag_ids = excluded_tag_ids.items,
     } });
 
     if (things_to_sort.items.len < 1) {
