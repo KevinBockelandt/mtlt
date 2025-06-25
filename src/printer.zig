@@ -151,6 +151,10 @@ pub const Printer = struct {
         try self.writeOut("There are no tags to list.\n", .{});
     }
 
+    pub fn thingsShown(self: *Printer, numShown: usize, numHidden: usize) !void {
+        try self.writeOut("\n{s}{d}{s} things shown. {s}{d}{s} things hidden due to the limit.\n", .{ ansi.colemp, numShown, ansi.colres, ansi.colemp, numHidden, ansi.colres });
+    }
+
     pub fn nextReportEmpty(self: *Printer) !void {
         try self.writeOut("There are no things to show. Try the \"mtlt plan\" command.\n", .{});
     }

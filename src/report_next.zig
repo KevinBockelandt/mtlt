@@ -113,13 +113,19 @@ pub fn nextReport(args: *ArgumentParser) !void {
     defer globals.allocator.free(things_to_sort_slice);
     std.mem.sort(dt.ThingToSort, things_to_sort_slice, {}, compareThings);
 
-    var limit = if (args.*.limit != null) args.*.limit.? else 10;
+    const limit = if (args.*.limit != null) args.*.limit.? else 10;
 
     if (limit == 0) {
         try displayTableReport(things_to_sort_slice[0..]);
+        try globals.printer.thingsShown(things_to_sort_slice.len, 0);
     } else {
-        limit = if (limit > things_to_sort_slice.len) @intCast(things_to_sort_slice.len) else limit;
-        try displayTableReport(things_to_sort_slice[0..limit]);
+        if (things_to_sort_slice.len >= limit) {
+            try displayTableReport(things_to_sort_slice[0..limit]);
+            try globals.printer.thingsShown(limit, things_to_sort_slice.len - limit);
+        } else {
+            try displayTableReport(things_to_sort_slice[0..]);
+            try globals.printer.thingsShown(things_to_sort_slice.len, 0);
+        }
     }
 
     // free memory
